@@ -1,0 +1,87 @@
+# ==========================
+# IDE & 操作系统 (System)
+# ==========================
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+
+# ==========================
+# Java / Maven 后端
+# ==========================
+target/
+*.class
+
+# Maven Wrapper (通常建议提交 mvnw 脚本，但如果你想完全忽略 wrapper jar 可以取消下面注释)
+# .mvn/wrapper/maven-wrapper.jar
+
+# 日志文件
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Spring Boot / 常用工具生成文件
+help.md
+_site/
+dependency-reduced-pom.xml
+
+# ==========================
+# Vue / 前端通用
+# ==========================
+# 使用 ** 可以匹配任何目录下的 node_modules
+**/node_modules/
+**/dist/
+**/dist-ssr/
+
+# 本地环境配置
+.env.local
+.env.*.local
+
+# ESLint 缓存
+.eslintcache
+
+# 单元测试覆盖率报告
+coverage/
+
+# 编辑器目录 (如果在前端项目里有)
+.editorconfig
+
+# ==========================
+# Docker & 运行时数据 (CRITICAL)
+# ==========================
+# 数据库持久化数据
+mysql_data/
+mongo_data/
+redis_data/
+
+# 用户上传的文件
+uploads/
+**/public/uploads/
+
+# 临时文件
+tmp/
+temp/
+
+# 如果你有打包好的 jar 包也不应该提交（通常在 target 里，但为了保险）
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# !但是! 这里的例外规则：确保 Maven wrapper 的 jar (如果项目需要) 或者 lib 目录下的 jar 不被忽略
+# !*.jar
+# !.mvn/wrapper/maven-wrapper.jar
