@@ -1,4 +1,4 @@
-package com.example.zhizuo.mapper;
+package com.example.zhizuo.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.zhizuo.entity.Reservation;
@@ -9,11 +9,13 @@ import java.time.LocalDateTime;
 
 @Mapper
 public interface ReservationMapper extends BaseMapper<Reservation> {
-    // 核心冲突检测 SQL
+
+    // 关键 SQL：检测时间重叠
+    // 逻辑：(A.start < B.end) AND (A.end > B.start) 即为重叠
     @Select("SELECT COUNT(*) FROM reservation " +
-            "WHERE seat_id=#{seatId} " +
-            "AND status IN ('RESERVED','CHECKED_IN') " +
-            "AND NOT (end_time <= #{start} OR start_time >= #{end})")
+            "WHERE seat_id = #{seatId} " +
+            "AND status IN ('RESERVED', 'CHECKED_IN') " +
+            "AND start_time < #{end} AND end_time > #{start}")
     int countConflict(@Param("seatId") Long seatId,
                       @Param("start") LocalDateTime start,
                       @Param("end") LocalDateTime end);

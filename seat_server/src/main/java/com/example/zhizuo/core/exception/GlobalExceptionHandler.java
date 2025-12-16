@@ -1,4 +1,4 @@
-package com.example.zhizuo.exception;
+package com.example.zhizuo.core.exception;
 
 import com.example.zhizuo.common.ApiResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;

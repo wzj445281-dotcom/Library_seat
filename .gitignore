@@ -17,11 +17,12 @@ Desktop.ini
 # ==========================
 # Java / Maven 后端
 # ==========================
-target/
+**/target/
 *.class
 
-# Maven Wrapper (通常建议提交 mvnw 脚本，但如果你想完全忽略 wrapper jar 可以取消下面注释)
-# .mvn/wrapper/maven-wrapper.jar
+# Maven Wrapper
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
 
 # 日志文件
 *.log
@@ -39,7 +40,6 @@ dependency-reduced-pom.xml
 # ==========================
 # Vue / 前端通用
 # ==========================
-# 使用 ** 可以匹配任何目录下的 node_modules
 **/node_modules/
 **/dist/
 **/dist-ssr/
@@ -58,6 +58,14 @@ coverage/
 .editorconfig
 
 # ==========================
+# 微信小程序特定
+# ==========================
+project.private.config.json
+cloudfunctions/*/localconfig.json
+**/miniprogram_npm/
+*.upload
+
+# ==========================
 # Docker & 运行时数据 (CRITICAL)
 # ==========================
 # 数据库持久化数据
@@ -73,7 +81,7 @@ uploads/
 tmp/
 temp/
 
-# 如果你有打包好的 jar 包也不应该提交（通常在 target 里，但为了保险）
+# 打包文件（除了Maven wrapper的jar）
 *.jar
 *.war
 *.nar
@@ -82,6 +90,20 @@ temp/
 *.tar.gz
 *.rar
 
-# !但是! 这里的例外规则：确保 Maven wrapper 的 jar (如果项目需要) 或者 lib 目录下的 jar 不被忽略
-# !*.jar
-# !.mvn/wrapper/maven-wrapper.jar
+# ==========================
+# IDE 配置（选择性提交）
+# ==========================
+# 以下文件通常不提交，但有些人选择提交
+# .vscode/settings.json
+# .vscode/extensions.json
+# .idea/codeStyles/
+# .idea/inspectionProfiles/
+
+# ==========================
+# 确保这些重要文件不被忽略
+# ==========================
+!.mvn/wrapper/maven-wrapper.properties
+!mvnw
+!mvnw.cmd
+!.vscode/settings.json.example  # 如果有示例配置
+!.idea/codeStyles/Project.xml   # 如果有团队代码风格配置

@@ -1,0 +1,46 @@
+<view class="container">
+    <!-- 头部卡片 -->
+    <view class="header-card">
+        <view class="avatar-box">
+            <image class="avatar" src="../../assets/images/user-active.png" mode="aspectFit"></image>
+        </view>
+        <view class="info-box">
+            <view class="name">{{userName || '同学'}}</view>
+            <view class="credit-tag">信用分: {{creditScore}}</view>
+        </view>
+    </view>
+
+    <!-- 预约列表区域 -->
+    <view class="list-container">
+        <view class="section-title">我的预约</view>
+
+        <view wx:if="{{list.length === 0}}" class="empty-tip">
+            暂无预约记录
+        </view>
+
+        <block wx:for="{{list}}" wx:key="id">
+            <view class="order-card">
+                <view class="card-header">
+                    <text class="time">{{item.startTime}}</text>
+                    <!-- 状态标签样式动态化 -->
+                    <text class="status {{item.statusStr == '已预约' ? 'blue' : (item.statusStr == '已签到' ? 'green' : 'gray')}}">{{item.statusStr}}</text>
+                </view>
+                <view class="card-body">
+                    <view class="row">座位ID: {{item.seatId}}</view>
+                    <view class="row">结束时间: {{item.endTime}}</view>
+                </view>
+
+                <!-- 操作按钮：只有“已预约”状态才显示 -->
+                <view class="card-footer" wx:if="{{item.status === 'RESERVED'}}">
+                    <button class="btn mini-btn cancel" size="mini" bindtap="handleCancel" data-id="{{item.id}}">取消</button>
+                    <button class="btn mini-btn checkin" size="mini" bindtap="handleCheckIn" data-id="{{item.id}}">签到</button>
+                </view>
+            </view>
+        </block>
+    </view>
+
+    <!-- 退出按钮 -->
+    <view class="btn-area">
+        <button class="btn-logout" bindtap="handleLogout">退出登录</button>
+    </view>
+</view>
