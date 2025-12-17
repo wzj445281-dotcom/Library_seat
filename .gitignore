@@ -107,3 +107,22 @@ temp/
 !mvnw.cmd
 !.vscode/settings.json.example  # 如果有示例配置
 !.idea/codeStyles/Project.xml   # 如果有团队代码风格配置
+# ==========================
+# Python (新增 - AI服务必须忽略)
+# ==========================
+# 字节码缓存 (非常重要，否则到处都是 __pycache__ 文件夹)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python 虚拟环境 (如果你在本地创建了虚拟环境)
+venv/
+.venv/
+env/
+.env/
+
+# PyCharm / IDE 缓存
+.idea/
+
+# Jupyter Notebook (如果用了的话)
+.ipynb_checkpoints

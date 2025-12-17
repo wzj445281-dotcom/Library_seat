@@ -2,33 +2,83 @@ from flask import Flask, request, jsonify
 import random
 import datetime
 
+# 1. 必须先初始化 app，后续的 @app.route 才能用
 app = Flask(__name__)
 
-# 模拟预测接口
-# POST /predict
+# ----------------------------------------------------
+# 接口 1: 热度预测
+# ----------------------------------------------------
 @app.route('/predict', methods=['POST'])
 def predict():
+    try:
+        data = request.json
+        seat_ids = data.get('seatIds', [])
+
+        # 1. 获取时间特征
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        weekday = tomorrow.weekday() # 0=周一, 6=周日
+        is_weekend = weekday >= 5
+
+        results = []
+        for seat_id in seat_ids:
+            sid = int(seat_id)
+
+            # --- 模拟算法逻辑 ---
+            score = random.uniform(60, 75)
+
+            # 特征1：位置偏好 (假设 ID < 15 的是靠窗/VIP座位)
+            if sid < 15:
+                score += random.uniform(15, 20)
+            elif sid % 2 == 0:
+                score -= random.uniform(2, 5)
+
+            # 特征2：周末效应
+            if is_weekend:
+                score += random.uniform(5, 10)
+
+            final_score = round(max(0, min(99, score)), 1)
+
+            results.append({
+                'seatId': seat_id,
+                'heatScore': final_score,
+                'predictionDate': tomorrow.isoformat()
+            })
+
+        return jsonify({'code': 200, 'message': 'success', 'data': results})
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'code': 500, 'message': str(e)})
+
+# ----------------------------------------------------
+# 接口 2: 风控预测 (之前报错就是因为这个放错了位置)
+# ----------------------------------------------------
+@app.route('/predict/risk', methods=['POST'])
+def predict_risk():
     data = request.json
-    seat_ids = data.get('seatIds', [])
+    credit_score = data.get('creditScore', 100)
 
-    results = []
-    for seat_id in seat_ids:
-        # 模拟算法：随机生成 60-100 的热度分
-        # 这里的逻辑可以替换为真实的 sklearn/pytorch 模型调用
-        score = round(random.uniform(60, 99), 1)
+    # --- 模拟逻辑回归模型 ---
+    risk_prob = 0.0
 
-        # 简单规则：如果是第一排(ID < 10)，分数高一点
-        if int(seat_id) < 10:
-            score = round(random.uniform(90, 100), 1)
+    if credit_score < 80:
+        risk_prob += 0.4
+    if credit_score < 60:
+        risk_prob += 0.3
 
-        results.append({
-            'seatId': seat_id,
-            'heatScore': score,
-            'date': (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
-        })
+    risk_prob = min(0.99, max(0.01, risk_prob))
 
-    return jsonify({'code': 200, 'data': results})
+    result = {
+        'riskProbability': round(risk_prob, 2),
+        'action': 'ALLOW'
+    }
+
+    if risk_prob > 0.7:
+        result['action'] = 'WARN'
+
+    return jsonify({'code': 200, 'data': result})
 
 if __name__ == '__main__':
-    print("AI Prediction Server is running on port 5000...")
-    app.run(port=5000)
+    print("AI Prediction Server is running...")
+    # 必须监听 0.0.0.0 才能在 Docker 外部访问
+    app.run(host='0.0.0.0', port=5000)

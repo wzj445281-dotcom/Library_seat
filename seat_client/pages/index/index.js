@@ -78,7 +78,41 @@ Page({
             console.error(err);
         }
     },
+// 增加 handleSmartRecommend 方法
+    handleSmartRecommend() {
+        const seats = this.data.seats;
+        // 过滤出可用的座位
+        const availableSeats = seats.filter(s => s.status === 1);
 
+        if (availableSeats.length === 0) {
+            return wx.showToast({ title: '暂无可用座位', icon: 'none' });
+        }
+
+        wx.showLoading({ title: 'AI 计算中...' });
+
+        // 模拟 AI 决策延迟
+        setTimeout(() => {
+            // 策略：找热度分最低的（假设这里的逻辑是找最安静的角落）
+            // 也可以改为找 heatScore 最高的（找热门区域）
+            // 这里我们需要后端返回 heatScore，之前的 AppSeatController 改造已经加上了
+
+            // 排序：按热度分从小到大
+            availableSeats.sort((a, b) => (a.heatScore || 0) - (b.heatScore || 0));
+
+            const recommendSeat = availableSeats[0]; // 推荐最安静的
+
+            this.setData({
+                selectedSeat: recommendSeat
+            });
+
+            wx.hideLoading();
+            wx.showModal({
+                title: 'AI 推荐成功',
+                content: `为您推荐了最安静的座位：${recommendSeat.label} (热度分: ${recommendSeat.heatScore || 0})`,
+                showCancel: false
+            });
+        }, 800);
+    },
     // 简单的格式化时间工具 yyyy-MM-dd HH:mm:ss
     formatTime(date) {
         const y = date.getFullYear();

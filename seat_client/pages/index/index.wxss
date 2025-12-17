@@ -142,3 +142,17 @@ page {
     box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.1);
     z-index: 5;
 }
+.ai-recommend-btn {
+    position: fixed;
+    bottom: 180rpx;
+    right: 30rpx;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20rpx 40rpx;
+    border-radius: 50rpx;
+    box-shadow: 0 4rpx 15rpx rgba(118, 75, 162, 0.4);
+    font-weight: bold;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+}
