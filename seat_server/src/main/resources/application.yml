@@ -1,6 +1,21 @@
-
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/zhizuo?useSSL=false&serverTimezone=Asia/Shanghai
     username: root
-    password: "000000"
+    password: "000000" # 请确保密码正确
+
+  # Redis 配置 (Day 1)
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+
+  # RabbitMQ 配置 (Day 2)
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    listener:
+      simple:
+        acknowledge-mode: manual # 开启手动确认模式，确保消息不丢失

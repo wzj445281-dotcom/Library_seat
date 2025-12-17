@@ -16,9 +16,12 @@ public class Reservation {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 
-    // 状态: RESERVED(已预约), CHECKED_IN(已签到), COMPLETED(已结束), CANCELLED(已取消)
+    // 状态: RESERVED(已预约), CHECKED_IN(已签到), COMPLETED(已结束), CANCELLED(已取消), VIOLATION(违约)
     private String status;
 
-    // 新增字段：签到时间
+    // 签到时间
     private LocalDateTime checkInTime;
+
+    // 创建时间 (Day 2 新增，用于记录订单生成时间)
+    private LocalDateTime createTime;
 }

@@ -1,7 +1,7 @@
 package com.example.zhizuo.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.example.zhizuo.entity.Reservation;
+import com.example.zhizuo.core.entity.Reservation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

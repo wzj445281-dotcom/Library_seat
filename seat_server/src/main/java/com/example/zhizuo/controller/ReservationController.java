@@ -1,7 +1,7 @@
 package com.example.zhizuo.controller;
 
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.service.ReservationService;
+import com.example.zhizuo.core.service.ReservationService;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

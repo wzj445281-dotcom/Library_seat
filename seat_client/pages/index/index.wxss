@@ -121,3 +121,24 @@ page {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
 }
+.seat-item {
+    position: relative; /* 增加相对定位 */
+    /* ... existing styles ... */
+}
+
+/* 火苗图标样式 */
+.fire-icon {
+    position: absolute;
+    top: -10rpx;
+    right: -10rpx;
+    font-size: 20rpx;
+    background: #fff;
+    border-radius: 50%;
+    width: 28rpx;
+    height: 28rpx;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.1);
+    z-index: 5;
+}

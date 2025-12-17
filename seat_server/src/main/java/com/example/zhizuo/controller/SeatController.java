@@ -1,8 +1,8 @@
 package com.example.zhizuo.controller;
 
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.entity.Seat;
-import com.example.zhizuo.mapper.SeatMapper; // 使用正确的 Mapper
+import com.example.zhizuo.core.entity.Seat;
+import com.example.zhizuo.core.mapper.SeatMapper; // 使用正确的 Mapper
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

@@ -1,19 +1,36 @@
 package com.example.zhizuo.core.exception;
 
 import com.example.zhizuo.common.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Objects;
+
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ApiResponse<String> handleException(Exception e) {
-        // 打印堆栈信息方便调试
-        e.printStackTrace();
-        // 返回友好的错误提示
+        log.error("系统异常:", e);
         return ApiResponse.error(500, e.getMessage());
     }
 
-    // 你可以继续添加自定义异常处理，比如 CreditTooLowException
+    @ExceptionHandler(RuntimeException.class)
+    public ApiResponse<String> handleRuntimeException(RuntimeException e) {
+        log.warn("业务异常: {}", e.getMessage());
+        return ApiResponse.error(400, e.getMessage());
+    }
+
+    // 处理 @Validated 参数校验失败异常
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ApiResponse<String> handleValidationException(MethodArgumentNotValidException e) {
+        BindingResult result = e.getBindingResult();
+        String message = Objects.requireNonNull(result.getFieldError()).getDefaultMessage();
+        log.warn("参数校验失败: {}", message);
+        return ApiResponse.error(400, message);
+    }
 }

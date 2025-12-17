@@ -1,4 +1,5 @@
 package com.example.zhizuo.core.entity;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -10,4 +11,7 @@ public class Seat {
     private Integer gridX;
     private Integer gridY;
     private Integer status; // 1可用 0维修
+
+    @TableField(exist = false)
+    private Double heatScore;
 }

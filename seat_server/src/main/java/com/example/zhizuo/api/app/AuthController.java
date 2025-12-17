@@ -3,13 +3,17 @@ package com.example.zhizuo.api.app;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.zhizuo.common.ApiResponse;
 import com.example.zhizuo.common.util.JwtUtil;
+import com.example.zhizuo.core.dto.UserLoginDTO;
+import com.example.zhizuo.core.dto.UserRegisterDTO;
 import com.example.zhizuo.core.entity.User;
 import com.example.zhizuo.core.mapper.UserMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -17,6 +21,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "App-认证模块")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -31,30 +36,22 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * 登录接口
-     * POST /api/auth/login
-     */
+    @Operation(summary = "学生登录")
     @PostMapping("/login")
-    public ApiResponse<Map<String, String>> login(@RequestBody Map<String, String> loginRequest) {
-        String studentId = loginRequest.get("studentId");
-        String password = loginRequest.get("password");
-
+    // 使用 @RequestBody 接收 JSON，@Validated 开启校验
+    public ApiResponse<Map<String, String>> login(@RequestBody @Validated UserLoginDTO loginDTO) {
         try {
-            // 1. 调用 Spring Security 进行认证
-            Authentication authenticate = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(studentId, password)
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginDTO.getStudentId(), loginDTO.getPassword())
             );
         } catch (BadCredentialsException e) {
             return ApiResponse.error(401, "学号或密码错误");
         }
 
-        // 2. 认证成功，生成 Token
-        String token = jwtUtil.generateToken(studentId);
+        String token = jwtUtil.generateToken(loginDTO.getStudentId());
 
-        // 3. 查一下用户ID方便前端用
         QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", studentId);
+        query.eq("student_id", loginDTO.getStudentId());
         User user = userMapper.selectOne(query);
 
         Map<String, String> result = new HashMap<>();
@@ -65,22 +62,20 @@ public class AuthController {
         return ApiResponse.success(result);
     }
 
-    /**
-     * 注册接口 (用于测试，生成加密密码)
-     * POST /api/auth/register
-     */
+    @Operation(summary = "学生注册")
     @PostMapping("/register")
-    public ApiResponse<String> register(@RequestBody User user) {
-        // 检查学号是否已存在
+    public ApiResponse<String> register(@RequestBody @Validated UserRegisterDTO registerDTO) {
         QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", user.getStudentId());
+        query.eq("student_id", registerDTO.getStudentId());
         if (userMapper.selectCount(query) > 0) {
             return ApiResponse.error(400, "该学号已注册");
         }
 
-        // 加密密码
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setCreditScore(100); // 初始信用分
+        User user = new User();
+        user.setStudentId(registerDTO.getStudentId());
+        user.setName(registerDTO.getName());
+        user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
+        user.setCreditScore(100);
 
         userMapper.insert(user);
         return ApiResponse.success("注册成功");
