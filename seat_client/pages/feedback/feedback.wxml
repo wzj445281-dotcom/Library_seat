@@ -1,0 +1,17 @@
+<view class="container">
+    <view class="header-tip">
+        请详细描述您遇到的问题，如：座位损坏、插座没电等。
+    </view>
+
+    <view class="form-group">
+    <textarea class="content-input" placeholder="请输入反馈内容..."
+              model:value="{{content}}" maxlength="200"></textarea>
+        <view class="word-count">{{content.length || 0}}/200</view>
+    </view>
+
+    <view class="form-group">
+        <input class="contact-input" placeholder="联系方式 (选填)" model:value="{{contact}}" />
+    </view>
+
+    <button class="btn-submit" bindtap="handleSubmit" loading="{{loading}}">提交反馈</button>
+</view>

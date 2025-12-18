@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智座 - 座位布局设计器</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { margin: 0; background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
+
+        /* 顶部工具栏 */
+        .toolbar {
+            height: 60px; background: #fff; display: flex; align-items: center; padding: 0 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 100; position: relative;
+        }
+        .title { font-size: 18px; font-weight: bold; margin-right: 30px; color: #333; }
+
+        /* 画布区域 */
+        .canvas-container {
+            position: relative;
+            width: 100vw;
+            height: calc(100vh - 60px);
+            overflow: auto;
+            background-color: #fafafa;
+            /* 网格背景，模拟设计图纸 */
+            background-image: linear-gradient(#e8e8e8 1px, transparent 1px), linear-gradient(90deg, #e8e8e8 1px, transparent 1px);
+            background-size: 40px 40px; /* 对应 grid 大小 */
+        }
+
+        /* 座位元素 */
+        .seat {
+            position: absolute;
+            width: 36px; height: 36px; /* 略小于格子大小，留出间隙 */
+            background: #fff;
+            border: 2px solid #1890ff;
+            border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 12px; color: #1890ff; font-weight: bold;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: box-shadow 0.2s, transform 0.1s;
+            z-index: 10;
+        }
+        .seat:active { cursor: grabbing; transform: scale(1.05); z-index: 20; }
+        .seat:hover { box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4); }
+
+        /* 维修状态样式 */
+        .seat.maintenance {
+            border-color: #ff4d4f;
+            color: #ff4d4f;
+            background: #fff1f0;
+            /* 加上斜线纹理表示不可用 */
+            background-image: repeating-linear-gradient(45deg, #fff1f0, #fff1f0 5px, #ffa39e 5px, #ffa39e 6px);
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 6px 16px; background: #1890ff; color: white; border: none;
+            border-radius: 4px; cursor: pointer; margin-right: 12px; font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #40a9ff; }
+        .btn:active { background: #096dd9; }
+        .btn.danger { background: #ff4d4f; }
+        .btn.danger:hover { background: #ff7875; }
+
+        .tips { margin-left: auto; color: #888; font-size: 13px; }
+        kbd { background: #eee; border-radius: 3px; padding: 2px 4px; border: 1px solid #ccc; font-family: monospace; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="toolbar">
+        <div class="title">📐 智座布局设计器</div>
+        <button class="btn" @click="addSeat">➕ 新增座位</button>
+        <button class="btn" @click="refresh">🔄 刷新数据</button>
+
+        <div class="tips">
+            操作指南: <kbd>左键拖拽</kbd> 移动位置 | <kbd>点击</kbd> 切换维修状态 | <kbd>右键</kbd> 删除座位
+            (当前座位数: {{ seats.length }})
+        </div>
+    </div>
+
+    <!-- 画布区域 -->
+    <div class="canvas-container"
+         @mousemove="onDrag"
+         @mouseup="stopDrag"
+         @mouseleave="stopDrag">
+
+        <div
+                v-for="seat in seats" :key="seat.id"
+                class="seat"
+                :class="{ maintenance: seat.status === 0 }"
+                :style="{ left: (seat.gridX * 40 + 2) + 'px', top: (seat.gridY * 40 + 2) + 'px' }"
+                @mousedown="startDrag($event, seat)"
+                @click.stop="toggleStatus(seat)"
+                @contextmenu.prevent="deleteSeat(seat)"
+                :title="'ID: ' + seat.id + '\n状态: ' + (seat.status===1?'可用':'维修')"
+        >
+            {{ seat.label }}
+        </div>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            seats: [],
+            // 拖拽相关状态
+            draggingSeat: null,
+            dragOffset: { x: 0, y: 0 },
+            isMoved: false // 用于区分点击还是拖拽
+        },
+        mounted() {
+            this.refresh();
+        },
+        methods: {
+            // 1. 获取所有座位
+            async refresh() {
+                try {
+                    const res = await axios.get('/api/admin/seat/list');
+                    if (res.data.code === 200) {
+                        this.seats = res.data.data;
+                    }
+                } catch (err) {
+                    alert("加载数据失败，请检查后端服务");
+                }
+            },
+
+            // 2. 开始拖拽
+            startDrag(e, seat) {
+                this.draggingSeat = seat;
+                this.isMoved = false;
+
+                // 计算鼠标在元素内的偏移量
+                const rect = e.target.getBoundingClientRect();
+                this.dragOffset.x = e.clientX - rect.left;
+                this.dragOffset.y = e.clientY - rect.top;
+            },
+
+            // 3. 拖拽中 (实时更新视图)
+            onDrag(e) {
+                if (!this.draggingSeat) return;
+
+                this.isMoved = true;
+
+                // 计算画布内的相对坐标 (减去头部高度 60)
+                const rawX = e.clientX - this.dragOffset.x;
+                const rawY = e.clientY - 60 - this.dragOffset.y;
+
+                // 网格吸附算法 (Snap to Grid): 每 40px 一个格
+                const gridSize = 40;
+                let gridX = Math.round(rawX / gridSize);
+                let gridY = Math.round(rawY / gridSize);
+
+                // 边界限制
+                if (gridX < 0) gridX = 0;
+                if (gridY < 0) gridY = 0;
+
+                // 更新本地数据实现流畅动画
+                this.draggingSeat.gridX = gridX;
+                this.draggingSeat.gridY = gridY;
+            },
+
+            // 4. 结束拖拽 (保存数据)
+            async stopDrag() {
+                if (!this.draggingSeat) return;
+
+                const seat = this.draggingSeat;
+                this.draggingSeat = null;
+
+                // 只有真的移动了才发送请求
+                if (this.isMoved) {
+                    try {
+                        await axios.post('/api/admin/seat/update', {
+                            id: seat.id,
+                            gridX: seat.gridX,
+                            gridY: seat.gridY
+                        });
+                        // 稍微闪烁一下边框表示保存成功？这里省略，直接用静默保存
+                    } catch (err) {
+                        alert('位置保存失败，即将还原');
+                        this.refresh();
+                    }
+                }
+                this.isMoved = false;
+            },
+
+            // 5. 切换状态 (可用 <-> 维修)
+            async toggleStatus(seat) {
+                // 如果刚刚发生了拖拽，则不触发点击事件
+                if (this.isMoved) return;
+
+                const newStatus = seat.status === 1 ? 0 : 1;
+                try {
+                    await axios.post('/api/admin/seat/update', {
+                        id: seat.id,
+                        status: newStatus
+                    });
+                    seat.status = newStatus;
+                } catch (err) {
+                    alert('状态更新失败');
+                }
+            },
+
+            // 6. 新增座位
+            async addSeat() {
+                const label = prompt("请输入座位号 (例如 A-101):", "New");
+                if (!label) return;
+
+                try {
+                    // 默认放在画布左上角稍微偏移一点的位置
+                    const res = await axios.post('/api/admin/seat/add', {
+                        label: label,
+                        gridX: 1,
+                        gridY: 1,
+                        status: 1
+                    });
+                    if (res.data.code === 200) {
+                        this.seats.push(res.data.data);
+                        this.$nextTick(() => {
+                            alert("座位已添加在左上角 (1,1) 位置，请拖动调整");
+                        });
+                    }
+                } catch (err) {
+                    alert('添加失败: ' + (err.response?.data?.message || err.message));
+                }
+            },
+
+            // 7. 删除座位
+            async deleteSeat(seat) {
+                if (!confirm(`⚠️ 确定要永久删除座位 [${seat.label}] 吗？`)) return;
+
+                try {
+                    await axios.delete(`/api/admin/seat/${seat.id}`);
+                    // 从数组中移除
+                    this.seats = this.seats.filter(s => s.id !== seat.id);
+                } catch (err) {
+                    alert('删除失败');
+                }
+            }
+        }
+    });
+</script>
+</body>
+</html>

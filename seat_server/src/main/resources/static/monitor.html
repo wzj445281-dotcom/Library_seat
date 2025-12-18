@@ -79,6 +79,17 @@
             </div>
         </div>
 
+        <div class="header">
+            <div class="title">SMART SEAT 智座 · 监控大脑</div>
+            <!-- 新增：导出按钮 -->
+            <div style="margin-left: auto; margin-right: 20px;">
+                <button onclick="window.location.href='/api/admin/stats/export'"
+                        style="background:#00c6ff; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">
+                    📥 导出报表
+                </button>
+            </div>
+            <div class="time">{{ currentTime }}</div>
+        </div>
         <div class="right-col card">
             <h3 class="card-title">AI 热度预测分布 (Tomorrow)</h3>
             <div id="heatMapChart" class="chart-box"></div>

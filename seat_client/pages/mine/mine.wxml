@@ -6,7 +6,23 @@
         </view>
         <view class="info-box">
             <view class="name">{{userName || '同学'}}</view>
-            <view class="credit-tag">信用分: {{creditScore}}</view>
+            <!-- 点击信用分也能跳转 -->
+            <view class="credit-tag" bindtap="goToCredit">信用分: {{creditScore}} ></view>
+        </view>
+    </view>
+
+    <!-- 新增：功能菜单区域 -->
+    <view class="menu-list">
+        <view class="menu-item" bindtap="goToCredit">
+            <text class="menu-icon">📜</text>
+            <text class="menu-text">信用记录</text>
+            <text class="arrow">></text>
+        </view>
+        <!-- 新增反馈入口 -->
+        <view class="menu-item" bindtap="goToFeedback">
+            <text class="menu-icon">🔧</text>
+            <text class="menu-text">报修反馈</text>
+            <text class="arrow">></text>
         </view>
     </view>
 
@@ -22,7 +38,6 @@
             <view class="order-card">
                 <view class="card-header">
                     <text class="time">{{item.startTime}}</text>
-                    <!-- 状态标签样式动态化 -->
                     <text class="status {{item.statusStr == '已预约' ? 'blue' : (item.statusStr == '已签到' ? 'green' : 'gray')}}">{{item.statusStr}}</text>
                 </view>
                 <view class="card-body">
@@ -30,10 +45,13 @@
                     <view class="row">结束时间: {{item.endTime}}</view>
                 </view>
 
-                <!-- 操作按钮：只有“已预约”状态才显示 -->
                 <view class="card-footer" wx:if="{{item.status === 'RESERVED'}}">
                     <button class="btn mini-btn cancel" size="mini" bindtap="handleCancel" data-id="{{item.id}}">取消</button>
                     <button class="btn mini-btn checkin" size="mini" bindtap="handleCheckIn" data-id="{{item.id}}">签到</button>
+                </view>
+                <!-- 新增：已签到状态下显示离座按钮 -->
+                <view class="card-footer" wx:if="{{item.status === 'CHECKED_IN'}}">
+                    <button class="btn mini-btn leave" size="mini" bindtap="handleLeave" data-id="{{item.id}}">结束使用</button>
                 </view>
             </view>
         </block>

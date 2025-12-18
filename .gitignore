@@ -38,6 +38,20 @@ _site/
 dependency-reduced-pom.xml
 
 # ==========================
+# Python / AI 服务 (关键新增)
+# ==========================
+__pycache__/
+*.py[cod]
+*$py.class
+# 虚拟环境
+venv/
+.venv/
+env/
+.env/
+# Jupyter checkpoints
+.ipynb_checkpoints
+
+# ==========================
 # Vue / 前端通用
 # ==========================
 **/node_modules/
@@ -54,9 +68,6 @@ dependency-reduced-pom.xml
 # 单元测试覆盖率报告
 coverage/
 
-# 编辑器目录 (如果在前端项目里有)
-.editorconfig
-
 # ==========================
 # 微信小程序特定
 # ==========================
@@ -64,14 +75,16 @@ project.private.config.json
 cloudfunctions/*/localconfig.json
 **/miniprogram_npm/
 *.upload
+**/unpackage/
 
 # ==========================
 # Docker & 运行时数据 (CRITICAL)
 # ==========================
-# 数据库持久化数据
+# 数据库持久化数据 (防止本地测试数据上传)
 mysql_data/
 mongo_data/
 redis_data/
+rabbitmq_data/
 
 # 用户上传的文件
 uploads/
@@ -81,7 +94,7 @@ uploads/
 tmp/
 temp/
 
-# 打包文件（除了Maven wrapper的jar）
+# 打包文件
 *.jar
 *.war
 *.nar
@@ -91,38 +104,8 @@ temp/
 *.rar
 
 # ==========================
-# IDE 配置（选择性提交）
-# ==========================
-# 以下文件通常不提交，但有些人选择提交
-# .vscode/settings.json
-# .vscode/extensions.json
-# .idea/codeStyles/
-# .idea/inspectionProfiles/
-
-# ==========================
 # 确保这些重要文件不被忽略
 # ==========================
 !.mvn/wrapper/maven-wrapper.properties
 !mvnw
 !mvnw.cmd
-!.vscode/settings.json.example  # 如果有示例配置
-!.idea/codeStyles/Project.xml   # 如果有团队代码风格配置
-# ==========================
-# Python (新增 - AI服务必须忽略)
-# ==========================
-# 字节码缓存 (非常重要，否则到处都是 __pycache__ 文件夹)
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Python 虚拟环境 (如果你在本地创建了虚拟环境)
-venv/
-.venv/
-env/
-.env/
-
-# PyCharm / IDE 缓存
-.idea/
-
-# Jupyter Notebook (如果用了的话)
-.ipynb_checkpoints

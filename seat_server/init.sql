@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `reservation` (
   KEY `idx_seat_time` (`seat_id`, `start_time`, `end_time`)
 ) ENGINE=InnoDB COMMENT='预约记录';
 
--- 5. (新增) 座位热度统计表 - 之前缺少的表
+-- 5. 座位热度统计表
 CREATE TABLE IF NOT EXISTS `seat_heat_stats` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `seat_id` bigint(20) NOT NULL COMMENT '座位ID',
@@ -48,7 +48,29 @@ CREATE TABLE IF NOT EXISTS `seat_heat_stats` (
   UNIQUE KEY `uk_seat_date` (`seat_id`, `prediction_date`)
 ) ENGINE=InnoDB COMMENT='座位热度AI预测表';
 
--- 6. 插入测试数据
-INSERT INTO users (student_id, name, credit_score) VALUES ('2021001', '张三', 100), ('2021002', '李四', 50);
--- 插入一些座位数据以便测试
-INSERT INTO seats (label, grid_x, grid_y) VALUES ('A1', 1, 1), ('A2', 1, 2), ('A3', 1, 3), ('B1', 2, 1), ('B2', 2, 2);
+-- 6. (新增) 信用分变动日志表 - 答辩关键加分项
+CREATE TABLE IF NOT EXISTS `credit_logs` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL,
+  `type` varchar(10) NOT NULL COMMENT 'ADD/REDUCE',
+  `score` int(11) NOT NULL COMMENT '变动分值',
+  `reason` varchar(100) NOT NULL COMMENT '变动原因',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB COMMENT='信用分变动日志';
+
+-- 7. (新增) 意见反馈/报修表
+CREATE TABLE IF NOT EXISTS `feedback` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL,
+  `content` varchar(500) NOT NULL COMMENT '反馈内容',
+  `contact` varchar(50) DEFAULT NULL COMMENT '联系方式',
+  `status` int(2) DEFAULT '0' COMMENT '0未处理 1已处理',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB COMMENT='反馈报修表';
+
+-- 插入测试数据
+INSERT IGNORE INTO users (student_id, name, credit_score) VALUES ('2021001', '张三', 100), ('2021002', '李四', 50);
+INSERT IGNORE INTO seats (label, grid_x, grid_y) VALUES ('A1', 1, 1), ('A2', 1, 2), ('A3', 1, 3), ('B1', 2, 1), ('B2', 2, 2);

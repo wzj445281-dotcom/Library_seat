@@ -36,13 +36,11 @@ public class AppReservationController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String studentId = (String) auth.getPrincipal();
 
-        // 2. 补全 UserId (如果前端没传，或者为了安全起见，从 Token 反查)
         QueryWrapper<User> query = new QueryWrapper<>();
         query.eq("student_id", studentId);
         User user = userMapper.selectOne(query);
         if (user == null) return ApiResponse.error(401, "用户不存在");
 
-        // 3. 调用 Service
         service.reserve(user.getId(), requestDTO.getSeatId(), requestDTO.getStartTime(), requestDTO.getEndTime());
         return ApiResponse.success("预约成功");
     }
@@ -72,6 +70,18 @@ public class AppReservationController {
         try {
             service.cancel(id);
             return ApiResponse.success("取消成功");
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
+    }
+
+    // --- 新增：结束使用/离座 ---
+    @Operation(summary = "结束使用(离座)")
+    @PostMapping("/leave/{id}")
+    public ApiResponse<String> leave(@PathVariable Long id) {
+        try {
+            service.leave(id);
+            return ApiResponse.success("离座成功，欢迎下次再来");
         } catch (RuntimeException e) {
             return ApiResponse.error(400, e.getMessage());
         }
