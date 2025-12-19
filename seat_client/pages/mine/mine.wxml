@@ -1,63 +1,53 @@
 <view class="container">
-    <!-- 头部卡片 -->
     <view class="header-card">
         <view class="avatar-box">
-            <image class="avatar" src="../../assets/images/user-active.png" mode="aspectFit"></image>
+            <image class="avatar" src="../../assets/images/user-active.png"></image>
         </view>
         <view class="info-box">
-            <view class="name">{{userName || '同学'}}</view>
-            <!-- 点击信用分也能跳转 -->
-            <view class="credit-tag" bindtap="goToCredit">信用分: {{creditScore}} ></view>
+            <view class="name">{{userName || '未登录'}}</view>
+            <view class="credit-row" bindtap="goToCredit">
+                <text class="credit-val">信用分: {{creditScore}}</text>
+                <!-- 动态等级标签 -->
+                <text class="level-tag {{creditClass}}">{{creditLevel}}</text>
+            </view>
+        </view>
+        <!-- AI 客服入口图标 -->
+        <view class="ai-entry" bindtap="goToAiChat">
+            <text>🤖 客服</text>
         </view>
     </view>
 
-    <!-- 新增：功能菜单区域 -->
     <view class="menu-list">
         <view class="menu-item" bindtap="goToCredit">
-            <text class="menu-icon">📜</text>
-            <text class="menu-text">信用记录</text>
-            <text class="arrow">></text>
+            <text class="icon">📜</text><text>信用记录</text><text class="arrow">></text>
         </view>
-        <!-- 新增反馈入口 -->
         <view class="menu-item" bindtap="goToFeedback">
-            <text class="menu-icon">🔧</text>
-            <text class="menu-text">报修反馈</text>
-            <text class="arrow">></text>
+            <text class="icon">🔧</text><text>报修反馈</text><text class="arrow">></text>
+        </view>
+        <view class="menu-item" bindtap="goToAiChat">
+            <text class="icon">💬</text><text>智能助手</text><text class="arrow">></text>
         </view>
     </view>
 
-    <!-- 预约列表区域 -->
     <view class="list-container">
-        <view class="section-title">我的预约</view>
-
-        <view wx:if="{{list.length === 0}}" class="empty-tip">
-            暂无预约记录
-        </view>
-
+        <view class="section-title">当前预约</view>
         <block wx:for="{{list}}" wx:key="id">
             <view class="order-card">
                 <view class="card-header">
-                    <text class="time">{{item.startTime}}</text>
-                    <text class="status {{item.statusStr == '已预约' ? 'blue' : (item.statusStr == '已签到' ? 'green' : 'gray')}}">{{item.statusStr}}</text>
-                </view>
-                <view class="card-body">
-                    <view class="row">座位ID: {{item.seatId}}</view>
-                    <view class="row">结束时间: {{item.endTime}}</view>
+                    <text class="time">{{item.startTime}} 起</text>
+                    <text class="status">{{item.statusStr}}</text>
                 </view>
 
-                <view class="card-footer" wx:if="{{item.status === 'RESERVED'}}">
-                    <button class="btn mini-btn cancel" size="mini" bindtap="handleCancel" data-id="{{item.id}}">取消</button>
-                    <button class="btn mini-btn checkin" size="mini" bindtap="handleCheckIn" data-id="{{item.id}}">签到</button>
-                </view>
-                <!-- 新增：已签到状态下显示离座按钮 -->
+                <!-- 只有在使用中(CHECKED_IN)才显示结束按钮 -->
                 <view class="card-footer" wx:if="{{item.status === 'CHECKED_IN'}}">
-                    <button class="btn mini-btn leave" size="mini" bindtap="handleLeave" data-id="{{item.id}}">结束使用</button>
+                    <button class="btn-leave" bindtap="handleLeave" data-id="{{item.id}}">
+                        结束使用 (释放座位)
+                    </button>
                 </view>
             </view>
         </block>
     </view>
 
-    <!-- 退出按钮 -->
     <view class="btn-area">
         <button class="btn-logout" bindtap="handleLogout">退出登录</button>
     </view>

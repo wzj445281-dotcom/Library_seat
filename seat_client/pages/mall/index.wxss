@@ -1,0 +1,75 @@
+page { background-color: #f0f2f5; height: 100%; }
+
+.header {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); /* 更清新的渐变蓝 */
+    padding: 40rpx 40rpx 80rpx; /* 底部留白给 stats-row */
+    color: white;
+    position: relative;
+    border-bottom-left-radius: 40rpx;
+    border-bottom-right-radius: 40rpx;
+    box-shadow: 0 4rpx 20rpx rgba(79, 172, 254, 0.3);
+}
+
+.balance-card { text-align: center; margin-bottom: 30rpx; }
+.balance-card .label { font-size: 28rpx; opacity: 0.9; }
+.balance-card .value { font-size: 80rpx; font-weight: bold; margin: 10rpx 0; font-family: 'DIN', sans-serif; }
+.balance-card .sub-label { font-size: 24rpx; background: rgba(255,255,255,0.2); padding: 4rpx 16rpx; border-radius: 20rpx; display: inline-block; }
+
+.stats-row {
+    display: flex; justify-content: space-around;
+    background: rgba(255,255,255,0.1);
+    border-radius: 16rpx; padding: 20rpx 0;
+    backdrop-filter: blur(5px);
+}
+.stat-item { display: flex; flex-direction: column; align-items: center; }
+.stat-item .num { font-size: 32rpx; font-weight: bold; }
+.stat-item .txt { font-size: 22rpx; opacity: 0.8; margin-top: 4rpx; }
+
+.tabs {
+    display: flex; justify-content: center; margin-top: -30rpx; /* 上移重叠 */
+    margin-bottom: 20rpx; padding: 0 30rpx;
+}
+.tab {
+    background: white; padding: 16rpx 50rpx;
+    color: #666; font-size: 28rpx; font-weight: bold;
+    box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.05);
+    margin: 0 15rpx; border-radius: 40rpx;
+    transition: all 0.3s;
+}
+.tab.active {
+    color: #4facfe; transform: scale(1.05);
+    box-shadow: 0 6rpx 16rpx rgba(79, 172, 254, 0.2);
+}
+
+.product-list { height: calc(100vh - 380rpx); }
+.list-container { padding: 0 30rpx 40rpx; }
+
+/* 列表式卡片设计，比网格更显正式 */
+.product-card {
+    background: white; border-radius: 20rpx; padding: 30rpx;
+    margin-bottom: 24rpx; display: flex; align-items: center;
+    box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.03);
+}
+
+.img-box {
+    width: 100rpx; height: 100rpx; background: #f7f9fc; border-radius: 16rpx;
+    display: flex; justify-content: center; align-items: center; margin-right: 24rpx;
+    flex-shrink: 0;
+}
+.placeholder-icon { font-size: 48rpx; }
+.img-box image { width: 100%; height: 100%; border-radius: 16rpx; }
+
+.info-box { flex: 1; margin-right: 20rpx; }
+.title { font-size: 30rpx; font-weight: bold; color: #333; margin-bottom: 8rpx; }
+.desc { font-size: 24rpx; color: #999; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.stock-tag { font-size: 20rpx; color: #ff9800; border: 1px solid #ff9800; display: inline-block; padding: 2rpx 8rpx; border-radius: 8rpx; margin-top: 8rpx; }
+
+.action-box { display: flex; flex-direction: column; align-items: flex-end; }
+.point-text { font-size: 28rpx; color: #4facfe; font-weight: bold; margin-bottom: 12rpx; }
+.btn-exchange {
+    background: #4facfe; color: white; font-size: 24rpx; padding: 0 30rpx;
+    height: 56rpx; line-height: 56rpx; border-radius: 28rpx; border: none; margin: 0;
+}
+.btn-exchange.disabled { background: #e0e0e0; color: #999; }
+
+.empty-tip { text-align: center; color: #ccc; margin-top: 100rpx; font-size: 26rpx; }

@@ -4,7 +4,8 @@
     "pages/index/index",
     "pages/mine/mine",
     "pages/credit/credit",
-    "pages/feedback/feedback"
+    "pages/feedback/feedback",
+    "pages/ai_chat/ai_chat"
   ],
   "window": {
     "backgroundTextStyle": "light",

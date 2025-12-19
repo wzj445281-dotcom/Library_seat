@@ -1,17 +1,33 @@
+-- ==========================================
+-- 0. 初始化权限 (核心修复)
+-- 允许 root 用户从任何 IP 远程连接 (适配 Docker 网络)
+-- ==========================================
+USE mysql;
+CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '000000';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+
+-- ==========================================
 -- 1. 创建数据库
+-- ==========================================
 CREATE DATABASE IF NOT EXISTS zhizuo DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_general_ci;
 USE zhizuo;
 
--- 2. 创建用户表
+-- 修改用户表结构
 CREATE TABLE IF NOT EXISTS `users` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `student_id` varchar(20) NOT NULL COMMENT '学号',
   `name` varchar(20) NOT NULL COMMENT '姓名',
   `password` varchar(100) DEFAULT '123456' COMMENT '密码',
   `credit_score` int(11) DEFAULT '100' COMMENT '信用分',
+  `role` varchar(10) DEFAULT 'STUDENT' COMMENT '角色: STUDENT/ADMIN', -- 新增字段
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_student_id` (`student_id`)
 ) ENGINE=InnoDB COMMENT='用户表';
+
+-- 插入一个初始管理员账号
+INSERT IGNORE INTO users (student_id, name, password, credit_score, role)
+VALUES ('admin01', '系统管理员', '$2a$10$7R..', 100, 'ADMIN'); -- 密码需为BCrypt加密值
 
 -- 3. 创建座位表
 CREATE TABLE IF NOT EXISTS `seats` (
@@ -48,7 +64,7 @@ CREATE TABLE IF NOT EXISTS `seat_heat_stats` (
   UNIQUE KEY `uk_seat_date` (`seat_id`, `prediction_date`)
 ) ENGINE=InnoDB COMMENT='座位热度AI预测表';
 
--- 6. (新增) 信用分变动日志表 - 答辩关键加分项
+-- 6. 信用分变动日志表
 CREATE TABLE IF NOT EXISTS `credit_logs` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `user_id` bigint(20) NOT NULL,
@@ -60,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `credit_logs` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB COMMENT='信用分变动日志';
 
--- 7. (新增) 意见反馈/报修表
+-- 7. 意见反馈/报修表
 CREATE TABLE IF NOT EXISTS `feedback` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `user_id` bigint(20) NOT NULL,

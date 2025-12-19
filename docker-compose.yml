@@ -6,30 +6,33 @@ services:
     image: mysql:8.0
     container_name: zhizuo-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: "000000"  # 对应 Java 里的密码
+      MYSQL_ROOT_PASSWORD: "000000"
       MYSQL_DATABASE: zhizuo
+      TZ: Asia/Shanghai
     ports:
       - "3306:3306"
     volumes:
-      # 自动初始化 SQL 脚本
       - ./seat_server/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
 
-  # 2. Redis 缓存
+  # 2. Redis 缓存 (开启 AOF 持久化)
   redis:
     image: redis:alpine
     container_name: zhizuo-redis
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
 
-  # 3. RabbitMQ 消息队列
+  # 3. RabbitMQ 消息队列 (暴露管理端口)
   rabbitmq:
     image: rabbitmq:management
     container_name: zhizuo-rabbitmq
     ports:
-      - "5672:5672"   # Java 连接端口
-      - "15672:15672" # Web 管理端口
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Web UI
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -40,24 +43,34 @@ services:
     container_name: zhizuo-ai
     ports:
       - "5000:5000"
+    restart: always
 
-  # 5. Java 后端核心 (最后启动)
+  # 5. Java 后端核心
   seat-server:
     build: ./seat_server
     container_name: zhizuo-backend
     ports:
       - "8080:8080"
     depends_on:
-      - mysql
-      - redis
-      - rabbitmq
-      - ai-service
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     environment:
-      # 覆盖 application.yml 中的 localhost 配置
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/zhizuo?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_PASSWORD: "root"
+      SPRING_DATASOURCE_PASSWORD: "000000"
       SPRING_REDIS_HOST: redis
       SPRING_RABBITMQ_HOST: rabbitmq
+      # 开启 Gemini API Key 配置 (可选)
+      AI_GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+    # JVM 内存限制
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 volumes:
   mysql_data:
+  redis_data:

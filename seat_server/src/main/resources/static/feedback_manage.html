@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智座 - 用户反馈管理中心</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { margin: 0; background: #f0f2f5; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+        #app { padding: 20px; }
+        .header { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .title { font-size: 20px; font-weight: bold; color: #303133; }
+        .stat-card { background: #fff; border-radius: 8px; padding: 20px; flex: 1; text-align: center; margin-right: 20px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05); }
+        .stat-card:last-child { margin-right: 0; }
+        .stat-num { font-size: 28px; font-weight: bold; color: #409EFF; margin-top: 10px; }
+        .stat-label { color: #909399; font-size: 14px; }
+        .status-tag { font-weight: bold; }
+        .content-box { background: #fff; padding: 20px; border-radius: 8px; min-height: 500px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- 顶部统计 -->
+    <div style="display: flex; margin-bottom: 20px;">
+        <div class="stat-card">
+            <div class="stat-label">总反馈数</div>
+            <div class="stat-num">{{ stats.total }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">待处理</div>
+            <div class="stat-num" style="color: #F56C6C">{{ stats.pending }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">已解决</div>
+            <div class="stat-num" style="color: #67C23A">{{ stats.resolved }}</div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="content-box">
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between;">
+            <span class="title">📋 反馈列表</span>
+            <el-button type="primary" icon="el-icon-refresh" circle @click="fetchList"></el-button>
+        </div>
+
+        <el-table :data="list" style="width: 100%" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80"></el-table-column>
+            <el-table-column prop="content" label="反馈内容" min-width="300"></el-table-column>
+            <el-table-column prop="contact" label="联系方式" width="150">
+                <template slot-scope="scope">{{ scope.row.contact || '未填写' }}</template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="提交时间" width="180">
+                <template slot-scope="scope">{{ formatDate(scope.row.createTime) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+                <template slot-scope="scope">
+                    <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" class="status-tag">
+                        {{ scope.row.status === 1 ? '已处理' : '待处理' }}
+                    </el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" width="150" align="center">
+                <template slot-scope="scope">
+                    <el-button
+                            v-if="scope.row.status === 0"
+                            size="mini"
+                            type="primary"
+                            @click="openResolveDialog(scope.row)">
+                        处理
+                    </el-button>
+                    <span v-else style="color: #909399; font-size: 12px;">无需操作</span>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <div style="margin-top: 20px; text-align: right;">
+            <el-pagination
+                    background
+                    layout="prev, pager, next"
+                    :total="total"
+                    :page-size="pageSize"
+                    @current-change="handlePageChange">
+            </el-pagination>
+        </div>
+    </div>
+
+    <!-- 处理反馈对话框 -->
+    <el-dialog title="处理反馈" :visible.sync="dialogVisible" width="30%">
+        <p><strong>用户反馈：</strong>{{ currentItem.content }}</p>
+        <el-input
+                type="textarea"
+                :rows="3"
+                placeholder="请输入处理意见或回复内容 (选填)"
+                v-model="resolveNote">
+        </el-input>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="confirmResolve">确认已处理</el-button>
+        </span>
+    </el-dialog>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            loading: false,
+            list: [],
+            total: 0,
+            currentPage: 1,
+            pageSize: 10,
+            stats: { total: 0, pending: 0, resolved: 0 },
+            dialogVisible: false,
+            currentItem: {},
+            resolveNote: ''
+        },
+        mounted() {
+            this.fetchList();
+        },
+        methods: {
+            async fetchList() {
+                this.loading = true;
+                try {
+                    // 1. 获取列表
+                    const res = await axios.get(`/api/admin/feedback/list?page=${this.currentPage}&size=${this.pageSize}`);
+                    if (res.data.code === 200) {
+                        this.list = res.data.data.records;
+                        this.total = res.data.data.total;
+                        this.calculateStats(); // 简单前端统计，实际应由后端返回
+                    }
+                } catch (err) {
+                    this.$message.error('数据加载失败');
+                } finally {
+                    this.loading = false;
+                }
+            },
+            // 模拟统计数据 (真实项目中建议增加单独的统计接口)
+            calculateStats() {
+                // 这里只演示逻辑，实际上 stats 应该从后端 dashboard 接口获取
+                // 这里做一个假的自增效果
+                this.stats.total = this.total;
+                this.stats.pending = this.list.filter(i => i.status === 0).length;
+                this.stats.resolved = this.total - this.stats.pending;
+            },
+            handlePageChange(val) {
+                this.currentPage = val;
+                this.fetchList();
+            },
+            openResolveDialog(item) {
+                this.currentItem = item;
+                this.resolveNote = '';
+                this.dialogVisible = true;
+            },
+            async confirmResolve() {
+                try {
+                    // 调用处理接口
+                    const res = await axios.post(`/api/admin/feedback/resolve/${this.currentItem.id}`, {
+                        note: this.resolveNote
+                    });
+                    if (res.data.code === 200) {
+                        this.$message.success('处理成功');
+                        this.dialogVisible = false;
+                        this.fetchList(); // 刷新列表
+                    } else {
+                        this.$message.error(res.data.message);
+                    }
+                } catch (err) {
+                    this.$message.error('操作失败');
+                }
+            },
+            formatDate(str) {
+                if(!str) return '';
+                return str.replace('T', ' ').substring(0, 16);
+            }
+        }
+    });
+</script>
+</body>
+</html>
