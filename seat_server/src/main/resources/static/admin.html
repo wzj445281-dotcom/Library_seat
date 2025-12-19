@@ -1,245 +1,217 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智座 - 座位布局设计器</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <title>智座 - 运营管理后台</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- 新增: 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
-        body { margin: 0; background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
+        html, body { margin: 0; padding: 0; height: 100%; }
+        #app { height: 100%; }
+        .el-header { background-color: #001529; color: #fff; line-height: 60px; display: flex; justify-content: space-between; }
+        .el-aside { background-color: #001529; color: #333; height: 100%; }
+        .el-main { background-color: #f0f2f5; padding: 20px; }
+        .logo { font-size: 20px; font-weight: bold; color: #1890ff; margin-right: 20px; }
+        .stat-card { text-align: center; padding: 20px 0; }
+        .stat-num { font-size: 24px; font-weight: bold; color: #1890ff; margin-top: 10px; }
 
-        /* 顶部工具栏 */
-        .toolbar {
-            height: 60px; background: #fff; display: flex; align-items: center; padding: 0 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 100; position: relative;
-        }
-        .title { font-size: 18px; font-weight: bold; margin-right: 30px; color: #333; }
-
-        /* 画布区域 */
-        .canvas-container {
-            position: relative;
-            width: 100vw;
-            height: calc(100vh - 60px);
-            overflow: auto;
-            background-color: #fafafa;
-            /* 网格背景，模拟设计图纸 */
-            background-image: linear-gradient(#e8e8e8 1px, transparent 1px), linear-gradient(90deg, #e8e8e8 1px, transparent 1px);
-            background-size: 40px 40px; /* 对应 grid 大小 */
-        }
-
-        /* 座位元素 */
-        .seat {
-            position: absolute;
-            width: 36px; height: 36px; /* 略小于格子大小，留出间隙 */
-            background: #fff;
-            border: 2px solid #1890ff;
-            border-radius: 8px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 12px; color: #1890ff; font-weight: bold;
-            cursor: grab;
-            user-select: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: box-shadow 0.2s, transform 0.1s;
-            z-index: 10;
-        }
-        .seat:active { cursor: grabbing; transform: scale(1.05); z-index: 20; }
-        .seat:hover { box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4); }
-
-        /* 维修状态样式 */
-        .seat.maintenance {
-            border-color: #ff4d4f;
-            color: #ff4d4f;
-            background: #fff1f0;
-            /* 加上斜线纹理表示不可用 */
-            background-image: repeating-linear-gradient(45deg, #fff1f0, #fff1f0 5px, #ffa39e 5px, #ffa39e 6px);
-        }
-
-        /* 按钮样式 */
-        .btn {
-            padding: 6px 16px; background: #1890ff; color: white; border: none;
-            border-radius: 4px; cursor: pointer; margin-right: 12px; font-size: 14px;
-            transition: all 0.2s;
-        }
-        .btn:hover { background: #40a9ff; }
-        .btn:active { background: #096dd9; }
-        .btn.danger { background: #ff4d4f; }
-        .btn.danger:hover { background: #ff7875; }
-
-        .tips { margin-left: auto; color: #888; font-size: 13px; }
-        kbd { background: #eee; border-radius: 3px; padding: 2px 4px; border: 1px solid #ccc; font-family: monospace; }
+        /* 菜单样式微调 */
+        .el-menu { border-right: none; }
+        .el-menu-item { color: rgba(255,255,255,0.65); }
+        .el-menu-item:hover, .el-menu-item.is-active { background-color: #1890ff !important; color: #fff; }
     </style>
 </head>
 <body>
 <div id="app">
-    <div class="toolbar">
-        <div class="title">📐 智座布局设计器</div>
-        <button class="btn" @click="addSeat">➕ 新增座位</button>
-        <button class="btn" @click="refresh">🔄 刷新数据</button>
+    <el-container style="height: 100%;">
+        <el-header>
+            <div style="display: flex; align-items: center;">
+                <span class="logo">智座 SmartSeat</span>
+                <span style="font-size: 14px; color: rgba(255,255,255,0.65);">高校图书馆智能运营平台</span>
+            </div>
+            <div>
+                <el-dropdown>
+                    <span style="color: #fff; cursor: pointer;"> 管理员 <i class="el-icon-arrow-down"></i> </span>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item>个人中心</el-dropdown-item>
+                        <el-dropdown-item divided>退出登录</el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+            </div>
+        </el-header>
 
-        <div class="tips">
-            操作指南: <kbd>左键拖拽</kbd> 移动位置 | <kbd>点击</kbd> 切换维修状态 | <kbd>右键</kbd> 删除座位
-            (当前座位数: {{ seats.length }})
-        </div>
-    </div>
+        <el-container>
+            <el-aside width="220px">
+                <el-menu default-active="1" background-color="#001529" text-color="#fff" active-text-color="#409EFF">
+                    <el-menu-item index="1">
+                        <i class="el-icon-s-home"></i>
+                        <span slot="title">总览仪表盘</span>
+                    </el-menu-item>
 
-    <!-- 画布区域 -->
-    <div class="canvas-container"
-         @mousemove="onDrag"
-         @mouseup="stopDrag"
-         @mouseleave="stopDrag">
+                    <!-- 资源管理入口 -->
+                    <el-menu-item index="2" @click="goToPage('resource_manage.html')">
+                        <i class="el-icon-reading"></i>
+                        <span slot="title">资源入库/库存</span>
+                    </el-menu-item>
 
-        <div
-                v-for="seat in seats" :key="seat.id"
-                class="seat"
-                :class="{ maintenance: seat.status === 0 }"
-                :style="{ left: (seat.gridX * 40 + 2) + 'px', top: (seat.gridY * 40 + 2) + 'px' }"
-                @mousedown="startDrag($event, seat)"
-                @click.stop="toggleStatus(seat)"
-                @contextmenu.prevent="deleteSeat(seat)"
-                :title="'ID: ' + seat.id + '\n状态: ' + (seat.status===1?'可用':'维修')"
-        >
-            {{ seat.label }}
-        </div>
-    </div>
+                    <el-menu-item index="3" @click="goToPage('monitor.html')">
+                        <i class="el-icon-monitor"></i>
+                        <span slot="title">实时座位监控</span>
+                    </el-menu-item>
+
+                    <el-menu-item index="4" @click="goToPage('feedback_manage.html')">
+                        <i class="el-icon-chat-dot-square"></i>
+                        <span slot="title">用户反馈处理</span>
+                    </el-menu-item>
+
+                    <!-- 新增：借阅履约订单入口 -->
+                    <el-menu-item index="5" @click="goToPage('order_manage.html')">
+                        <i class="el-icon-s-order"></i>
+                        <span slot="title">借阅履约订单</span>
+                    </el-menu-item>
+                </el-menu>
+            </el-aside>
+
+            <el-main>
+                <!-- 仪表盘内容 -->
+                <el-row :gutter="20" style="margin-bottom: 20px;">
+                    <el-col :span="6">
+                        <el-card shadow="hover" class="stat-card">
+                            <div style="color: #666;">今日预约</div>
+                            <div class="stat-num">{{ stats.todayReservations || 0 }}</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card shadow="hover" class="stat-card">
+                            <div style="color: #666;">当前入座率</div>
+                            <div class="stat-num">{{ stats.occupancyRate || '0%' }}</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card shadow="hover" class="stat-card">
+                            <div style="color: #666;">违规记录</div>
+                            <div class="stat-num" style="color: #ff4d4f;">{{ stats.violations || 0 }}</div>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-card shadow="hover" class="stat-card">
+                            <div style="color: #666;">待处理反馈</div>
+                            <div class="stat-num" style="color: #faad14;">{{ stats.pendingFeedback || 0 }}</div>
+                        </el-card>
+                    </el-col>
+                </el-row>
+
+                <el-card shadow="never">
+                    <div slot="header">
+                        <span>📅 近七日预约趋势</span>
+                    </div>
+                    <!-- 修改: 增加 ID 用于 ECharts 渲染 -->
+                    <div id="trendChart" style="height: 350px;"></div>
+                </el-card>
+
+                <div style="margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
+                    © 2025 SmartSeat Admin System V2.1
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
 </div>
 
 <script>
     new Vue({
         el: '#app',
         data: {
-            seats: [],
-            // 拖拽相关状态
-            draggingSeat: null,
-            dragOffset: { x: 0, y: 0 },
-            isMoved: false // 用于区分点击还是拖拽
+            stats: {
+                todayReservations: 128,
+                occupancyRate: '85%',
+                violations: 3,
+                pendingFeedback: 5
+            },
+            chartInstance: null
+        },
+        created() {
+            this.fetchStats();
         },
         mounted() {
-            this.refresh();
+            // 页面挂载后初始化图表
+            this.initChart();
+            window.addEventListener('resize', this.handleResize);
+        },
+        beforeDestroy() {
+            window.removeEventListener('resize', this.handleResize);
+            if (this.chartInstance) {
+                this.chartInstance.dispose();
+            }
         },
         methods: {
-            // 1. 获取所有座位
-            async refresh() {
-                try {
-                    const res = await axios.get('/api/admin/seat/list');
-                    if (res.data.code === 200) {
-                        this.seats = res.data.data;
+            goToPage(page) {
+                window.location.href = page;
+            },
+            fetchStats() {
+                // 模拟从后端获取数据
+                axios.get('/api/admin/stats/overview').then(res => {
+                    if(res.data.code === 200) {
+                        this.stats = res.data.data;
+                        // 如果后端返回了图表数据，可以在这里调用 updateChart(res.data.chartData)
                     }
-                } catch (err) {
-                    alert("加载数据失败，请检查后端服务");
-                }
+                }).catch(e => {
+                    console.log('Mock mode used: API not connected');
+                    // 即使API失败，我们也保留默认值，不影响演示
+                });
             },
+            initChart() {
+                const chartDom = document.getElementById('trendChart');
+                this.chartInstance = echarts.init(chartDom);
 
-            // 2. 开始拖拽
-            startDrag(e, seat) {
-                this.draggingSeat = seat;
-                this.isMoved = false;
+                const option = {
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: [
+                        {
+                            name: '预约人次',
+                            type: 'line',
+                            stack: 'Total',
+                            smooth: true,
+                            data: [120, 132, 101, 134, 90, 230, 210],
+                            itemStyle: { color: '#1890ff' },
+                            areaStyle: { color: 'rgba(24,144,255,0.1)' }
+                        },
+                        {
+                            name: '实际入座',
+                            type: 'line',
+                            stack: 'Total',
+                            smooth: true,
+                            data: [110, 120, 95, 124, 85, 200, 190],
+                            itemStyle: { color: '#52c41a' }
+                        }
+                    ]
+                };
 
-                // 计算鼠标在元素内的偏移量
-                const rect = e.target.getBoundingClientRect();
-                this.dragOffset.x = e.clientX - rect.left;
-                this.dragOffset.y = e.clientY - rect.top;
+                this.chartInstance.setOption(option);
             },
-
-            // 3. 拖拽中 (实时更新视图)
-            onDrag(e) {
-                if (!this.draggingSeat) return;
-
-                this.isMoved = true;
-
-                // 计算画布内的相对坐标 (减去头部高度 60)
-                const rawX = e.clientX - this.dragOffset.x;
-                const rawY = e.clientY - 60 - this.dragOffset.y;
-
-                // 网格吸附算法 (Snap to Grid): 每 40px 一个格
-                const gridSize = 40;
-                let gridX = Math.round(rawX / gridSize);
-                let gridY = Math.round(rawY / gridSize);
-
-                // 边界限制
-                if (gridX < 0) gridX = 0;
-                if (gridY < 0) gridY = 0;
-
-                // 更新本地数据实现流畅动画
-                this.draggingSeat.gridX = gridX;
-                this.draggingSeat.gridY = gridY;
-            },
-
-            // 4. 结束拖拽 (保存数据)
-            async stopDrag() {
-                if (!this.draggingSeat) return;
-
-                const seat = this.draggingSeat;
-                this.draggingSeat = null;
-
-                // 只有真的移动了才发送请求
-                if (this.isMoved) {
-                    try {
-                        await axios.post('/api/admin/seat/update', {
-                            id: seat.id,
-                            gridX: seat.gridX,
-                            gridY: seat.gridY
-                        });
-                        // 稍微闪烁一下边框表示保存成功？这里省略，直接用静默保存
-                    } catch (err) {
-                        alert('位置保存失败，即将还原');
-                        this.refresh();
-                    }
-                }
-                this.isMoved = false;
-            },
-
-            // 5. 切换状态 (可用 <-> 维修)
-            async toggleStatus(seat) {
-                // 如果刚刚发生了拖拽，则不触发点击事件
-                if (this.isMoved) return;
-
-                const newStatus = seat.status === 1 ? 0 : 1;
-                try {
-                    await axios.post('/api/admin/seat/update', {
-                        id: seat.id,
-                        status: newStatus
-                    });
-                    seat.status = newStatus;
-                } catch (err) {
-                    alert('状态更新失败');
-                }
-            },
-
-            // 6. 新增座位
-            async addSeat() {
-                const label = prompt("请输入座位号 (例如 A-101):", "New");
-                if (!label) return;
-
-                try {
-                    // 默认放在画布左上角稍微偏移一点的位置
-                    const res = await axios.post('/api/admin/seat/add', {
-                        label: label,
-                        gridX: 1,
-                        gridY: 1,
-                        status: 1
-                    });
-                    if (res.data.code === 200) {
-                        this.seats.push(res.data.data);
-                        this.$nextTick(() => {
-                            alert("座位已添加在左上角 (1,1) 位置，请拖动调整");
-                        });
-                    }
-                } catch (err) {
-                    alert('添加失败: ' + (err.response?.data?.message || err.message));
-                }
-            },
-
-            // 7. 删除座位
-            async deleteSeat(seat) {
-                if (!confirm(`⚠️ 确定要永久删除座位 [${seat.label}] 吗？`)) return;
-
-                try {
-                    await axios.delete(`/api/admin/seat/${seat.id}`);
-                    // 从数组中移除
-                    this.seats = this.seats.filter(s => s.id !== seat.id);
-                } catch (err) {
-                    alert('删除失败');
+            handleResize() {
+                if (this.chartInstance) {
+                    this.chartInstance.resize();
                 }
             }
         }

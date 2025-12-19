@@ -90,6 +90,11 @@ Page({
             }
         });
     },
+    navigateToOrders() {
+        wx.navigateTo({
+            url: '/pages/orders/list'
+        });
+    },
 
     // 跳转逻辑
     goToCredit() { wx.navigateTo({ url: '/pages/credit/credit' }); },
