@@ -6,36 +6,37 @@ services:
     image: mysql:8.0
     container_name: zhizuo-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: "000000"
-      MYSQL_DATABASE: zhizuo
+      # 使用环境变量，避免密码硬编码
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
       TZ: Asia/Shanghai
     ports:
-      - "3306:3306"
+      - "${DB_PORT}:3306"
     volumes:
       - ./seat_server/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
 
-  # 2. Redis 缓存 (开启 AOF 持久化)
+  # 2. Redis 缓存
   redis:
     image: redis:alpine
     container_name: zhizuo-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
 
-  # 3. RabbitMQ 消息队列 (暴露管理端口)
+  # 3. RabbitMQ 消息队列
   rabbitmq:
     image: rabbitmq:management
     container_name: zhizuo-rabbitmq
     ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Web UI
+      - "${RABBIT_MQ_PORT}:5672"
+      - "${RABBIT_UI_PORT}:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD}
 
   # 4. Python AI 服务
   ai-service:
@@ -59,13 +60,15 @@ services:
       rabbitmq:
         condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/zhizuo?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_PASSWORD: "000000"
+      # 引用环境变量
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${DB_NAME}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
-      # 开启 Gemini API Key 配置 (可选)
+      SPRING_RABBITMQ_USERNAME: ${RABBIT_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBIT_PASSWORD}
       AI_GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
-    # JVM 内存限制
     deploy:
       resources:
         limits:
