@@ -33,10 +33,10 @@ public class AppUserController {
     @GetMapping("/info")
     public ApiResponse<User> getUserInfo() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String studentId = (String) auth.getPrincipal();
+        String username = (String) auth.getPrincipal();
 
         QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", studentId);
+        query.eq("username", username);
         User user = userMapper.selectOne(query);
 
         if (user != null) {
@@ -49,10 +49,10 @@ public class AppUserController {
     @GetMapping("/credit-logs")
     public ApiResponse<List<CreditLog>> getMyCreditLogs() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String studentId = (String) auth.getPrincipal();
+        String username = (String) auth.getPrincipal();
 
         QueryWrapper<CreditLog> query = new QueryWrapper<>();
-        query.inSql("user_id", "SELECT id FROM users WHERE student_id = '" + studentId + "'");
+        query.inSql("user_id", "SELECT id FROM users WHERE username = '" + username + "'");
         query.orderByDesc("create_time");
 
         return ApiResponse.success(creditLogMapper.selectList(query));

@@ -5,99 +5,73 @@ import com.example.zhizuo.common.ApiResponse;
 import com.example.zhizuo.common.util.JwtUtil;
 import com.example.zhizuo.core.dto.UserLoginDTO;
 import com.example.zhizuo.core.dto.UserRegisterDTO;
-import com.example.zhizuo.core.entity.CreditLog;
 import com.example.zhizuo.core.entity.User;
-import com.example.zhizuo.core.mapper.CreditLogMapper;
 import com.example.zhizuo.core.mapper.UserMapper;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "App-认证模块")
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
-    private final UserMapper userMapper;
-    private final PasswordEncoder passwordEncoder;
-    private final CreditLogMapper creditLogMapper; // 新增注入
+    @Autowired
+    private UserMapper userMapper;
 
-    public AuthController(AuthenticationManager authenticationManager,
-                          JwtUtil jwtUtil,
-                          UserMapper userMapper,
-                          PasswordEncoder passwordEncoder,
-                          CreditLogMapper creditLogMapper) {
-        this.authenticationManager = authenticationManager;
-        this.jwtUtil = jwtUtil;
-        this.userMapper = userMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.creditLogMapper = creditLogMapper;
-    }
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
-    @Operation(summary = "学生登录")
+    @Autowired
+    private JwtUtil jwtUtil;
+
     @PostMapping("/login")
-    public ApiResponse<Map<String, String>> login(@RequestBody @Validated UserLoginDTO loginDTO) {
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginDTO.getStudentId(), loginDTO.getPassword())
-            );
-        } catch (BadCredentialsException e) {
-            return ApiResponse.error(401, "学号或密码错误");
-        }
-
-        String token = jwtUtil.generateToken(loginDTO.getStudentId());
-
+    public ApiResponse login(@RequestBody UserLoginDTO loginDTO) {
+        // 使用 username 查询 (原 studentId)
         QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", loginDTO.getStudentId());
+        query.eq("username", loginDTO.getUsername());
         User user = userMapper.selectOne(query);
 
-        Map<String, String> result = new HashMap<>();
-        result.put("token", token);
-        result.put("userId", user.getId().toString());
-        result.put("name", user.getName());
-
-        return ApiResponse.success(result);
-    }
-
-    @Operation(summary = "学生注册")
-    @PostMapping("/register")
-    @Transactional(rollbackFor = Exception.class) // 开启事务，保证两张表同时成功
-    public ApiResponse<String> register(@RequestBody @Validated UserRegisterDTO registerDTO) {
-        QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", registerDTO.getStudentId());
-        if (userMapper.selectCount(query) > 0) {
-            return ApiResponse.error(400, "该学号已注册");
+        if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+            return ApiResponse.error("用户名或密码错误");
         }
 
-        // 1. 创建用户
+        String token = jwtUtil.generateToken(user.getUsername());
+        Map<String, Object> data = new HashMap<>();
+        data.put("token", token);
+        data.put("user", user);
+        return ApiResponse.success(data);
+    }
+
+    @PostMapping("/register")
+    public ApiResponse register(@RequestBody UserRegisterDTO registerDTO) {
+        QueryWrapper<User> query = new QueryWrapper<>();
+        query.eq("username", registerDTO.getUsername());
+        if (userMapper.selectCount(query) > 0) {
+            return ApiResponse.error("用户已存在");
+        }
+
         User user = new User();
-        user.setStudentId(registerDTO.getStudentId());
+        // 字段适配: setUsername 替代 setStudentId
+        user.setUsername(registerDTO.getUsername());
         user.setName(registerDTO.getName());
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
-        user.setCreditScore(100);
+        user.setPhone(registerDTO.getPhone());
+        
+        // 字段适配: setPoints 替代 setCreditScore
+        user.setPoints(100); // 初始积分
+        user.setBalance(new BigDecimal("0.00")); // 初始余额
+        user.setRole("USER");
+        user.setCreateTime(LocalDateTime.now());
+
         userMapper.insert(user);
-
-        // 2. 记录初始信用日志 (需要在 insert user 后，这样才有 user.id)
-        CreditLog log = new CreditLog();
-        log.setUserId(user.getId());
-        log.setType("ADD");
-        log.setScore(100);
-        log.setReason("新用户注册奖励");
-        log.setCreateTime(LocalDateTime.now());
-        creditLogMapper.insert(log);
-
         return ApiResponse.success("注册成功");
     }
 }

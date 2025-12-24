@@ -5,11 +5,12 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.example.zhizuo.core.entity.Seat;
-import com.example.zhizuo.core.entity.SeatHeatStats;
-import com.example.zhizuo.core.mapper.SeatHeatStatsMapper;
-import com.example.zhizuo.core.mapper.SeatMapper;
-import lombok.extern.slf4j.Slf4j;
+import com.example.zhizuo.core.entity.ServiceSlot;
+import com.example.zhizuo.core.entity.StationBusyStats;
+import com.example.zhizuo.core.mapper.StationBusyStatsMapper;
+import com.example.zhizuo.core.mapper.ServiceSlotMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,19 +22,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 public class AiPredictionService {
 
-    private final SeatMapper seatMapper;
-    private final SeatHeatStatsMapper heatStatsMapper;
+    private static final Logger log = LoggerFactory.getLogger(AiPredictionService.class);
+
+    private final ServiceSlotMapper serviceSlotMapper;
+    private final StationBusyStatsMapper busyStatsMapper;
 
     // Python 服务地址
     private static final String AI_URL = "http://localhost:5000/predict";
 
-    public AiPredictionService(SeatMapper seatMapper, SeatHeatStatsMapper heatStatsMapper) {
-        this.seatMapper = seatMapper;
-        this.heatStatsMapper = heatStatsMapper;
+    public AiPredictionService(ServiceSlotMapper serviceSlotMapper, StationBusyStatsMapper busyStatsMapper) {
+        this.serviceSlotMapper = serviceSlotMapper;
+        this.busyStatsMapper = busyStatsMapper;
     }
 
     /**
@@ -44,15 +46,15 @@ public class AiPredictionService {
     public void syncHeatScores() {
         log.info("开始执行 AI 热度预测任务...");
 
-        // 1. 获取所有座位 ID
-        List<Seat> seats = seatMapper.selectList(null);
-        if (seats.isEmpty()) return;
+        // 1. 获取所有服务工位 ID
+        List<ServiceSlot> slots = serviceSlotMapper.selectList(null);
+        if (slots.isEmpty()) return;
 
-        List<Long> seatIds = seats.stream().map(Seat::getId).collect(Collectors.toList());
+        List<Long> slotIds = slots.stream().map(ServiceSlot::getId).collect(Collectors.toList());
 
         // 2. 调用 Python 接口
         Map<String, Object> param = new HashMap<>();
-        param.put("seatIds", seatIds);
+        param.put("slotIds", slotIds);
 
         try {
             String resultJson = HttpUtil.post(AI_URL, JSONUtil.toJsonStr(param));
@@ -64,24 +66,24 @@ public class AiPredictionService {
                 // 3. 解析结果并入库
                 for (Object item : data) {
                     JSONObject obj = (JSONObject) item;
-                    Long seatId = obj.getLong("seatId");
-                    Double score = obj.getDouble("heatScore");
+                    Long slotId = obj.getLong("slotId");
+                    Double score = obj.getDouble("busyScore");
 
                     // 构造实体
-                    SeatHeatStats stats = new SeatHeatStats();
-                    stats.setSeatId(seatId);
-                    stats.setHeatScore(score);
+                    StationBusyStats stats = new StationBusyStats();
+                    stats.setStationId(slotId);
+                    stats.setBusyScore(score);
                     stats.setPredictionDate(LocalDate.now().plusDays(1)); // 预测明天
                     stats.setUpdateTime(LocalDateTime.now());
 
                     // 先删后插 (简单 Upsert)
-                    QueryWrapper<SeatHeatStats> deleteQuery = new QueryWrapper<>();
-                    deleteQuery.eq("seat_id", seatId).eq("prediction_date", stats.getPredictionDate());
-                    heatStatsMapper.delete(deleteQuery);
+                    QueryWrapper<StationBusyStats> deleteQuery = new QueryWrapper<>();
+                    deleteQuery.eq("station_id", slotId).eq("prediction_date", stats.getPredictionDate());
+                    busyStatsMapper.delete(deleteQuery);
 
-                    heatStatsMapper.insert(stats);
+                    busyStatsMapper.insert(stats);
                 }
-                log.info("AI 热度数据同步完成，共更新 {} 条", data.size());
+                log.info("AI 工位繁忙度数据同步完成，共更新 {} 条", data.size());
             }
         } catch (Exception e) {
             log.error("调用 AI 服务失败 (请检查 Python 脚本是否运行): {}", e.getMessage());

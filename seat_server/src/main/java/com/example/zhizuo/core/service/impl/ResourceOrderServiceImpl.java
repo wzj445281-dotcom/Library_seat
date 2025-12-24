@@ -4,13 +4,11 @@ import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.core.entity.Reservation;
-import com.example.zhizuo.core.entity.ResourceOrder; // 需自行创建Entity
-import com.example.zhizuo.core.entity.Resources;     // 需自行创建Entity
-import com.example.zhizuo.core.mapper.ResourceOrderMapper; // 需自行创建Mapper
-import com.example.zhizuo.core.mapper.ResourcesMapper;     // 需自行创建Mapper
-import com.example.zhizuo.core.mapper.ReservationMapper;
-import com.example.zhizuo.core.service.ResourceOrderService;
+import com.example.zhizuo.core.entity.Product;
+import com.example.zhizuo.core.entity.ProductOrder;
+import com.example.zhizuo.core.mapper.ProductMapper;
+import com.example.zhizuo.core.mapper.ProductOrderMapper;
+import com.example.zhizuo.core.service.ProductOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -28,12 +26,10 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
-public class ResourceOrderServiceImpl extends ServiceImpl<ResourceOrderMapper, ResourceOrder> implements ResourceOrderService {
+public class ProductOrderServiceImpl extends ServiceImpl<ProductOrderMapper, ProductOrder> implements ProductOrderService {
 
     @Resource
-    private ResourcesMapper resourcesMapper;
-    @Resource
-    private ReservationMapper reservationMapper;
+    private ProductMapper productMapper;
     @Resource
     private RedissonClient redissonClient;
 

@@ -1,7 +1,7 @@
 package com.example.zhizuo.config;
 
 import com.example.zhizuo.common.util.JwtUtil;
-import com.example.zhizuo.core.service.impl.UserDetailsServiceImpl;
+import com.example.zhizuo.core.impl.UserDetailsServiceImpl;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,10 +18,10 @@ import java.io.IOException;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    private final UserDetailsServiceImpl userDetailsService;
+    private final com.example.zhizuo.core.impl.UserDetailsServiceImpl userDetailsService;
     private final JwtUtil jwtUtil;
 
-    public JwtFilter(UserDetailsServiceImpl userDetailsService, JwtUtil jwtUtil) {
+    public JwtFilter(com.example.zhizuo.core.impl.UserDetailsServiceImpl userDetailsService, JwtUtil jwtUtil) {
         this.userDetailsService = userDetailsService;
         this.jwtUtil = jwtUtil;
     }

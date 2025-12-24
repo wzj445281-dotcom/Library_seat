@@ -1,23 +1,22 @@
 package com.example.zhizuo.core.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.example.zhizuo.core.entity.Reservation;
+import com.example.zhizuo.core.entity.ServiceBooking;
+import com.example.zhizuo.core.entity.ServiceSlot;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface ReservationService extends IService<Reservation> {
+public interface ReservationService extends IService<ServiceBooking> {
+    // 获取可用工位
+    List<ServiceSlot> getAvailableSlots(String type);
 
-    // 原有核心方法（Admin或内部调用）
-    void reserve(Long userId, Long seatId, LocalDateTime startTime, LocalDateTime endTime);
+    // 创建预约
+    void createBooking(Long userId, Long slotId, String petName, LocalDateTime appointmentTime);
 
-    // [新增] App端专用方法：支持直接传 studentId
-    void reserve(String studentId, Long seatId, LocalDateTime startTime, LocalDateTime endTime);
-
-    List<Reservation> getUserReservations(String studentId);
-
-    void checkIn(Long reservationId);
-
-    void cancel(Long reservationId);
-
-    void leave(Long reservationId);
+    // 获取我的预约
+    List<ServiceBooking> getMyBookings(Long userId);
+    
+    // 取消预约
+    void cancelBooking(Long bookingId);
 }

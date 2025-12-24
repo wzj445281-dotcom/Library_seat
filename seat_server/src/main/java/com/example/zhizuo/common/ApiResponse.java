@@ -22,4 +22,8 @@ public class ApiResponse<T> {
         response.setMessage(message);
         return response;
     }
+
+    public static <T> ApiResponse<T> error(String message) {
+        return error(500, message);
+    }
 }

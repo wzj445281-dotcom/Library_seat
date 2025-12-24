@@ -13,15 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminUserServiceImpl extends ServiceImpl<UserMapper, User> implements AdminUserService {
 
     @Override
-    public Page<User> getUserList(int page, int size, String studentId) {
+    public Page<User> getUserList(int page, int size, String username) {
         Page<User> pageParam = new Page<>(page, size);
         QueryWrapper<User> query = new QueryWrapper<>();
 
-        if (studentId != null && !studentId.isEmpty()) {
-            query.like("student_id", studentId);
+        if (username != null && !username.isEmpty()) {
+            query.like("username", username);
         }
-        // 按信用分排序，方便管理员先处理违纪学生
-        query.orderByAsc("credit_score");
+        // 按积分排序，方便管理员先处理违纪学生
+        query.orderByAsc("points");
 
         return this.page(pageParam, query);
     }
@@ -34,11 +34,11 @@ public class AdminUserServiceImpl extends ServiceImpl<UserMapper, User> implemen
             throw new RuntimeException("用户不存在");
         }
 
-        if (user.getCreditScore() == 100) {
-            throw new RuntimeException("该用户信用分已是满分，无需重置");
+        if (user.getPoints() == 100) {
+            throw new RuntimeException("该用户积分已是满分，无需重置");
         }
 
-        user.setCreditScore(100);
+        user.setPoints(100);
         this.updateById(user);
 
         // 💡 扩展点：未来可以在这里插入一条 System Log (系统日志表)，记录是哪个管理员操作的

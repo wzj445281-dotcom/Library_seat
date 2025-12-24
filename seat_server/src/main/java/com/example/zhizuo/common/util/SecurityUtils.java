@@ -23,4 +23,19 @@ public class SecurityUtils {
         }
         return (String) auth.getPrincipal();
     }
+
+    /**
+     * 获取当前登录用户的ID
+     * @return userId
+     */
+    public static Long getCurrentUserId() {
+        // 临时实现，实际应该从数据库查询或JWT中获取
+        // 这里简化处理，假设用户名就是ID的字符串形式
+        String username = getCurrentStudentId();
+        try {
+            return Long.parseLong(username);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("无法解析用户ID");
+        }
+    }
 }

@@ -165,3 +165,19 @@ CREATE TABLE IF NOT EXISTS `feedback` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB COMMENT='反馈报修表';
+
+-- ==========================================
+-- 10. 评价表 (新增，替代原 credit_logs)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS `reviews` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL,
+  `related_id` bigint(20) NOT NULL COMMENT '关联ID (商品ID 或 工位ID)',
+  `type` varchar(20) NOT NULL COMMENT '类型: PRODUCT / SERVICE',
+  `rating` int(1) NOT NULL COMMENT '评分 1-5',
+  `content` text COMMENT '评价内容',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_related_id` (`related_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB COMMENT='商品/服务评价表';

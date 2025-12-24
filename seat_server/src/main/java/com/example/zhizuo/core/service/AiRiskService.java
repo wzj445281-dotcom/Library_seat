@@ -3,15 +3,17 @@ package com.example.zhizuo.core.service;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@Slf4j
 @Service
 public class AiRiskService {
+
+    private static final Logger log = LoggerFactory.getLogger(AiRiskService.class);
 
     private static final String AI_RISK_URL = "http://localhost:5000/predict/risk";
 

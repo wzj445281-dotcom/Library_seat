@@ -2,10 +2,10 @@ package com.example.zhizuo.core.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.example.zhizuo.core.entity.Reservation;
-import com.example.zhizuo.core.entity.User;
-import com.example.zhizuo.core.mapper.ReservationMapper;
-import com.example.zhizuo.core.mapper.UserMapper;
+import com.example.zhizuo.core.entity.ServiceBooking;
+import com.example.zhizuo.core.entity.ServiceSlot;
+import com.example.zhizuo.core.mapper.ServiceBookingMapper;
+import com.example.zhizuo.core.mapper.ServiceSlotMapper;
 import com.example.zhizuo.core.service.ReservationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,87 +15,74 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reservation> implements ReservationService {
+public class ReservationServiceImpl extends ServiceImpl<ServiceBookingMapper, ServiceBooking> implements ReservationService {
 
     @Autowired
-    private UserMapper userMapper;
+    private ServiceSlotMapper serviceSlotMapper;
 
-    // ... 其他依赖注入 (RedisTemplate, RedissonClient 等保持原样) ...
+    @Override
+    public List<ServiceSlot> getAvailableSlots(String type) {
+        QueryWrapper<ServiceSlot> query = new QueryWrapper<>();
+        query.eq("status", 1); // 只查询可用的工位
+        if (type != null && !type.isEmpty()) {
+            query.eq("service_type", type);
+        }
+        return serviceSlotMapper.selectList(query);
+    }
 
-    /**
-     * [新增] App端专用入口：通过 studentId 进行预约
-     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void reserve(String studentId, Long seatId, LocalDateTime startTime, LocalDateTime endTime) {
-        // 1. 在 Service 内部完成用户查找，不再依赖 Controller
-        QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", studentId);
-        User user = userMapper.selectOne(query);
-
-        if (user == null) {
-            throw new RuntimeException("用户不存在，无法预约");
+    public void createBooking(Long userId, Long slotId, String petName, LocalDateTime appointmentTime) {
+        // 1. 检查工位是否存在且可用
+        ServiceSlot slot = serviceSlotMapper.selectById(slotId);
+        if (slot == null || slot.getStatus() != 1) {
+            throw new RuntimeException("工位不存在或不可用");
         }
 
-        // 2. 调用核心预约逻辑 (复用已有的 userId 逻辑)
-        this.reserve(user.getId(), seatId, startTime, endTime);
+        // 2. 检查是否已有相同时间的预约
+        QueryWrapper<ServiceBooking> query = new QueryWrapper<>();
+        query.eq("slot_id", slotId)
+             .eq("appointment_time", appointmentTime)
+             .in("status", "PENDING", "CONFIRMED");
+        
+        ServiceBooking existingBooking = baseMapper.selectOne(query);
+        if (existingBooking != null) {
+            throw new RuntimeException("该时间段已有预约");
+        }
+
+        // 3. 创建预约
+        ServiceBooking booking = new ServiceBooking();
+        booking.setUserId(userId);
+        booking.setSlotId(slotId);
+        booking.setPetName(petName);
+        booking.setAppointmentTime(appointmentTime);
+        booking.setStatus("PENDING");
+        booking.setCreateTime(LocalDateTime.now());
+        
+        this.save(booking);
     }
 
-    /**
-     * 核心预约逻辑 (原有逻辑保持不变)
-     */
+    @Override
+    public List<ServiceBooking> getMyBookings(Long userId) {
+        QueryWrapper<ServiceBooking> query = new QueryWrapper<>();
+        query.eq("user_id", userId)
+             .orderByDesc("create_time");
+        return this.list(query);
+    }
+    
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void reserve(Long userId, Long seatId, LocalDateTime startTime, LocalDateTime endTime) {
-        // ... 这里是你原有的 Redisson 锁、库存检查、死信队列发送等核心代码 ...
-        // 请确保这部分保留你原本的高并发处理逻辑
-        // 下面仅为示意：
-        /*
-        RLock lock = redissonClient.getLock("seat_lock:" + seatId);
-        try {
-            if (lock.tryLock(10, TimeUnit.SECONDS)) {
-                // 检查冲突...
-                // 保存订单...
-            } else {
-                throw new RuntimeException("抢座人数过多，请稍后重试");
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException("系统繁忙");
-        } finally {
-            lock.unlock();
+    public void cancelBooking(Long bookingId) {
+        ServiceBooking booking = this.getById(bookingId);
+        if (booking == null) {
+            throw new RuntimeException("预约不存在");
         }
-        */
-    }
-
-    @Override
-    public List<Reservation> getUserReservations(String studentId) {
-        // 原有逻辑应该已经实现了这个，这里保持接口一致性
-        return baseMapper.selectList(new QueryWrapper<Reservation>()
-                .eq("student_id", studentId) // 假设 Reservation 表里存了 student_id 或者关联查询
-                .orderByDesc("create_time"));
-    }
-
-    @Override
-    public void checkIn(Long reservationId) {
-        // 实现签到逻辑
-        Reservation reservation = getById(reservationId);
-        if (reservation == null) throw new RuntimeException("预约不存在");
-        // ... 状态更新 ...
-        updateById(reservation);
-    }
-
-    @Override
-    public void cancel(Long reservationId) {
-        // 实现取消逻辑
-        removeById(reservationId);
-    }
-
-    @Override
-    public void leave(Long reservationId) {
-        Reservation reservation = getById(reservationId);
-        if (reservation != null) {
-            reservation.setStatus("2"); // 修正为 String 类型
-            updateById(reservation);
+        
+        if (!"PENDING".equals(booking.getStatus()) && !"CONFIRMED".equals(booking.getStatus())) {
+            throw new RuntimeException("只能取消待确认或已确认的预约");
         }
+        
+        booking.setStatus("CANCELLED");
+        this.updateById(booking);
     }
 }

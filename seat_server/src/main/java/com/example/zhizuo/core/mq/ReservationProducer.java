@@ -1,12 +1,14 @@
 package com.example.zhizuo.core.mq;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
-@Slf4j
 @Component
 public class ReservationProducer {
+
+    private static final Logger log = LoggerFactory.getLogger(ReservationProducer.class);
 
     private final RabbitTemplate rabbitTemplate;
 
