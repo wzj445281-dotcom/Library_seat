@@ -9,5 +9,5 @@ public class User {
     private String studentId;
     private String name;
     private String password; // 补全缺失的密码字段
-    private Integer creditScore;
+    private Integer points; // 会员积分
 }

@@ -7,10 +7,10 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.core.entity.CreditLog;
 import com.example.zhizuo.core.entity.User;
-import com.example.zhizuo.core.mapper.CreditLogMapper;
+import com.example.zhizuo.core.entity.Product;
 import com.example.zhizuo.core.mapper.UserMapper;
+import com.example.zhizuo.core.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 public class AiAssistantController {
 
     private final UserMapper userMapper;
-    private final CreditLogMapper creditLogMapper;
+    private final ProductService productService;
 
     // Google Gemini API URL
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
@@ -42,9 +42,9 @@ public class AiAssistantController {
     @Value("${ai.gemini.api-key:YOUR_API_KEY_HERE}")
     private String apiKey;
 
-    public AiAssistantController(UserMapper userMapper, CreditLogMapper creditLogMapper) {
+    public AiAssistantController(UserMapper userMapper, ProductService productService) {
         this.userMapper = userMapper;
-        this.creditLogMapper = creditLogMapper;
+        this.productService = productService;
     }
 
     @Operation(summary = "咨询AI客服")
@@ -60,30 +60,33 @@ public class AiAssistantController {
         String studentId = (String) auth.getPrincipal();
         User user = userMapper.selectOne(new QueryWrapper<User>().eq("student_id", studentId));
 
-        // 2. 获取最近5条信用日志
-        List<CreditLog> logs = creditLogMapper.selectList(
-                new QueryWrapper<CreditLog>()
-                        .eq("user_id", user.getId())
-                        .orderByDesc("create_time")
-                        .last("LIMIT 5")
-        );
-
-        // 格式化日志为字符串
-        String logContext = logs.stream()
-                .map(l -> String.format("[%s] %s %d分 (原因: %s)",
-                        l.getCreateTime().toString(),
-                        "ADD".equals(l.getType()) ? "加" : "扣",
-                        l.getScore(),
-                        l.getReason()))
-                .collect(Collectors.joining("\n"));
+        // 2. 检查是否需要商品推荐
+        String productContext = "";
+        if (userQuestion.contains("买") || userQuestion.contains("推荐") || userQuestion.contains("吃什么") || userQuestion.contains("用品")) {
+            // 查询销量最高的3个商品
+            List<Product> topProducts = productService.getTopSellingProducts(3);
+            if (!topProducts.isEmpty()) {
+                productContext = "本店热销商品推荐：\n";
+                for (int i = 0; i < topProducts.size(); i++) {
+                    Product p = topProducts.get(i);
+                    String categoryName = p.getCategory() == 0 ? "主粮" : 
+                                         p.getCategory() == 1 ? "零食" : 
+                                         p.getCategory() == 2 ? "玩具" : "医疗";
+                    productContext += String.format("%d. %s (%s) - ￥%.2f\n", 
+                            i+1, p.getName(), categoryName, p.getPrice());
+                }
+                productContext += "\n";
+            }
+        }
 
         // 3. 构建 Prompt
         String systemPrompt = String.format(
-                "你是一个高校图书馆座位预约系统的智能客服‘智座小助手’。当前对话学生：%s，当前信用分：%d。\n" +
-                        "该学生的最近信用变动记录如下：\n%s\n\n" +
-                        "请根据以上信息，回答学生的问题。如果涉及扣分，请温和地解释原因；如果信用分较低，请给出恢复建议（如连续签到、正常离座）。" +
-                        "回答要简练、亲切，不要暴露系统内部数据结构。",
-                user.getName(), user.getCreditScore(), logContext
+                "你是一位专业的宠物医生助理，名字叫'宠爱小助手'。你的职责是：1.根据用户的描述判断宠物的健康状况。2.推荐本店的宠物商品（如狗粮、驱虫药）。3.引导用户预约线下的洗澡或美容服务。请用温柔、关怀的语气回答。\n\n" +
+                "当前用户：%s，当前会员积分：%d。\n\n" +
+                "%s" +
+                "请根据以上信息，回答用户的问题。如果涉及宠物健康问题，请给出专业建议；如果涉及商品推荐，请结合热销商品进行推荐；如果涉及服务预约，请引导用户预约洗澡或美容服务。" +
+                "回答要简练、亲切，不要暴露系统内部数据结构。",
+                user.getName(), user.getPoints(), productContext
         );
 
         // 4. 调用 Gemini API
@@ -92,7 +95,7 @@ public class AiAssistantController {
             return ApiResponse.success(responseText);
         } catch (Exception e) {
             log.error("AI 服务调用失败", e);
-            return ApiResponse.success("抱歉，AI 大脑暂时短路了，请稍后再试。您的当前信用分是 " + user.getCreditScore());
+            return ApiResponse.success("抱歉，AI 大脑暂时短路了，请稍后再试。您的当前会员积分是 " + user.getPoints());
         }
     }
 
