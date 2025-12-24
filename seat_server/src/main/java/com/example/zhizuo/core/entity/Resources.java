@@ -47,6 +47,10 @@ public class Resources implements Serializable {
     @ExcelProperty("总库存")
     private Integer totalStock;
 
+    // 新增字段：每小时费用（积分）
+    @ExcelProperty("每小时费用")
+    private Double hourlyCost;
+
     @ExcelIgnore
     private String imgUrl;
 

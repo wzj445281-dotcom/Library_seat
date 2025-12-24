@@ -92,10 +92,9 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
 
     @Override
     public void leave(Long reservationId) {
-        // 实现离座逻辑
         Reservation reservation = getById(reservationId);
         if (reservation != null) {
-            reservation.setStatus(2); // 假设 2 代表完成
+            reservation.setStatus("2"); // 修正为 String 类型
             updateById(reservation);
         }
     }

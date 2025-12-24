@@ -86,7 +86,73 @@ CREATE TABLE IF NOT EXISTS `feedback` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB COMMENT='反馈报修表';
+-- ==========================================
+-- 8. 智能工单表 (对应 WorkOrder.java)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS `work_orders` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `ticket_no` varchar(32) NOT NULL COMMENT '工单编号',
+  `user_id` bigint(20) NOT NULL,
+  `category` varchar(20) NOT NULL COMMENT '分类: NOISE/REPAIR/CLEAN',
+  `content` text COMMENT '工单内容',
+  `snapshot_img` varchar(255) DEFAULT NULL COMMENT '现场照片',
+  `priority` int(2) DEFAULT '0' COMMENT '优先级: 0低 1中 2高',
+  `ai_analysis_result` varchar(500) DEFAULT NULL COMMENT 'AI分析摘要',
+  `status` varchar(20) DEFAULT 'PENDING' COMMENT '状态: PENDING/PROCESSING/RESOLVED',
+  `handler_id` bigint(20) DEFAULT NULL COMMENT '处理人ID',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ticket_no` (`ticket_no`)
+) ENGINE=InnoDB COMMENT='智能工单表';
 
+-- ==========================================
+-- 9. 物资表 (对应 Resources.java)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS `resources` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL COMMENT '物资名称',
+  `type` int(2) NOT NULL COMMENT '0=图书, 1=雨伞, 2=充电宝',
+  `isbn` varchar(50) DEFAULT NULL,
+  `author` varchar(50) DEFAULT NULL,
+  `publisher` varchar(50) DEFAULT NULL,
+  `category` varchar(20) DEFAULT NULL,
+  `location_code` varchar(20) DEFAULT NULL COMMENT '库位',
+  `stock` int(11) DEFAULT '0' COMMENT '当前库存',
+  `total_stock` int(11) DEFAULT '0' COMMENT '总库存',
+  `hourly_cost` double DEFAULT '0.0' COMMENT '每小时费用(积分)', -- 刚才Java代码里补加的字段
+  `img_url` varchar(255) DEFAULT NULL,
+  `status` int(2) DEFAULT '1' COMMENT '1上架 0下架',
+  `version` int(11) DEFAULT '1' COMMENT '乐观锁版本号',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB COMMENT='物资资源表';
+
+-- 插入一些初始物资数据
+INSERT IGNORE INTO `resources` (name, type, stock, total_stock, hourly_cost) VALUES
+('Java编程思想', 0, 5, 5, 0),
+('共享充电宝', 2, 10, 10, 2.0),
+('天堂伞', 1, 20, 20, 1.0);
+
+-- ==========================================
+-- 10. 物资订单表 (对应 ResourceOrder.java)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS `resource_orders` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `order_no` varchar(32) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `resource_id` bigint(20) NOT NULL,
+  `seat_id` bigint(20) DEFAULT NULL COMMENT '配送时的座位ID',
+  `delivery_type` int(2) DEFAULT '0' COMMENT '0=自取, 1=配送到座',
+  `status` varchar(20) NOT NULL COMMENT '状态',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `start_use_time` datetime DEFAULT NULL,
+  `return_time` datetime DEFAULT NULL,
+  `total_cost` int(11) DEFAULT '0' COMMENT '总花费积分',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_no` (`order_no`)
+) ENGINE=InnoDB COMMENT='物资流转订单';
 -- 插入测试数据
 INSERT IGNORE INTO users (student_id, name, credit_score) VALUES ('2021001', '张三', 100), ('2021002', '李四', 50);
 INSERT IGNORE INTO seats (label, grid_x, grid_y) VALUES ('A1', 1, 1), ('A2', 1, 2), ('A3', 1, 3), ('B1', 2, 1), ('B2', 2, 2);

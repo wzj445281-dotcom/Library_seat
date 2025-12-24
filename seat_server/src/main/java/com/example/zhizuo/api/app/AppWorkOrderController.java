@@ -22,7 +22,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/app/feedback")
+@RequestMapping("/api/app/workorder")
 @Tag(name = "App-智能反馈")
 public class AppWorkOrderController {
 

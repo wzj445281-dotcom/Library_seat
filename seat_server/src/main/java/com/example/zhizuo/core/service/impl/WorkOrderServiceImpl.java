@@ -22,11 +22,10 @@ import java.util.Map;
 @Slf4j
 @Service
 public class WorkOrderServiceImpl extends ServiceImpl<WorkOrderMapper, WorkOrder> implements WorkOrderService {
-
-    // private final SimpMessagingTemplate messagingTemplate; // WebSocket 推送工具
-    // AI 服务地址 (Python Flask)
-    private static final String AI_ANALYSIS_URL = "http://localhost:5000/analyze/ticket";
-
+    // 修改后 (使用服务名，docker-compose 会自动解析 IP)
+    // 注意：如果您的 docker-compose.yml 里服务名是 ai-service，请用 ai-service
+    // 根据之前的日志，服务名很可能是 ai-service
+    private static final String AI_ANALYSIS_URL = "http://ai-service:5000/analyze/ticket";
     /**
      * 提交智能工单
      */

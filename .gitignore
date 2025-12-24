@@ -109,3 +109,7 @@ temp/
 !.mvn/wrapper/maven-wrapper.properties
 !mvnw
 !mvnw.cmd
+
+# 忽略环境变量文件
+.env
+```

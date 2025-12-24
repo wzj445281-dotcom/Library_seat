@@ -77,6 +77,44 @@ def predict_risk():
         result['action'] = 'WARN'
 
     return jsonify({'code': 200, 'data': result})
+# ----------------------------------------------------
+# 接口 3: 工单智能分析 (新增修复)
+# ----------------------------------------------------
+@app.route('/analyze/ticket', methods=['POST'])
+def analyze_ticket():
+    try:
+        data = request.json
+        text = data.get('text', '')
+        category = data.get('category', '')
+
+        # --- 简单的关键词规则模拟 AI 分析 ---
+        priority = 0
+        summary = "常规反馈"
+
+        # 1. 关键词检测优先级
+        urgent_keywords = ['漏水', '冒烟', '火花', '紧急', '受伤', '救命']
+        medium_keywords = ['吵', '噪音', '坏了', '故障', '无法使用']
+
+        if any(k in text for k in urgent_keywords):
+            priority = 2
+            summary = f"【紧急】检测到安全隐患关键词，请立即处理。分类：{category}"
+        elif any(k in text for k in medium_keywords):
+            priority = 1
+            summary = f"【关注】设施故障或环境问题。分类：{category}"
+        else:
+            summary = f"普通建议或反馈。分类：{category}"
+
+        return jsonify({
+            'code': 200,
+            'message': 'success',
+            'data': {
+                'priority': priority,
+                'summary': summary
+            }
+        })
+    except Exception as e:
+        print(f"Analysis Error: {e}")
+        return jsonify({'code': 500, 'message': str(e)})
 
 if __name__ == '__main__':
     print("AI Prediction Server is running...")
