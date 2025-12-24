@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petsaas.mapper.OrderMapper">
+    
+    <!-- 查询今日统计数据 -->
+    <select id="getTodayStats" resultType="java.util.Map">
+        SELECT 
+            IFNULL(SUM(total_amount), 0) as income, 
+            COUNT(*) as count 
+        FROM sys_order 
+        WHERE merchant_id = #{merchantId} 
+          AND order_status = 1 -- 只统计已完成/已核销的
+          AND DATE(created_at) = CURDATE()
+    </select>
+    
+    <!-- 查询热销服务Top3 -->
+    <select id="getHotServices" resultType="com.petsaas.vo.DashboardVo$HotServiceVo">
+        SELECT 
+            s.name, 
+            COUNT(o.id) as count 
+        FROM sys_order o 
+        LEFT JOIN sys_service_schedule sc ON o.schedule_id = sc.id 
+        LEFT JOIN sys_service s ON sc.service_id = s.id 
+        WHERE o.merchant_id = #{merchantId} 
+          AND o.order_status = 1 
+          AND o.order_type = 1 -- 只统计服务预约
+        GROUP BY s.id, s.name 
+        ORDER BY count DESC 
+        LIMIT 3
+    </select>
+    
+    <!-- 查询累计会员数 -->
+    <select id="getTotalMemberCount" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT user_id) 
+        FROM sys_order 
+        WHERE merchant_id = #{merchantId} 
+          AND order_status = 1
+    </select>
+    
+</mapper>

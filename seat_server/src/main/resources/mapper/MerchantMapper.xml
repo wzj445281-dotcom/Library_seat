@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petsaas.mapper.MerchantMapper">
+    <select id="selectNearby" resultType="com.petsaas.vo.MerchantVo">
+        SELECT 
+            id, 
+            name, 
+            address, 
+            logo_url as logoUrl, 
+            latitude, 
+            longitude,
+            status,
+            phone,
+            description,
+            business_hours as businessHours,
+            -- 计算距离 (单位: 米) -> 转为千米保留1位小数
+            ROUND(ST_Distance_Sphere( 
+                POINT(longitude, latitude), 
+                POINT(#{userLng}, #{userLat}) 
+            ) / 1000, 1) AS distanceKM 
+        FROM 
+            sys_merchant 
+        WHERE 
+            status = 1  -- 只显示营业中的店铺 
+        ORDER BY 
+            -- 按距离升序排列 (最近的在前面) 
+            ST_Distance_Sphere( 
+                POINT(longitude, latitude), 
+                POINT(#{userLng}, #{userLat}) 
+            ) ASC
+    </select>
+</mapper>
