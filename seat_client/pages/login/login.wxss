@@ -50,14 +50,42 @@ page {
     font-size: 30rpx;
 }
 
+.code-row {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+}
+
+.code-input {
+    flex: 1;
+}
+
+.code-btn {
+    width: 200rpx;
+    height: 90rpx;
+    line-height: 90rpx;
+    background: #0022AB;
+    color: #fff;
+    border-radius: 12rpx;
+    font-size: 26rpx;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.code-btn.disabled {
+    background: #ccc;
+    color: #999;
+}
+
 .btn-login {
-    background: #1296db;
+    background: linear-gradient(135deg, #0022AB 0%, #0044CC 100%);
     color: #fff;
     border-radius: 50rpx;
     margin-top: 60rpx;
     font-size: 32rpx;
     font-weight: bold;
-    box-shadow: 0 6rpx 20rpx rgba(18, 150, 219, 0.3);
+    box-shadow: 0 6rpx 20rpx rgba(0, 34, 171, 0.3);
 }
 
 .link-area {
@@ -65,6 +93,6 @@ page {
     text-align: center;
 }
 .register-link {
-    color: #1296db;
+    color: #0022AB;
     font-size: 26rpx;
 }

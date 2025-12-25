@@ -1,8 +1,9 @@
 // 基础URL，开发环境通常指向本地，上线后替换为真实域名
 // 【本地开发】后端默认端口是8080，所以用 http://localhost:8080/api
 // 【真机调试】必须使用局域网IP，不能用localhost (如 http://192.168.1.5:8080/api)
+//   获取本机IP：Windows用 ipconfig，Mac/Linux用 ifconfig，找到 IPv4 地址
+//   修改下面的 BASE_URL 为你的局域网IP，例如：http://192.168.1.5:8080/api
 // 【Docker部署】后端端口映射为8081，用 http://你的IP:8081/api
-// 获取本机IP：Windows用 ipconfig，Mac/Linux用 ifconfig
 const BASE_URL = 'http://localhost:8080/api';
 
 const request = (url, method, data) => {
@@ -19,10 +20,21 @@ const request = (url, method, data) => {
             header['Authorization'] = 'Bearer ' + token;
         }
 
+        // 处理 GET 请求的 query 参数
+        let requestUrl = BASE_URL + url;
+        if (method === 'GET' && data) {
+            const queryString = Object.keys(data)
+                .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`)
+                .join('&');
+            if (queryString) {
+                requestUrl += (url.includes('?') ? '&' : '?') + queryString;
+            }
+        }
+
         wx.request({
-            url: BASE_URL + url,
+            url: requestUrl,
             method: method,
-            data: data,
+            data: method === 'GET' ? null : data, // GET 请求不传 data
             header: header,
             success(res) {
                 // 3. 统一处理响应状态

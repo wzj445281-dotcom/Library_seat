@@ -7,6 +7,29 @@
                 <image class="avatar" src="/assets/images/logo.png" mode="aspectFill"></image>
                 <view class="content-wrapper">
                     <view class="content">{{item.content}}</view>
+                    
+                    <!-- 推荐商品卡片 -->
+                    <view class="recommendations" wx:if="{{item.recommendations && item.recommendations.length > 0}}">
+                        <view class="recommend-title">为您推荐</view>
+                        <scroll-view class="recommend-scroll" scroll-x="true">
+                            <view class="recommend-list">
+                                <view 
+                                    class="recommend-item" 
+                                    wx:for="{{item.recommendations}}" 
+                                    wx:key="pid"
+                                    wx:for-item="rec"
+                                    data-pid="{{rec.pid}}"
+                                    bindtap="onRecommendTap">
+                                    <image class="rec-image" src="{{rec.image}}" mode="aspectFill" lazy-load></image>
+                                    <view class="rec-info">
+                                        <view class="rec-name">{{rec.name}}</view>
+                                        <view class="rec-price">¥{{rec.price}}</view>
+                                        <view class="rec-reason" wx:if="{{rec.reason}}">{{rec.reason}}</view>
+                                    </view>
+                                </view>
+                            </view>
+                        </scroll-view>
+                    </view>
                 </view>
             </view>
 
@@ -15,13 +38,16 @@
                 <view class="content-wrapper">
                     <view class="content">{{item.content}}</view>
                 </view>
-                <image class="avatar" src="{{userInfo.avatarUrl || '/assets/images/user.png'}}" mode="aspectFill"></image>
+                <image class="avatar" src="{{userInfo && userInfo.avatarUrl ? userInfo.avatarUrl : '/assets/images/user.png'}}" mode="aspectFill"></image>
             </view>
 
         </block>
 
         <!-- 加载状态 -->
         <view class="loading-wrapper" wx:if="{{loading}}">
+            <view class="loading-dot"></view>
+            <view class="loading-dot"></view>
+            <view class="loading-dot"></view>
             <view class="loading-text">AI 正在思考...</view>
         </view>
 
@@ -35,7 +61,8 @@
                bindinput="handleInput"
                bindconfirm="sendMessage"
                placeholder="请输入您的问题..."
-               confirm-type="send"/>
-        <button class="send-btn" bindtap="sendMessage" disabled="{{loading}}">发送</button>
+               confirm-type="send"
+               disabled="{{loading}}"/>
+        <button class="send-btn" bindtap="sendMessage" disabled="{{loading || !inputValue}}">发送</button>
     </view>
 </view>

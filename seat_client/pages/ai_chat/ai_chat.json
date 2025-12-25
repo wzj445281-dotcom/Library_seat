@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "智座小助手"
+  "navigationBarTitleText": "AI 助手",
+  "navigationBarBackgroundColor": "#0022AB",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f5f7fa"
 }

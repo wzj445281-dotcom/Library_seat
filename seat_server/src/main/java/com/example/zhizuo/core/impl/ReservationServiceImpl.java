@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -150,7 +151,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Servi
         User user = userMapper.selectOne(userQuery);
         
         if (user == null) {
-            return List.of(); // 用户不存在，返回空列表
+            return Collections.emptyList(); // 用户不存在，返回空列表
         }
         
         // 2. 通过userId查询预约记录

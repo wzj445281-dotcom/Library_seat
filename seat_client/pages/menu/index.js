@@ -41,11 +41,21 @@ Page({
   },
 
   onShow() {
+    // 检查登录状态
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      // 未登录，跳转到登录页
+      wx.redirectTo({
+        url: '/pages/login/login'
+      });
+      return;
+    }
+
     this.checkStoreAndLoadData();
     this.updateCartFromStorage(); // 每次显示页面时同步购物车状态
     
     // 每次显示页面时，刷新收藏状态（保证从详情页返回时状态同步）
-    if (app.globalData.token) {
+    if (token) {
       this.fetchFavoriteIds();
     }
   },
@@ -97,17 +107,40 @@ Page({
 
   // 将后端数据转换为前端 UI 需要的格式
   transformAndSetData(backendData) {
-    // 根据实际后端返回调整，这里假设后端直接返回了分类列表
-    // 构造左侧分类名列表
-    const categories = backendData.map(cat => cat.name || cat.categoryName);
+    // 后端返回的是商品列表，需要按分类分组
+    if (!backendData || !Array.isArray(backendData) || backendData.length === 0) {
+      console.warn('后端返回数据为空，使用Mock数据');
+      this.mockData();
+      return;
+    }
 
-    // 构造右侧商品列表
-    // 必须保证每个分类都有 id (用于 scroll-into-view)
-    const products = backendData.map((cat, index) => ({
-      id: `cat-${index}`,
-      name: cat.name || cat.categoryName,
-      items: cat.productList || cat.items || [] // 兼容不同字段名
-    }));
+    // 按 categoryId 分组商品
+    const categoryMap = {};
+    backendData.forEach(product => {
+      const categoryId = product.categoryId || 0;
+      const categoryName = product.categoryName || '其他';
+      
+      if (!categoryMap[categoryId]) {
+        categoryMap[categoryId] = {
+          id: categoryId,
+          name: categoryName,
+          items: []
+        };
+      }
+      
+      // 格式化商品数据
+      categoryMap[categoryId].items.push({
+        id: product.id,
+        name: product.name || '未知商品',
+        desc: product.description || '',
+        price: product.price || 0,
+        image: product.imgUrl || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200&fit=crop'
+      });
+    });
+
+    // 转换为数组并排序
+    const products = Object.values(categoryMap).sort((a, b) => a.id - b.id);
+    const categories = products.map(cat => cat.name);
 
     this.setData({
       categories,
