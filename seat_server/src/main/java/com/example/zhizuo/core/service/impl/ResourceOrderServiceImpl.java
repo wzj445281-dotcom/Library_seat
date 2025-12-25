@@ -3,8 +3,7 @@ package com.example.zhizuo.core.service.impl;
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.core.entity.Reservation;
+import com.example.zhizuo.core.entity.ServiceBooking;
 import com.example.zhizuo.core.entity.ResourceOrder; // 需自行创建Entity
 import com.example.zhizuo.core.entity.Resources;     // 需自行创建Entity
 import com.example.zhizuo.core.mapper.ResourceOrderMapper; // 需自行创建Mapper
@@ -55,7 +54,7 @@ public class ResourceOrderServiceImpl extends ServiceImpl<ResourceOrderMapper, R
         Long seatId = null;
         // 2. 配送模式校验：必须有正在使用中的座位
         if (deliveryType == 1) {
-            Reservation activeRes = getActiveReservation(userId);
+            ServiceBooking activeRes = getActiveReservation(userId);
             if (activeRes == null) {
                 throw new RuntimeException("您当前不在座位上，无法使用配送服务");
             }
@@ -147,8 +146,8 @@ public class ResourceOrderServiceImpl extends ServiceImpl<ResourceOrderMapper, R
         resourcesMapper.updateById(currentRes);
     }
 
-    private Reservation getActiveReservation(Long userId) {
-        QueryWrapper<Reservation> query = new QueryWrapper<>();
+    private ServiceBooking getActiveReservation(Long userId) {
+        QueryWrapper<ServiceBooking> query = new QueryWrapper<>();
         query.eq("user_id", userId)
                 .eq("status", "CHECKED_IN"); // 必须是已签到状态
         return reservationMapper.selectOne(query);

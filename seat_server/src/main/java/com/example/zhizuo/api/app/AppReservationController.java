@@ -3,7 +3,7 @@ package com.example.zhizuo.api.app;
 import com.example.zhizuo.common.ApiResponse;
 import com.example.zhizuo.common.util.SecurityUtils;
 import com.example.zhizuo.core.dto.ReservationRequestDTO;
-import com.example.zhizuo.core.entity.Reservation;
+import com.example.zhizuo.core.entity.ServiceBooking;
 import com.example.zhizuo.core.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,7 +38,7 @@ public class AppReservationController {
 
     @Operation(summary = "我的预约列表")
     @GetMapping("/list")
-    public ApiResponse<List<Reservation>> getMyList() {
+    public ApiResponse<List<ServiceBooking>> getMyList() {
         String studentId = SecurityUtils.getCurrentStudentId();
         return ApiResponse.success(service.getUserReservations(studentId));
     }

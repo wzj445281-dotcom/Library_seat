@@ -1,7 +1,6 @@
 package com.example.zhizuo.core.mq;
 
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import com.example.zhizuo.core.entity.Reservation;
+import com.example.zhizuo.core.entity.ServiceBooking;
 import com.example.zhizuo.core.mapper.ReservationMapper;
 import com.example.zhizuo.core.mapper.UserMapper;
 import com.example.zhizuo.core.entity.User;
@@ -38,7 +37,7 @@ public class ReservationConsumer {
 
         try {
             // 1. 查订单状态
-            Reservation r = reservationMapper.selectById(reservationId);
+            ServiceBooking r = reservationMapper.selectById(reservationId);
 
             // 如果订单不存在，或者已经签到/取消/完成，则直接确认消息，不做处理
             if (r == null || !"RESERVED".equals(r.getStatus())) {

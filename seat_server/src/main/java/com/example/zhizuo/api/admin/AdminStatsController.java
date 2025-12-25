@@ -3,7 +3,7 @@ package com.example.zhizuo.api.admin;
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.core.entity.Reservation;
+import com.example.zhizuo.core.entity.ServiceBooking;
 import com.example.zhizuo.core.entity.Seat;
 import com.example.zhizuo.core.entity.User;
 import com.example.zhizuo.core.mapper.ReservationMapper;
@@ -55,7 +55,7 @@ public class AdminStatsController {
 
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
-        QueryWrapper<Reservation> todayQuery = new QueryWrapper<>();
+        QueryWrapper<ServiceBooking> todayQuery = new QueryWrapper<>();
         todayQuery.between("start_time", todayStart, todayEnd);
         data.put("todayOrders", reservationMapper.selectCount(todayQuery));
 
@@ -88,17 +88,17 @@ public class AdminStatsController {
 
         // 2. 用户平均签到延迟时间 (Avg Check-in Delay)
         // 查最近100条已签到的记录
-        QueryWrapper<Reservation> checkInQuery = new QueryWrapper<>();
+        QueryWrapper<ServiceBooking> checkInQuery = new QueryWrapper<>();
         checkInQuery.eq("status", "CHECKED_IN");
         checkInQuery.isNotNull("check_in_time");
         checkInQuery.orderByDesc("create_time");
         checkInQuery.last("LIMIT 100");
-        List<Reservation> checkedList = reservationMapper.selectList(checkInQuery);
+        List<ServiceBooking> checkedList = reservationMapper.selectList(checkInQuery);
 
         double avgDelayMinutes = 0.0;
         if (!checkedList.isEmpty()) {
             long totalDelay = 0;
-            for (Reservation r : checkedList) {
+            for (ServiceBooking r : checkedList) {
                 // 如果签到时间晚于开始时间，计算延迟
                 if (r.getCheckInTime().isAfter(r.getStartTime())) {
                     totalDelay += Duration.between(r.getStartTime(), r.getCheckInTime()).toMinutes();
@@ -121,16 +121,16 @@ public class AdminStatsController {
         String fileName = URLEncoder.encode("预约记录表", "UTF-8").replaceAll("\\+", "%20");
         response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
 
-        QueryWrapper<Reservation> query = new QueryWrapper<>();
+        QueryWrapper<ServiceBooking> query = new QueryWrapper<>();
         query.orderByDesc("create_time");
         query.last("LIMIT 1000");
-        List<Reservation> list = reservationMapper.selectList(query);
+        List<ServiceBooking> list = reservationMapper.selectList(query);
 
         List<ReservationExportVO> exportData = new ArrayList<>();
         Map<Long, Seat> seatMap = seatMapper.selectList(null).stream().collect(Collectors.toMap(Seat::getId, s -> s));
         Map<Long, User> userMap = userMapper.selectList(null).stream().collect(Collectors.toMap(User::getId, u -> u));
 
-        for (Reservation r : list) {
+        for (ServiceBooking r : list) {
             ReservationExportVO vo = new ReservationExportVO();
             vo.setId(r.getId());
             vo.setStartTime(r.getStartTime());

@@ -1,0 +1,132 @@
+const request = require('../../utils/request.js');
+
+Page({
+  data: {
+    currentTab: 0, // 0:全部, 1:待支付, 2:制作中, 3:待取货
+    orderList: [],
+    page: 1,
+    hasMore: true
+  },
+
+  onShow() {
+    // 每次显示页面刷新数据
+    this.setData({ page: 1, orderList: [] });
+    this.fetchOrders();
+  },
+
+  switchTab(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    this.setData({
+      currentTab: index,
+      page: 1,
+      orderList: [],
+      hasMore: true
+    });
+    this.fetchOrders();
+  },
+
+  fetchOrders() {
+    if (!this.data.hasMore) return;
+
+    // 映射 Tab 到后端状态字段
+    // 假设后端接口: /api/app/store/order/list?status=...
+    let status = '';
+    switch(this.data.currentTab) {
+      case 1: status = 'PENDING_PAY'; break;
+      case 2: status = 'PAID'; break;
+      case 3: status = 'READY'; break;
+      default: status = ''; // 全部
+    }
+
+    wx.showLoading({ title: '加载中' });
+    
+    // 模拟数据请求
+    // 实际请替换为: request.get('/api/app/store/order/list', { status, page: this.data.page })
+    this.mockFetch(status).then(res => {
+      wx.hideLoading();
+      const list = res.list.map(item => this.processItem(item));
+      
+      this.setData({
+        orderList: this.data.page === 1 ? list : this.data.orderList.concat(list),
+        hasMore: list.length >= 10, // 假设每页10条
+        page: this.data.page + 1
+      });
+    });
+  },
+
+  // 处理订单显示状态
+  processItem(item) {
+    let statusText = '';
+    let statusStyle = '';
+    
+    switch(item.status) {
+      case 'PENDING_PAY': 
+        statusText = '待支付'; statusStyle = 'pending'; break;
+      case 'PAID': 
+        statusText = '制作中'; statusStyle = 'processing'; break;
+      case 'READY': 
+        statusText = item.type === 1 ? '待自取' : '配送中'; statusStyle = 'ready'; break;
+      case 'COMPLETED': 
+        statusText = '已完成'; statusStyle = 'completed'; break;
+      case 'CANCELLED': 
+        statusText = '已取消'; statusStyle = 'completed'; break;
+    }
+    return { ...item, statusText, statusStyle };
+  },
+
+  // 模拟支付
+  payOrder(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '支付确认',
+      content: '模拟支付该订单？',
+      success: (res) => {
+        if (res.confirm) {
+          // 调用后端支付接口
+          request.post('/api/app/store/order/pay', { orderId: id }).then(res => {
+             wx.showToast({ title: '支付成功' });
+             this.onShow(); // 刷新列表
+          });
+        }
+      }
+    });
+  },
+
+  goToDetail(e) {
+    // 暂时不跳转详情，实际可跳转
+    // wx.navigateTo({ url: '/pages/orders/detail?id=' + e.currentTarget.dataset.id });
+  },
+
+  // Mock 数据生成 (如果后端接口未就绪可用此测试)
+  mockFetch(status) {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const mockList = [
+          {
+            id: 'ORD_1001',
+            status: 'PENDING_PAY',
+            totalAmount: '59.90',
+            totalCount: 1,
+            type: 1,
+            createTime: '2023-10-25 10:00',
+            products: [{ imgUrl: '', name: 'Java书' }]
+          },
+          {
+            id: 'ORD_1002',
+            status: 'READY',
+            totalAmount: '32.00',
+            totalCount: 2,
+            type: 1,
+            pickupCode: 'A808',
+            createTime: '2023-10-24 14:30',
+            products: [{ imgUrl: '' }, { imgUrl: '' }]
+          }
+        ];
+        
+        // 简单过滤
+        const filtered = status ? mockList.filter(i => i.status === status) : mockList;
+        resolve({ list: filtered });
+      }, 500);
+    });
+  }
+});

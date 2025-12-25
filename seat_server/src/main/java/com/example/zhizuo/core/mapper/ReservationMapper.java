@@ -1,14 +1,14 @@
 package com.example.zhizuo.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.example.zhizuo.core.entity.Reservation;
+import com.example.zhizuo.core.entity.ServiceBooking;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import java.time.LocalDateTime;
 
 @Mapper
-public interface ReservationMapper extends BaseMapper<Reservation> {
+public interface ReservationMapper extends BaseMapper<ServiceBooking> {
 
     // 关键 SQL：检测时间重叠
     // 逻辑：(A.start < B.end) AND (A.end > B.start) 即为重叠

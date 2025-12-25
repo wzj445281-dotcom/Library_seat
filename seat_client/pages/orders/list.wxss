@@ -1,0 +1,173 @@
+page {
+  background-color: #f7f7f7;
+  height: 100%;
+}
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  background: #fff;
+  padding: 0 20rpx;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.tab-item {
+  flex: 1;
+  text-align: center;
+  font-size: 28rpx;
+  color: #666;
+  padding: 24rpx 0;
+  position: relative;
+}
+.tab-item.active {
+  color: #0052d9;
+  font-weight: bold;
+}
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background: #0052d9;
+  border-radius: 2rpx;
+}
+
+/* List */
+.order-list {
+  flex: 1;
+  padding: 20rpx;
+  box-sizing: border-box;
+}
+
+.order-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.03);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+.store-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+.status-text {
+  font-size: 26rpx;
+}
+.status-text.pending { color: #ff9c00; }
+.status-text.processing { color: #0052d9; }
+.status-text.ready { color: #00a870; font-weight: bold; }
+.status-text.completed { color: #999; }
+
+.card-body {
+  padding: 20rpx 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.goods-scroll {
+  width: 70%;
+  white-space: nowrap;
+}
+.goods-imgs image {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 8rpx;
+  margin-right: 16rpx;
+  background: #eee;
+}
+.order-info {
+  text-align: right;
+}
+.total-count {
+  font-size: 24rpx;
+  color: #999;
+  display: block;
+}
+.total-price {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.card-footer {
+  padding-top: 20rpx;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  border-top: 1rpx dashed #f5f5f5;
+}
+
+/* 取货码样式 */
+.pickup-code-box {
+  background: #e8f3ff;
+  padding: 10rpx 20rpx;
+  border-radius: 8rpx;
+}
+.pickup-code-box .label {
+  font-size: 24rpx;
+  color: #0052d9;
+}
+.pickup-code-box .code {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #0052d9;
+  margin-left: 10rpx;
+}
+
+/* 按钮组 */
+.btn-group {
+  display: flex;
+}
+.btn {
+  padding: 10rpx 30rpx;
+  font-size: 26rpx;
+  border-radius: 30rpx;
+  margin-left: 20rpx;
+}
+.btn.cancel {
+  border: 1rpx solid #ccc;
+  color: #666;
+}
+.btn.pay {
+  background: #0052d9;
+  color: #fff;
+  border: 1rpx solid #0052d9;
+}
+
+.order-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 200rpx;
+}
+.empty-state image {
+  width: 200rpx;
+  margin-bottom: 20rpx;
+}
+.empty-state text {
+  font-size: 28rpx;
+  color: #999;
+}

@@ -2,7 +2,7 @@ package com.example.zhizuo.core.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.example.zhizuo.core.entity.Reservation;
+import com.example.zhizuo.core.entity.ServiceBooking;
 import com.example.zhizuo.core.entity.User;
 import com.example.zhizuo.core.mapper.ReservationMapper;
 import com.example.zhizuo.core.mapper.UserMapper;
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reservation> implements ReservationService {
+public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, ServiceBooking> implements ReservationService {
 
     @Autowired
     private UserMapper userMapper;
@@ -68,9 +68,9 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     }
 
     @Override
-    public List<Reservation> getUserReservations(String studentId) {
+    public List<ServiceBooking> getUserReservations(String studentId) {
         // 原有逻辑应该已经实现了这个，这里保持接口一致性
-        return baseMapper.selectList(new QueryWrapper<Reservation>()
+        return baseMapper.selectList(new QueryWrapper<ServiceBooking>()
                 .eq("student_id", studentId) // 假设 Reservation 表里存了 student_id 或者关联查询
                 .orderByDesc("create_time"));
     }
@@ -78,7 +78,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     @Override
     public void checkIn(Long reservationId) {
         // 实现签到逻辑
-        Reservation reservation = getById(reservationId);
+        ServiceBooking reservation = getById(reservationId);
         if (reservation == null) throw new RuntimeException("预约不存在");
         // ... 状态更新 ...
         updateById(reservation);
@@ -92,7 +92,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
 
     @Override
     public void leave(Long reservationId) {
-        Reservation reservation = getById(reservationId);
+        ServiceBooking reservation = getById(reservationId);
         if (reservation != null) {
             reservation.setStatus("2"); // 修正为 String 类型
             updateById(reservation);
