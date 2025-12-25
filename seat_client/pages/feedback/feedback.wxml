@@ -1,6 +1,6 @@
 <view class="container">
     <view class="header-tip">
-        请详细描述您遇到的问题，如：座位损坏、插座没电等。
+        请详细描述您遇到的问题，如：产品问题、配送延迟、服务体验等。
     </view>
 
     <view class="form-group">

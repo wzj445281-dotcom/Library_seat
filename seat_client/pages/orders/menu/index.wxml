@@ -2,7 +2,7 @@
   <!-- 头部信息 (保持不变) -->
   <view class="shop-header">
     <view class="shop-info">
-      <view class="shop-name">智座实验室 (科技园店)</view>
+      <view class="shop-name">瑞幸咖啡 (科技园店)</view>
       <view class="shop-distance">距离您 150m</view>
     </view>
     <view class="delivery-switch">

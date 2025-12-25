@@ -8,7 +8,7 @@
     <view class="content-wrapper">
 
         <!-- 取餐码卡片 (核心区域) -->
-        <view class="card pickup-card" wx:if="{{order.status === 2}}">
+        <view class="card pickup-card" wx:if="{{order.status === 'READY' || order.status === 'WAIT_PICKUP'}}">
             <view class="pickup-header">
                 <text>取餐码</text>
                 <view class="qr-btn" bindtap="onShowQrCode">

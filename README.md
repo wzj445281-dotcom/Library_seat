@@ -1,24 +1,28 @@
-☕ 瑞客咖啡 (Ruike Coffee) 智能管理系统
+# 瑞幸咖啡购买小程序 (Ruixing Coffee Mini Program)
 
-"不仅仅是好咖啡，更是智能空间体验。"
+"不仅仅是好咖啡，更是智能点餐体验。"
 
 📖 项目简介
 
-瑞客咖啡 (Ruike Coffee) 是一个集成了 新零售咖啡点单 + 智能空间管理 的全栈项目。
+瑞幸咖啡 (Ruixing Coffee) 是一个基于微信小程序开发的在线点餐系统，集成了新零售咖啡点单、智能推荐和订单管理功能。
 
-本项目致敬瑞幸咖啡 (Luckin Coffee) 的商业模式与 UI 风格，并在此基础上引入了 AI 技术。系统不仅支持饮品管理和订单处理，还通过 DeepSeek 大模型提供智能客服服务，并结合 Python 数据分析实现门店客流的实时监控与预测。
+本项目采用 Spring Boot + 微信小程序原生框架开发，支持完整的 O2O 电商流程。系统不仅支持饮品管理和订单处理，还通过 DeepSeek 大模型提供智能客服服务，并结合 Python 数据分析实现门店客流的实时监控与预测。
 
 🚀 核心功能
 
-☕ 智能点单系统：支持“生椰拿铁”、“大师咖啡”等产品的管理、库存控制及订单履约。
+☕ **在线菜单**：浏览瑞幸咖啡全系列产品，支持分类展示、商品详情、收藏功能。
 
-🤖 AI 首席咖啡师：集成 DeepSeek 大模型，提供自然语言对话，解答营业时间、推荐饮品等问题。
+🛒 **自助下单**：支持选择口味、甜度及加料，购物车管理，优惠券使用，地址管理。
 
-📊 实时监控大屏：基于 ECharts 的可视化大屏，实时展示门店热力图、客流预测曲线及座位利用率。
+📦 **订单管理**：实时查看订单进度、历史记录、订单详情及取餐码。
 
-🔵 瑞幸蓝 UI 风格：全套后台管理界面采用经典的 Luckin Blue 配色，专业且现代。
+🤖 **AI 智能助手**：集成 DeepSeek 大模型，提供自然语言对话，解答营业时间、推荐饮品等问题。
 
-🐳 全栈容器化：基于 Docker Compose 的一键编排，整合 Java、Python、MySQL、Redis、RabbitMQ 五大服务。
+📍 **门店查询**：定位并选择最近的瑞幸门店，支持到店自取和外卖配送。
+
+🔵 **瑞幸蓝 UI 风格**：全套界面采用经典的 Luckin Blue 配色，专业且现代。
+
+🐳 **全栈容器化**：基于 Docker Compose 的一键编排，整合 Java、Python、MySQL、Redis、RabbitMQ 五大服务。
 
 🛠 技术栈
 
@@ -60,8 +64,8 @@ Docker Desktop (包含 Docker Compose)
 
 2. 获取代码
 
-git clone [https://github.com/your-username/ruike-coffee.git](https://github.com/your-username/ruike-coffee.git)
-cd ruike-coffee
+git clone https://github.com/wzj445281-dotcom/Ruixing.git
+cd bookSeats
 
 
 3. 配置 API Key (重要)
@@ -136,7 +140,7 @@ Database: zhizuo_db
 
 📂 项目结构
 
-ruike-coffee/
+ruixing-coffee/
 ├── ai_service/             # Python AI 微服务
 │   ├── predict_server.py   # AI 核心逻辑 (DeepSeek + 预测)
 │   ├── Dockerfile          # Python 镜像构建
@@ -146,6 +150,11 @@ ruike-coffee/
 │   ├── src/main/resources/
 │   │   └── static/         # 前端静态页面 (admin.html, monitor.html)
 │   └── Dockerfile          # Java 镜像构建
+├── seat_client/            # 微信小程序前端
+│   ├── pages/              # 页面文件
+│   ├── components/         # 组件
+│   ├── api/                # API 接口封装
+│   └── utils/              # 工具函数
 ├── docker-compose.yml      # 容器编排配置 (防冲突版)
 └── README.md               # 项目文档
 
@@ -167,4 +176,4 @@ A: 请确保后端 SecurityConfig.java 中已放行对应的 HTML 页面路径�
 
 📝 License
 
-MIT License. Copyright (c) 2025 Ruike Coffee Team.
+MIT License. Copyright (c) 2025 Ruixing Coffee Team.

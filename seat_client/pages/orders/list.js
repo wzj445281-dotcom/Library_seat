@@ -137,8 +137,12 @@ Page({
   },
 
   goToDetail(e) {
-    // 暂时不跳转详情，实际可跳转
-    // wx.navigateTo({ url: '/pages/orders/detail?id=' + e.currentTarget.dataset.id });
+    const orderNo = e.currentTarget.dataset.id;
+    if (orderNo) {
+      wx.navigateTo({ 
+        url: `/pages/orders/detail/detail?orderNo=${orderNo}` 
+      });
+    }
   },
 
   // Mock 数据生成 (如果后端接口未就绪可用此测试)

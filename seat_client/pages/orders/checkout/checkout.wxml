@@ -16,10 +16,16 @@
             <view class="store-address">{{storeInfo.address}}</view>
         </view>
         <view class="address-info" wx:else bindtap="selectAddress">
-            <view class="store-name">{{selectedAddress ? selectedAddress.name + ' ' + selectedAddress.phone : '请选择收货地址'}}</view>
-            <view class="store-address {{selectedAddress ? '' : 'text-gray'}}">
-                {{selectedAddress ? selectedAddress.province + selectedAddress.city + selectedAddress.district + selectedAddress.detail : '点击选择收货地址'}}
+            <view class="address-content">
+                <view class="store-name">
+                    {{selectedAddress ? selectedAddress.name + ' ' + selectedAddress.phone : '请选择收货地址'}}
+                    <text class="default-tag" wx:if="{{selectedAddress && selectedAddress.isDefault}}">默认</text>
+                </view>
+                <view class="store-address {{selectedAddress ? '' : 'text-gray'}}">
+                    {{selectedAddress ? (selectedAddress.province || '') + (selectedAddress.city || '') + (selectedAddress.district || '') + (selectedAddress.detail || '') : '点击选择收货地址'}}
+                </view>
             </view>
+            <text class="arrow">></text>
         </view>
     </view>
 

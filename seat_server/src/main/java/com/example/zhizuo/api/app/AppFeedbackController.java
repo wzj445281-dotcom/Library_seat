@@ -41,15 +41,11 @@ public class AppFeedbackController {
             return ApiResponse.error(400, "内容不能为空");
         }
 
-        // 获取当前用户
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String studentId = (String) auth.getPrincipal();
-        QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", studentId);
-        User user = userMapper.selectOne(query);
+        // 获取当前用户ID
+        Long userId = com.example.zhizuo.common.util.SecurityUtils.getUserId();
 
         Feedback fb = new Feedback();
-        fb.setUserId(user.getId());
+        fb.setUserId(userId);
         fb.setContent(content);
         fb.setContact(contact);
         fb.setStatus(0); // 默认未处理

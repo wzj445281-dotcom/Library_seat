@@ -12,8 +12,8 @@ public class Knife4jConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("智座系统 API 文档")
+                        .title("瑞幸咖啡 API 文档")
                         .version("V2.0")
-                        .description("基于 Spring Boot + Vue/UniApp 的高校座位智能调度系统"));
+                        .description("基于 Spring Boot + 微信小程序的瑞幸咖啡在线点餐系统"));
     }
 }

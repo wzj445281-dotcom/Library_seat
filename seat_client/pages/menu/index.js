@@ -283,10 +283,7 @@ Page({
    * 接口: GET /api/app/favorite/ids
    */
   fetchFavoriteIds() {
-    request({
-      url: '/api/app/favorite/ids',
-      method: 'GET'
-    }).then(res => {
+    request.get('/api/app/favorite/ids').then(res => {
       if (res.code === 200) {
         // 将数组转换为 Map 结构 {101: true, 102: true}，方便 WXML 判断
         const map = {};
@@ -324,11 +321,7 @@ Page({
     });
 
     // 发送请求
-    request({
-      url: '/api/app/favorite/toggle',
-      method: 'POST',
-      data: { productId: id }
-    }).then(res => {
+    request.post('/api/app/favorite/toggle', { productId: id }).then(res => {
       if (res.code !== 200) {
         // 如果失败，回滚状态
         this.setData({ [key]: isFavorite });

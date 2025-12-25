@@ -54,7 +54,7 @@ Page({
 
         try {
             // 发送验证码接口使用 GET 方法，phone 作为 query 参数
-            const res = await request.get('/auth/send-code', { phone });
+            const res = await request.get('/api/auth/send-code', { phone });
             
             if (res && res.code === 200) {
                 wx.showToast({ title: '验证码已发送', icon: 'success' });
@@ -98,7 +98,7 @@ Page({
         this.setData({ loading: true });
 
         try {
-            const res = await request.post('/auth/login', { phone, code });
+            const res = await request.post('/api/auth/login', { phone, code });
 
             if (res && res.code === 200 && res.data) {
                 // 保存登录信息
@@ -158,7 +158,7 @@ Page({
         this.setData({ loading: true });
 
         try {
-            const res = await request.post('/auth/register', { phone, name, code });
+            const res = await request.post('/api/auth/register', { phone, name, code });
 
             if (res && res.code === 200) {
                 wx.showToast({ title: '注册成功，请登录', icon: 'success' });

@@ -32,12 +32,9 @@ public class AppUserController {
     @Operation(summary = "获取当前用户信息(含最新信用分)")
     @GetMapping("/info")
     public ApiResponse<User> getUserInfo() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String studentId = (String) auth.getPrincipal();
-
-        QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", studentId);
-        User user = userMapper.selectOne(query);
+        // 使用 SecurityUtils 获取用户ID
+        Long userId = com.example.zhizuo.common.util.SecurityUtils.getUserId();
+        User user = userMapper.selectById(userId);
 
         if (user != null) {
             user.setPassword(null); // 脱敏，不返回密码
@@ -48,11 +45,11 @@ public class AppUserController {
     @Operation(summary = "获取我的信用分变动日志")
     @GetMapping("/credit-logs")
     public ApiResponse<List<CreditLog>> getMyCreditLogs() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String studentId = (String) auth.getPrincipal();
+        // 使用 SecurityUtils 获取用户ID
+        Long userId = com.example.zhizuo.common.util.SecurityUtils.getUserId();
 
         QueryWrapper<CreditLog> query = new QueryWrapper<>();
-        query.inSql("user_id", "SELECT id FROM users WHERE student_id = '" + studentId + "'");
+        query.eq("user_id", userId);
         query.orderByDesc("create_time");
 
         return ApiResponse.success(creditLogMapper.selectList(query));

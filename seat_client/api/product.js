@@ -6,7 +6,7 @@ module.exports = {
      * @param {number} storeId 门店ID
      */
     getStoreMenu(storeId) {
-        return request.get('/app/store/menu', { categoryId: null });
+        return request.get('/api/app/store/menu', { categoryId: null });
     },
 
     /**
@@ -14,6 +14,6 @@ module.exports = {
      * @param {number} productId 商品ID
      */
     getProductDetail(productId) {
-        return request.get('/app/product/detail', { id: productId });
+        return request.get('/api/app/product/detail', { id: productId });
     }
 }

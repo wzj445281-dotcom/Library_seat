@@ -56,6 +56,14 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Servi
 
     /**
      * 核心预约逻辑
+     * 
+     * 实现流程：
+     * 1. 参数校验
+     * 2. 使用 Redisson 分布式锁防止并发超卖（锁 key: seat_lock:{seatId}）
+     * 3. 检查座位在指定时间段是否已被预订（查询 service_booking 表）
+     * 4. 如果可用，创建并保存 ServiceBooking 记录
+     * 5. 发送 RabbitMQ 延迟消息到 order.delay.queue（用于订单超时自动取消）
+     * 6. 释放锁
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -68,7 +76,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Servi
             throw new RuntimeException("预约时间无效");
         }
 
-        // 2. 使用分布式锁防止并发冲突
+        // 2. 使用分布式锁防止并发冲突（锁 key: seat_lock:{seatId}）
         String lockKey = "seat_lock:" + seatId;
         RLock lock = null;
         if (redissonClient != null) {
@@ -76,13 +84,17 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Servi
         }
 
         try {
-            // 尝试获取锁，最多等待10秒，锁定30秒
+            // 尝试获取锁：等待时间 0（不等待），锁定时间 10秒
             boolean locked = false;
             if (lock != null) {
-                locked = lock.tryLock(10, 30, TimeUnit.SECONDS);
+                // tryLock(waitTime, leaseTime, timeUnit)
+                // waitTime=0: 不等待，立即返回
+                // leaseTime=10: 锁定10秒后自动释放
+                locked = lock.tryLock(0, 10, TimeUnit.SECONDS);
             } else {
-                // 如果没有Redisson，直接执行（单机环境）
+                // 如果没有Redisson，直接执行（单机环境或开发环境）
                 locked = true;
+                log.warn("Redisson未配置，跳过分布式锁，可能存在并发风险");
             }
 
             if (!locked) {
@@ -90,7 +102,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Servi
             }
 
             try {
-                // 3. 检查时间冲突（使用Mapper中的SQL查询）
+                // 3. 检查座位在指定时间段是否已被预订（查询 service_booking 表）
                 int conflictCount = baseMapper.countConflict(seatId, startTime, endTime);
                 if (conflictCount > 0) {
                     throw new RuntimeException("该时间段已被预约，请选择其他时间");
@@ -109,26 +121,29 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Servi
                 booking.setTotalPrice(BigDecimal.ZERO); // 可以根据业务设置价格
                 booking.setCreateTime(LocalDateTime.now());
 
-                // 5. 保存预约
+                // 5. 保存预约记录到数据库
                 save(booking);
 
-                // 6. 发送延迟消息（如果RabbitMQ启用）
+                // 6. 发送 RabbitMQ 延迟消息到 order.delay.queue（用于订单超时自动取消）
                 if (reservationProducer != null) {
                     try {
                         reservationProducer.sendDelayMessage(booking.getId());
-                        log.info("预约成功，已发送延迟消息，预约ID: {}", booking.getId());
+                        log.info("预约成功，已发送延迟消息到 order.delay.queue，预约ID: {}", booking.getId());
                     } catch (Exception e) {
                         log.error("发送延迟消息失败，预约ID: {}", booking.getId(), e);
-                        // 消息发送失败不影响预约成功
+                        // 消息发送失败不影响预约成功（异步操作，失败可后续补偿）
                     }
+                } else {
+                    log.warn("RabbitMQ未配置，跳过延迟消息发送");
                 }
 
                 log.info("预约成功：用户ID={}, 座位ID={}, 预约单号={}", userId, seatId, booking.getBookingNo());
 
             } finally {
-                // 释放锁
+                // 释放锁（确保在finally中释放，避免死锁）
                 if (lock != null && lock.isHeldByCurrentThread()) {
                     lock.unlock();
+                    log.debug("已释放分布式锁: {}", lockKey);
                 }
             }
 

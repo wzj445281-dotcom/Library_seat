@@ -62,7 +62,7 @@ public class AiPredictionService {
     }
 
     /**
-     * 预测座位拥挤度 (保留原有功能)
+     * 预测门店客流拥挤度 (保留原有功能)
      */
     public Double predictCrowding() {
         String url = aiServiceUrl + "/predict";

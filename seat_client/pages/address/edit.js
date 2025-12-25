@@ -65,17 +65,50 @@ Page({
   chooseLocation() {
     wx.chooseLocation({
       success: (res) => {
+        // 设置详细地址和经纬度
         this.setData({
           detail: res.address || res.name,
           latitude: res.latitude,
           longitude: res.longitude
         });
-        // 可以调用逆地理编码API获取省市区信息
-        // 这里简化处理，用户手动填写
+
+        // 尝试从地址字符串中解析省市区信息
+        // 微信返回的 address 格式通常是：省市区详细地址
+        const address = res.address || '';
+        if (address) {
+          // 简单的地址解析逻辑（可根据实际情况优化）
+          // 格式示例：广东省深圳市南山区科技园南区
+          const provinceMatch = address.match(/^(.+?省|.+?市|.+?自治区|.+?特别行政区)/);
+          if (provinceMatch) {
+            this.setData({ province: provinceMatch[1] });
+            const cityMatch = address.substring(provinceMatch[0].length).match(/^(.+?市|.+?州|.+?盟)/);
+            if (cityMatch) {
+              this.setData({ city: cityMatch[1] });
+              const districtMatch = address.substring(provinceMatch[0].length + cityMatch[0].length).match(/^(.+?区|.+?县|.+?市)/);
+              if (districtMatch) {
+                this.setData({ district: districtMatch[1] });
+              }
+            }
+          }
+        }
+
+        wx.showToast({ 
+          title: '定位成功', 
+          icon: 'success',
+          duration: 1500
+        });
       },
       fail: (err) => {
         console.error('选择位置失败', err);
-        wx.showToast({ title: '选择位置失败', icon: 'none' });
+        if (err.errMsg && err.errMsg.includes('auth deny')) {
+          wx.showModal({
+            title: '需要位置权限',
+            content: '请在小程序设置中开启位置权限',
+            showCancel: false
+          });
+        } else {
+          wx.showToast({ title: '选择位置失败', icon: 'none' });
+        }
       }
     });
   },

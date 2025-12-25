@@ -51,7 +51,7 @@ Page({
         });
 
         // 2. 请求后端接口
-        request.post('/app/ai/chat', { message: content })
+        request.post('/api/app/ai/chat', { message: content })
             .then(res => {
                 let replyContent = '系统繁忙，请稍后再试';
                 let recommendations = [];

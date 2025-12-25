@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>智座 - 借阅订单履约</title>
+    <title>瑞幸咖啡 - 订单履约</title>
     <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <script src="https://unpkg.com/element-ui/lib/index.js"></script>
@@ -17,15 +17,15 @@
 <body>
 <div id="app">
     <div class="header">
-        <h2 style="color: #1890ff; margin: 0;">🚚 借阅履约工作台</h2>
+        <h2 style="color: #1890ff; margin: 0;">🚚 订单履约工作台</h2>
         <el-button type="text" @click="goHome">返回首页</el-button>
     </div>
 
     <div class="container">
         <el-tabs v-model="activeStatus" @tab-click="fetchOrders">
             <el-tab-pane label="待处理 (Pending)" name="PENDING"></el-tab-pane>
-            <el-tab-pane label="借阅中 (Using)" name="USING"></el-tab-pane>
-            <el-tab-pane label="已归还 (Returned)" name="RETURNED"></el-tab-pane>
+            <el-tab-pane label="制作中 (Making)" name="MAKING"></el-tab-pane>
+            <el-tab-pane label="已完成 (Completed)" name="COMPLETED"></el-tab-pane>
             <el-tab-pane label="全部订单" name=""></el-tab-pane>
         </el-tabs>
 
@@ -39,7 +39,7 @@
                     </el-tag>
                 </template>
             </el-table-column>
-            <el-table-column prop="seatId" label="目标座位" width="100">
+            <el-table-column prop="seatId" label="配送地址" width="100">
                 <template slot-scope="scope">
                     {{ scope.row.seatId ? scope.row.seatId : '-' }}
                 </template>

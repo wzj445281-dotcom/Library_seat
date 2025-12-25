@@ -1,11 +1,17 @@
-import request from '../utils/request.js';
+const request = require('../utils/request.js');
 
-// 获取用户信息 (最新)
-export const getUserInfo = () => {
-    return request('/app/user/info', 'GET');
-};
+module.exports = {
+    /**
+     * 获取用户信息
+     */
+    getUserInfo() {
+        return request.get('/api/app/user/info');
+    },
 
-// 获取信用日志
-export const getCreditLogs = () => {
-    return request('/app/user/credit-logs', 'GET');
+    /**
+     * 获取信用日志
+     */
+    getCreditLogs() {
+        return request.get('/api/app/user/credit-logs');
+    }
 };

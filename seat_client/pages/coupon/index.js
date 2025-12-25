@@ -31,7 +31,7 @@ Page({
 
   // 1. 获取可领取的优惠券 
   fetchAvailableCoupons() { 
-    request({ url: '/api/app/coupon/list' }).then(res => { 
+    request.get('/api/app/coupon/list').then(res => { 
       if (res.code === 200) { 
         this.setData({ 
           availableCoupons: res.data, 
@@ -43,7 +43,7 @@ Page({
 
   // 2. 获取我的优惠券 
   fetchMyCoupons() { 
-    request({ url: '/api/app/coupon/my' }).then(res => { 
+    request.get('/api/app/coupon/my').then(res => { 
       if (res.code === 200) { 
         this.setData({ 
           myCoupons: res.data, 
@@ -62,10 +62,7 @@ Page({
     
     wx.showLoading({ title: '抢券中...' }); 
 
-    request({ 
-      url: `/api/app/coupon/acquire/${id}`, 
-      method: 'POST' 
-    }).then(res => { 
+    request.post(`/api/app/coupon/acquire/${id}`).then(res => { 
       wx.hideLoading(); 
       if (res.code === 200) { 
         wx.showToast({ title: '领取成功', icon: 'success' }); 

@@ -1,6 +1,6 @@
 const OrderAPI = require('../../../api/order.js');
-// 引入二维码生成库 (请确保 utils/QRCODE.js 文件存在)
-const QRCode = require('../../../utils/QRCODE.js');
+// 引入二维码生成库 (适配小程序的封装版本)
+const QRCode = require('../../../utils/qrcode.js');
 const app = getApp();
 const { request } = require('../../utils/request');
 
@@ -19,10 +19,11 @@ Page({
     },
 
     onLoad: function (options) {
-        const orderId = options.id;
-        if (orderId) {
-            this.setData({ orderId });
-            this.loadOrderDetail(orderId);
+        // 支持 orderNo 和 id 两种参数
+        const orderNo = options.orderNo || options.id;
+        if (orderNo) {
+            this.setData({ orderId: orderNo });
+            this.loadOrderDetail(orderNo);
             // 获取收藏状态
             if (app.globalData.token) {
                 this.fetchFavoriteIds();
@@ -35,21 +36,23 @@ Page({
     /**
      * 加载订单详情
      */
-    loadOrderDetail: function (orderId) {
+    loadOrderDetail: function (orderNo) {
         this.setData({ loading: true });
         wx.showLoading({ title: '加载中' });
 
-        OrderAPI.getOrderDetail(orderId).then(res => {
+        OrderAPI.getOrderDetail(orderNo).then(res => {
             // 处理后端返回结构：假设 res.code 为 200 且数据在 res.data 中
             if (res.code === 200 && res.data) {
                 const backendData = res.data;
 
                 // 1. 数据映射 (适配后端 Entity 字段)
+                // 后端状态: PENDING, PAID, READY, COMPLETED, CANCELLED
+                const status = backendData.status || '';
                 const order = {
                     id: backendData.id,
-                    status: backendData.status, // 0:待支付, 1:制作中, 2:待取餐, 3:已完成, 4:已取消
-                    statusText: this.getStatusText(backendData.status),
-                    pickupCode: backendData.pickupCode || backendData.fetchCode || '---',
+                    status: status, // 字符串状态: PENDING, PAID, READY, COMPLETED, CANCELLED
+                    statusText: this.getStatusText(status),
+                    pickupCode: backendData.pickupCode || '---',
                     storeName: backendData.storeName || '瑞幸咖啡 (科技园店)',
                     storeAddress: backendData.storeAddress || '高新南九道10号',
                     totalAmount: backendData.totalAmount,
@@ -57,7 +60,7 @@ Page({
                     createTime: backendData.createTime,
                     orderNo: backendData.orderNo,
                     remark: backendData.remark || '无',
-                    items: backendData.items || []
+                    items: backendData.products || backendData.items || [] // 后端返回的是 products 字段
                 };
 
                 // 2. 更新时间轴状态
@@ -69,8 +72,8 @@ Page({
                     steps: steps,
                     loading: false
                 }, () => {
-                    // 如果状态是“待取餐”(2)，绘制二维码
-                    if (order.status === 2) {
+                    // 如果状态是"待取餐"(READY)且有取餐码，绘制二维码
+                    if ((order.status === 'READY' || order.status === 'WAIT_PICKUP') && order.pickupCode) {
                         this.drawQrCode(order.pickupCode);
                     }
                 });
@@ -87,6 +90,7 @@ Page({
 
     /**
      * 更新进度条状态逻辑
+     * 后端状态: PENDING(待支付) -> PAID(制作中) -> READY(待取餐) -> COMPLETED(已完成) -> CANCELLED(已取消)
      */
     updateSteps: function(order) {
         let steps = [
@@ -97,20 +101,27 @@ Page({
 
         const timeStr = order.createTime ? order.createTime.substring(11, 16) : '';
 
-        // 步骤1: 已下单
+        // 步骤1: 已下单（所有状态都显示）
         steps[0].active = true;
         steps[0].time = timeStr;
 
-        // 步骤2: 制作中 (状态为1, 2, 3均视为已开始或完成制作)
-        if (order.status >= 1 && order.status <= 3) {
+        // 步骤2: 制作中（PAID 状态）
+        if (order.status === 'PAID' || order.status === 'MAKING') {
             steps[1].active = true;
             steps[1].time = timeStr;
         }
 
-        // 步骤3: 待取餐 (状态为2或3)
-        if (order.status === 2 || order.status === 3) {
+        // 步骤3: 待取餐（READY 或 WAIT_PICKUP 状态）
+        if (order.status === 'READY' || order.status === 'WAIT_PICKUP') {
+            steps[1].active = true; // 制作中已完成
+            steps[2].active = true; // 待取餐
+            steps[2].time = '现在';
+        }
+
+        // 已完成状态
+        if (order.status === 'COMPLETED') {
+            steps[1].active = true;
             steps[2].active = true;
-            steps[2].time = order.status === 2 ? '现在' : '';
         }
 
         return steps;
@@ -128,8 +139,18 @@ Page({
     },
 
     getStatusText: function(status) {
-        const map = { 0: '待支付', 1: '制作中', 2: '待取餐', 3: '已完成', 4: '已取消' };
-        return map[status] || '处理中';
+        // 后端状态映射: PENDING, PAID, READY, COMPLETED, CANCELLED
+        const statusMap = {
+            'PENDING': '待支付',
+            'PENDING_PAY': '待支付',
+            'PAID': '制作中',
+            'MAKING': '制作中',
+            'READY': '待取餐',
+            'WAIT_PICKUP': '待取餐',
+            'COMPLETED': '已完成',
+            'CANCELLED': '已取消'
+        };
+        return statusMap[status] || '处理中';
     },
 
     /**
@@ -140,6 +161,7 @@ Page({
         console.log('开始绘制二维码:', code);
         try {
             // 注意：需确保 wxml 中有 <canvas canvas-id="myQrcode"></canvas>
+            // 使用适配小程序的二维码生成器
             new QRCode('myQrcode', {
                 text: String(code),
                 width: 160,
@@ -150,6 +172,10 @@ Page({
             });
         } catch (e) {
             console.error('二维码绘制异常:', e);
+            wx.showToast({
+                title: '二维码生成失败',
+                icon: 'none'
+            });
         }
     },
 

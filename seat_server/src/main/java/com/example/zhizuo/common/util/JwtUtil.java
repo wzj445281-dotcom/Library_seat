@@ -14,7 +14,7 @@ import java.util.function.Function;
 public class JwtUtil {
 
     // ⚠️ 真实项目中这个密钥应该非常复杂且放在配置文件里
-    private final String SECRET_KEY = "zhizuo_library_secure_key_2025_student_project";
+    private final String SECRET_KEY = "ruixing_coffee_secure_key_2025_production";
 
     // 提取用户名 (学号)
     public String extractUsername(String token) {
