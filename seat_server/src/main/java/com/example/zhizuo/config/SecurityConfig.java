@@ -7,58 +7,54 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 
+/**
+ * Spring Security 安全配置类
+ * 修复 AuthenticationManager 注入失败问题
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtFilter jwtFilter;
+    @Autowired
+    private JwtFilter jwtFilter;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
-        this.jwtFilter = jwtFilter;
+    /**
+     * 显式注入 AuthenticationManager
+     * 解决 AuthController 构造函数注入失败的问题
+     */
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf().disable() // 禁用 CSRF，因为使用 JWT
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 禁用 Session
+                // 1. 禁用 CSRF
+                .csrf().disable()
+
+                // 2. 禁用 Session (使用 JWT)
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
+
+                // 3. 配置路径权限
                 .authorizeRequests()
-                // --- 🔧 核心修复开始：放行 Knife4j/Swagger 文档资源 ---
-                .antMatchers("/doc.html").permitAll()
-                .antMatchers("/webjars/**").permitAll()
-                .antMatchers("/swagger-resources/**").permitAll()
-                .antMatchers("/v3/api-docs/**").permitAll()
+                // 登录、商品、AI 等基础接口允许匿名访问
+                .antMatchers("/api/app/auth/**", "/api/app/product/**", "/api/app/ai/**").permitAll()
+                // 静态资源、Swagger 文档允许匿名访问
+                .antMatchers("/", "/index.html", "/static/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // 其他接口需要认证
+                .antMatchers("/api/app/**").authenticated()
+                .antMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated();
 
-                // --- 放行静态资源 (监控大屏等) ---
-                .antMatchers("/monitor.html", "/admin.html", "/feedback_manage.html", "/order_manage.html", "/resource_manage.html").permitAll()
-                .antMatchers("/favicon.ico", "/css/**", "/js/**", "/images/**").permitAll()
-
-                // --- 放行认证接口 (登录/注册) ---
-                .antMatchers("/api/auth/**").permitAll()
-                .antMatchers("/api/app/auth/**").permitAll()
-                .antMatchers("/api/admin/auth/**").permitAll()
-
-                // --- 其他接口需认证 ---
-                .anyRequest().authenticated()
-                .and()
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        // 4. 添加 JWT 过滤器
+        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }
