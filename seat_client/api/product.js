@@ -7,8 +7,9 @@ module.exports = {
      * @param {number} storeId 门店ID（暂时不使用，后端接口不需要）
      */
     getStoreMenu(storeId) {
-        // 后端接口：GET /api/app/store/menu?categoryId=null
-        return request.get('/app/store/menu', { categoryId: null });
+        // 后端接口：GET /api/app/store/menu
+        // 不传categoryId参数，让后端使用默认值
+        return request.get('/app/store/menu');
     },
 
     /**

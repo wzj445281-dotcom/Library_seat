@@ -14,7 +14,7 @@ Component({
     },
     placeholder: {
       type: String,
-      value: '/assets/images/placeholder.png' // 占位图
+      value: '/assets/images/cart.png' // 使用现有图片作为占位图
     }
   },
 

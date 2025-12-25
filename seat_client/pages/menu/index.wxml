@@ -110,10 +110,10 @@
                   data-id="{{product.id}}"
                 >
                   <!-- 根据 favoriteMap 判断显示实心还是空心图标 -->
-                  <image 
-                    src="{{favoriteMap[product.id] ? '/assets/icons/heart-filled.png' : '/assets/icons/heart-outline.png'}}" 
-                    class="icon-heart {{favoriteMap[product.id] ? 'animate-bounce' : ''}}" 
-                  />
+                  <!-- 使用文字符号代替图片，避免图片资源问题 -->
+                  <text class="icon-heart {{favoriteMap[product.id] ? 'animate-bounce' : ''}}">
+                    {{favoriteMap[product.id] ? '❤️' : '🤍'}}
+                  </text>
                 </view>
               </view>
               <view class="product-info">
