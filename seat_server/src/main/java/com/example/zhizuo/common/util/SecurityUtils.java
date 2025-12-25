@@ -64,6 +64,14 @@ public class SecurityUtils {
     }
 
     /**
+     * 获取当前登录用户ID (String类型)
+     * 用于收藏功能
+     */
+    public static String getCurrentUserId() {
+        return String.valueOf(getUserId());
+    }
+
+    /**
      * 获取当前登录用户实体
      */
     public static User getUser() {

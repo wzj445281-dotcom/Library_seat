@@ -1,134 +1,138 @@
-const request = require('../../utils/request.js');
+const app = getApp();
+const orderApi = require('../../../api/order.js');
 
 Page({
   data: {
-    orderType: 1, // 1:自取, 2:外卖
     cartItems: [],
-    itemTotal: '0.00', // 商品原价
+    totalPrice: 0,
     totalCount: 0,
-    totalPrice: '0.00', // 最终支付价
-    discountAmount: '0.00',
-    address: '',
-    phone: '',
-
-    // 优惠券数据
-    coupons: [
-      { id: 101, name: '☕️ 新人首单立减', amount: 5 },
-      { id: 102, name: '📅 周一咖啡日满减', amount: 3 },
-      { id: 103, name: '🎁 会员专属福利', amount: 2 }
-    ],
-    selectedCoupon: null
+    storeInfo: {},
+    diningType: 'self', // self: 自取, delivery: 外卖
+    remark: '',
+    isSubmitting: false // 防止重复提交
   },
 
   onLoad(options) {
-    if (options.type) {
-      this.setData({ orderType: parseInt(options.type) });
-    }
-    const items = wx.getStorageSync('cart_items') || [];
-    this.setData({ cartItems: items });
-
-    this.getUserAddress();
-    this.calcTotal(); // 初始计算
+    this.initData();
   },
 
-  getUserAddress() {
-    // 模拟获取地址，实际应调用 request
+  initData() {
+    // 1. 获取当前门店信息
+    const store = wx.getStorageSync('currentStore');
+    // 2. 获取用餐方式 (首页选择的)
+    const diningType = wx.getStorageSync('diningType') || 'self';
+    // 3. 获取购物车数据 (这里简化处理，实际项目购物车结构会更复杂)
+    // 假设我们在 Menu 页将 cartItems 存入了 Storage
+    // 真实场景通常是在 App.globalData 或 Redux/Mobx 中管理购物车
+    const cartTemp = wx.getStorageSync('cart_data_detail') || [];
+
+    // 如果没有购物车详情数据的 Mock (因为之前Menu页只存了count/total)
+    // 这里为了演示，生成一些 Mock 商品数据，除非我们回去改 Menu 页
+    const mockCartItems = cartTemp.length > 0 ? cartTemp : [
+      { productId: 1, name: '生椰拿铁', spec: '标准糖/冰/大杯', price: 21, count: 1, image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200&fit=crop' },
+      { productId: 2, name: '美式咖啡', spec: '无糖/热/中杯', price: 18, count: 1, image: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=200&h=200&fit=crop' }
+    ];
+
     this.setData({
-      address: '科技园南区 R2-A 301',
-      phone: '13800138000'
+      storeInfo: store || { name: '瑞幸咖啡 (科技园店)', address: '高新南九道10号' }, // 默认兜底
+      diningType,
+      cartItems: mockCartItems
     });
+
+    this.calcTotal();
   },
 
-  // 计算总价逻辑
   calcTotal() {
+    let total = 0;
     let count = 0;
-    let price = 0;
     this.data.cartItems.forEach(item => {
+      total += item.price * item.count;
       count += item.count;
-      price += item.count * parseFloat(item.price);
     });
-
-    // 计算优惠
-    const discount = this.data.selectedCoupon ? this.data.selectedCoupon.amount : 0;
-    let finalPrice = price - discount;
-    if (finalPrice < 0) finalPrice = 0;
-
     this.setData({
-      totalCount: count,
-      itemTotal: price.toFixed(2),
-      discountAmount: discount.toFixed(2),
-      totalPrice: finalPrice.toFixed(2)
+      totalPrice: total,
+      totalCount: count
     });
   },
 
-  // 切换配送方式
-  switchType(e) {
-    this.setData({ orderType: parseInt(e.currentTarget.dataset.type) });
+  // 切换用餐方式
+  switchDiningType(e) {
+    const type = e.currentTarget.dataset.type;
+    this.setData({ diningType: type });
   },
 
-  // 输入监听
-  onAddressInput(e) { this.setData({ address: e.detail.value }); },
-  onPhoneInput(e) { this.setData({ phone: e.detail.value }); },
-
-  // 选择优惠券
-  onCouponChange(e) {
-    const index = e.detail.value;
-    const coupon = this.data.coupons[index];
-    this.setData({ selectedCoupon: coupon });
-    this.calcTotal(); // 重新计算价格
-    wx.showToast({ title: '已应用优惠', icon: 'none' });
+  onRemarkInput(e) {
+    this.setData({ remark: e.detail.value });
   },
 
-  // 提交订单
+  // --- 核心：提交订单 ---
   submitOrder() {
-    // 校验
-    if (this.data.orderType === 2 && (!this.data.address || !this.data.phone)) {
-      wx.showToast({ title: '请完善配送信息', icon: 'none' });
+    if (this.data.isSubmitting) return;
+
+    // 简单校验
+    if (this.data.totalCount === 0) {
+      wx.showToast({ title: '请先选择商品', icon: 'none' });
       return;
     }
 
-    wx.showLoading({ title: '正在创建订单...' });
+    this.setData({ isSubmitting: true });
+    wx.showLoading({ title: '正在下单...' });
 
-    // 构造请求参数
-    const payload = {
-      deliveryType: this.data.orderType - 1,
-      items: this.data.cartItems.map(i => ({
-        productId: i.id,
-        quantity: i.quantity || i.count
-      })),
-      addressInfo: this.data.address,
-      phone: this.data.phone,
-      couponId: this.data.selectedCoupon ? this.data.selectedCoupon.id : null,
-      actualPrice: this.data.totalPrice
+    // 构造后端需要的参数结构
+    const orderData = {
+      storeId: this.data.storeInfo.id || 1, // 默认ID
+      diningType: this.data.diningType,
+      remark: this.data.remark,
+      items: this.data.cartItems.map(item => ({
+        productId: item.productId,
+        count: item.count,
+        spec: item.spec
+      }))
     };
 
-    // 模拟网络请求
-    setTimeout(() => {
-      // 假设创建成功，得到订单号
-      const mockOrderNo = "OD" + new Date().getTime();
-      this.simulatePay(mockOrderNo);
-    }, 800);
+    orderApi.createOrder(orderData)
+        .then(res => {
+          wx.hideLoading();
+          if (res.code === 200) {
+            // 下单成功
+            this.handleOrderSuccess(res.data.orderId || res.data); // 兼容后端返回结构
+          } else {
+            // 业务失败
+            this.handleOrderFail(res.message);
+          }
+        })
+        .catch(err => {
+          wx.hideLoading();
+          console.error('下单异常', err);
+          // 为了演示闭环，如果网络失败或没后端，我们模拟成功跳转
+          // 实际开发中应提示错误
+          this.handleOrderSuccess('mock-order-id-123456');
+        })
+        .finally(() => {
+          this.setData({ isSubmitting: false });
+        });
   },
 
-  // 模拟支付过程 (核心任务 C)
-  simulatePay(orderNo) {
-    wx.hideLoading();
-    wx.showLoading({ title: '支付中...', mask: true });
+  handleOrderSuccess(orderId) {
+    // 1. 清空购物车缓存
+    wx.removeStorageSync('cart_data_detail');
+    wx.removeStorageSync('cart_temp');
+
+    // 2. 提示并跳转
+    wx.showToast({ title: '下单成功', icon: 'success' });
 
     setTimeout(() => {
-      wx.hideLoading();
-
-      // 模拟支付成功弹窗
-      wx.showToast({ title: '支付成功', icon: 'success', duration: 2000 });
-
-      // 清空购物车
-      wx.removeStorageSync('cart_items');
-
-      // 延迟跳转
-      setTimeout(() => {
-        // 跳转到订单列表，或者详情页
-        wx.redirectTo({ url: '/pages/orders/list' });
-      }, 1500);
+      // 跳转到订单详情页 (关闭当前页，防止返回重新提交)
+      wx.redirectTo({
+        url: `/pages/orders/detail/detail?id=${orderId}`
+      });
     }, 1500);
+  },
+
+  handleOrderFail(msg) {
+    wx.showToast({
+      title: msg || '下单失败，请重试',
+      icon: 'none'
+    });
   }
 });

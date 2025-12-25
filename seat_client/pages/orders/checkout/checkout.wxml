@@ -1,82 +1,62 @@
 <view class="container">
-    <!-- 配送方式切换 (仿瑞幸胶囊切换) -->
-    <view class="switch-container">
-        <view class="switch-box">
-            <view class="switch-item {{orderType === 1 ? 'active' : ''}}" bindtap="switchType" data-type="1">自提</view>
-            <view class="switch-item {{orderType === 2 ? 'active' : ''}}" bindtap="switchType" data-type="2">外送</view>
+    <!-- 用餐方式选择 -->
+    <view class="dining-type-card">
+        <view class="type-switch">
+            <view class="switch-item {{diningType === 'self' ? 'active' : ''}}" bindtap="switchDiningType" data-type="self">
+                到店自取
+            </view>
+            <view class="switch-item {{diningType === 'delivery' ? 'active' : ''}}" bindtap="switchDiningType" data-type="delivery">
+                外卖配送
+            </view>
+        </view>
+
+        <!-- 门店信息/地址信息 -->
+        <view class="address-info" wx:if="{{diningType === 'self'}}">
+            <view class="store-name">{{storeInfo.name}}</view>
+            <view class="store-address">{{storeInfo.address}}</view>
+        </view>
+        <view class="address-info" wx:else>
+            <view class="store-name">请选择收货地址</view>
+            <view class="store-address text-gray">暂未支持外卖地址选择，默认配送至当前定位</view>
         </view>
     </view>
 
-    <!-- 地址/门店卡片 -->
-    <view class="card address-card">
-        <block wx:if="{{orderType === 1}}">
-            <view class="store-name">智座实验室 (科技园店)</view>
-            <view class="store-address">南山区科技园南区 R2-A 栋 301</view>
-            <view class="map-guide">距离您 150m | 步行约 3 分钟</view>
-        </block>
-        <block wx:else>
-            <view class="input-group">
-                <view class="label">配送地址</view>
-                <input class="input" placeholder="请输入楼号/门牌号" value="{{address}}" bindinput="onAddressInput" />
-            </view>
-            <view class="input-group border-top">
-                <view class="label">联系电话</view>
-                <input class="input" type="number" placeholder="请输入手机号" value="{{phone}}" bindinput="onPhoneInput" />
-            </view>
-        </block>
-    </view>
-
-    <!-- 商品明细卡片 -->
-    <view class="card">
+    <!-- 订单明细 -->
+    <view class="order-detail-card">
         <view class="card-title">订单详情</view>
-        <block wx:for="{{cartItems}}" wx:key="id">
-            <view class="product-item">
-                <!-- 兜底显示默认图 -->
-                <image class="prod-img" src="{{item.image || '/assets/images/book-default.png'}}" mode="aspectFill"></image>
-                <view class="prod-info">
-                    <view class="prod-name">{{item.name}}</view>
-                    <view class="prod-desc">{{item.specs || '标准规格'}}</view>
-                    <view class="prod-price-row">
-                        <view class="price">¥{{item.price}}</view>
-                        <view class="count">x{{item.count}}</view>
-                    </view>
+        <block wx:for="{{cartItems}}" wx:key="productId">
+            <view class="cart-item">
+                <image class="item-img" src="{{item.image}}" mode="aspectFill"></image>
+                <view class="item-info">
+                    <view class="item-name">{{item.name}}</view>
+                    <view class="item-spec">{{item.spec}}</view>
+                </view>
+                <view class="item-right">
+                    <view class="item-count">x{{item.count}}</view>
+                    <view class="item-price">¥{{item.price}}</view>
                 </view>
             </view>
         </block>
+
+        <!-- 备注输入 -->
+        <view class="remark-row">
+            <text>备注</text>
+            <input class="remark-input" placeholder="口味、包装等要求" value="{{remark}}" bindinput="onRemarkInput" />
+        </view>
+
+        <!-- 小计 -->
+        <view class="total-row">
+            <text>共{{totalCount}}件商品，小计</text>
+            <text class="total-price">¥{{totalPrice}}</text>
+        </view>
     </view>
 
-    <!-- 优惠券与金额卡片 -->
-    <view class="card">
-        <picker mode="selector" range="{{coupons}}" range-key="name" bindchange="onCouponChange">
-            <view class="row-item">
-                <view class="row-label">优惠券</view>
-                <view class="row-val highlight">
-                    {{selectedCoupon ? '-¥' + selectedCoupon.amount : (coupons.length > 0 ? '有可用优惠券' : '暂无可用')}}
-                    <text class="arrow">></text>
-                </view>
-            </view>
-        </picker>
-        <view class="row-item">
-            <view class="row-label">商品小计</view>
-            <view class="row-val">¥{{itemTotal}}</view>
+    <!-- 底部支付栏 -->
+    <view class="footer-bar">
+        <view class="price-section">
+            <text class="label">合计</text>
+            <text class="price">¥{{totalPrice}}</text>
         </view>
-        <view class="row-item">
-            <view class="row-label">优惠抵扣</view>
-            <view class="row-val highlight">-¥{{discountAmount}}</view>
-        </view>
-        <view class="divider"></view>
-        <view class="row-item total-row">
-            <view class="row-label bold">合计</view>
-            <view class="row-val price-large">¥{{totalPrice}}</view>
-        </view>
+        <view class="pay-btn" bindtap="submitOrder">去支付</view>
     </view>
-</view>
-
-<!-- 底部结算栏 -->
-<view class="footer-bar">
-    <view class="footer-left">
-        <text class="pay-label">应付金额</text>
-        <text class="pay-price">¥{{totalPrice}}</text>
-    </view>
-    <button class="pay-btn" bindtap="submitOrder">去支付</button>
 </view>

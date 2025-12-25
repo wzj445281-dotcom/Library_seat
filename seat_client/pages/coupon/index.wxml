@@ -1,0 +1,72 @@
+<!-- 顶部 Tab 切换 --> 
+<view class="tabs"> 
+  <view class="tab-item {{currentTab == 0 ? 'active' : ''}}" bindtap="switchTab" data-idx="0"> 
+    领券中心 
+  </view> 
+  <view class="tab-item {{currentTab == 1 ? 'active' : ''}}" bindtap="switchTab" data-idx="1"> 
+    我的卡包 
+  </view> 
+</view> 
+
+<!-- 骨架屏 Loading (可选) --> 
+<view wx:if="{{loading}}" class="loading-container"> 
+  <view class="loading-spinner"></view> 
+</view> 
+
+<!-- 列表内容区域 --> 
+<view class="coupon-list" wx:else> 
+  
+  <!-- 场景 A: 领券中心 --> 
+  <block wx:if="{{currentTab == 0}}"> 
+    <view class="coupon-card" wx:for="{{availableCoupons}}" wx:key="id"> 
+      <view class="left"> 
+        <text class="currency">¥</text> 
+        <text class="amount">{{item.amount}}</text> 
+      </view> 
+      <view class="center"> 
+        <view class="title">{{item.title}}</view> 
+        <view class="desc">满 {{item.minPoint}} 元可用</view> 
+        <view class="progress-bar"> 
+          <!-- 简单计算剩余比例 --> 
+          <view class="progress-inner" style="width: {{(item.stock / item.totalStock) * 100}}%"></view> 
+        </view> 
+        <view class="stock-text">剩余 {{item.stock}} 张</view> 
+      </view> 
+      <view class="right"> 
+        <button 
+          class="btn-acquire {{item.stock <= 0 ? 'disabled' : ''}}" 
+          bindtap="onAcquire" 
+          data-id="{{item.id}}" 
+          data-index="{{index}}" 
+          disabled="{{item.stock <= 0}}" 
+        > 
+          {{item.stock <= 0 ? '已抢光' : '立即领取'}} 
+        </button> 
+      </view> 
+    </view> 
+    
+    <!-- 空状态 --> 
+    <view wx:if="{{availableCoupons.length === 0}}" class="empty-tip">暂无优惠券</view> 
+  </block> 
+
+  <!-- 场景 B: 我的卡包 --> 
+  <block wx:if="{{currentTab == 1}}"> 
+    <view class="coupon-card my-card" wx:for="{{myCoupons}}" wx:key="id"> 
+      <view class="left"> 
+        <!-- 注意：这里假设后端 My 接口返回了 amount，如果没有需后端关联查询 --> 
+        <text class="currency">¥</text> 
+        <text class="amount">10</text> 
+      </view> 
+      <view class="center"> 
+        <view class="title">新人专享券</view> 
+        <view class="desc">有效期至：2025-12-31</view> 
+      </view> 
+      <view class="right"> 
+        <view class="status-tag">未使用</view> 
+      </view> 
+    </view> 
+
+    <view wx:if="{{myCoupons.length === 0}}" class="empty-tip">您还没有优惠券</view> 
+  </block> 
+
+</view>

@@ -2,36 +2,32 @@ const request = require('../utils/request.js');
 
 module.exports = {
     /**
-     * 获取订单列表
-     * @param {Object} params { status, page, size }
+     * 创建订单
+     * @param {object} data 订单数据
+     * {
+     * storeId: 1,
+     * items: [{ productId: 1, count: 2, spec: '标准糖' }],
+     * remark: '不要辣',
+     * diningType: 'self' // self: 自取, delivery: 外卖
+     * }
      */
-    getOrderList(params) {
-        // 请确认后端接口地址，通常是 /app/orders 或 /app/order/list
-        return request.get('/app/orders', params);
+    createOrder(data) {
+        return request.post('/app/order/create', data);
     },
 
     /**
      * 获取订单详情
-     * @param {String} orderId
+     * @param {string} orderId 订单ID
      */
     getOrderDetail(orderId) {
-        // RESTful 风格接口
-        return request.get(`/app/orders/${orderId}`);
+        return request.get('/app/order/detail', { id: orderId });
     },
 
     /**
-     * 创建订单
-     * @param {Object} data
+     * 获取订单列表
+     * @param {string} status 状态筛选 (可选)
      */
-    createOrder(data) {
-        return request.post('/app/orders', data);
-    },
-
-    /**
-     * 取消订单
-     * @param {String} orderId
-     */
-    cancelOrder(orderId) {
-        return request.post(`/app/orders/${orderId}/cancel`);
+    getOrderList(status) {
+        return request.get('/app/order/list', { status });
     }
 };

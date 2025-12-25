@@ -1,53 +1,89 @@
-<!-- 骨架屏 (Loading状态下显示) -->
-<view class="skeleton-container" wx:if="{{loading}}">
-  <view class="skeleton-item sk-banner"></view>
-  <view class="sk-card">
-    <view class="skeleton-item sk-store-info"></view>
-    <view class="skeleton-item sk-distance"></view>
-    <view class="sk-buttons">
-      <view class="skeleton-item sk-btn"></view>
-      <view class="skeleton-item sk-btn"></view>
+<view class="container">
+  <!-- 顶部状态栏 & 取餐码 -->
+  <view class="status-card">
+    <view class="status-header">
+      <text class="status-text">{{order.statusText}}</text>
+      <text class="status-desc">{{order.statusDesc}}</text>
     </view>
-  </view>
-</view>
 
-<!-- 真实内容 -->
-<view class="container" wx:else>
-  <!-- 顶部 Banner -->
-  <view class="header">
-    <swiper class="banner-swiper" indicator-dots="{{true}}" autoplay="{{true}}" interval="3000" duration="1000" circular="{{true}}" indicator-active-color="#fff">
-      <block wx:for="{{banners}}" wx:key="*this">
-        <swiper-item>
-          <image src="{{item}}" class="slide-image" mode="aspectFill" />
-        </swiper-item>
-      </block>
-    </swiper>
-  </view>
-
-  <!-- 核心入口卡片 -->
-  <view class="content-card">
-    <!-- 门店信息 -->
-    <view class="store-info">
-      <text class="store-name">{{storeInfo.name}}</text>
-      <view class="store-address">
-        <text class="iconfont icon-location"></text>
-        <text>{{storeInfo.address}}</text>
-        <text class="distance">距您 {{storeInfo.distance}}</text>
+    <!-- 取餐码区域 (仅在制作中或待取餐状态显示) -->
+    <view class="pickup-code-area" wx:if="{{order.status === 'MAKING' || order.status === 'WAIT_PICKUP'}}">
+      <text class="label">取餐码</text>
+      <text class="code">{{order.pickupCode}}</text>
+      <view class="qrcode-placeholder">
+        <!-- 实际项目中这里可以使用 canvas 绘制二维码，暂时用图片占位 -->
+        <!-- 使用本地图片或网络图片占位，这里使用一个通用的二维码图标 -->
+        <image src="/assets/images/user.png" mode="aspectFit" class="qr-img" style="opacity: 0.2;"></image>
+        <text class="qr-tip">请凭码取餐</text>
       </view>
     </view>
 
-    <!-- 点单按钮 -->
-    <view class="action-area">
-      <view class="order-btn ziqu" bindtap="navigateToMenu" data-type="self">
-        <image class="icon" src="/assets/images/coffee-cup.png" mode="aspectFit"></image> <!-- 需确保图片存在，这里用逻辑占位 -->
-        <text class="btn-title">到店取</text>
-        <text class="btn-desc">提前点单 免排队</text>
+    <!-- 制作进度条 (Steps) -->
+    <view class="progress-steps">
+      <!-- Step 1 -->
+      <view class="step-item {{currentStep >= 0 ? 'active' : ''}}">
+        <view class="dot"></view>
+        <text>已接单</text>
       </view>
-      <view class="order-btn waimai" bindtap="navigateToMenu" data-type="delivery">
-        <image class="icon" src="/assets/images/delivery-bike.png" mode="aspectFit"></image> <!-- 需确保图片存在，这里用逻辑占位 -->
-        <text class="btn-title">外卖配送</text>
-        <text class="btn-desc">无接触 放心送</text>
+
+      <!-- Line 1 -->
+      <view class="line {{currentStep >= 1 ? 'active' : ''}}"></view>
+
+      <!-- Step 2 -->
+      <view class="step-item {{currentStep >= 1 ? 'active' : ''}}">
+        <view class="dot"></view>
+        <text>制作中</text>
       </view>
+
+      <!-- Line 2 -->
+      <view class="line {{currentStep >= 2 ? 'active' : ''}}"></view>
+
+      <!-- Step 3 -->
+      <view class="step-item {{currentStep >= 2 ? 'active' : ''}}">
+        <view class="dot"></view>
+        <text>请取餐</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 订单内容列表 -->
+  <view class="order-content">
+    <view class="shop-info">
+      <text class="shop-name">{{order.shopName}}</text>
+    </view>
+    <block wx:for="{{order.items}}" wx:key="id">
+      <view class="order-item">
+        <image class="item-img" src="{{item.image}}" mode="aspectFill"></image>
+        <view class="item-info">
+          <text class="item-name">{{item.name}}</text>
+          <text class="item-spec">{{item.spec}}</text>
+        </view>
+        <view class="item-right">
+          <text class="item-count">x{{item.count}}</text>
+          <text class="item-price">¥{{item.price}}</text>
+        </view>
+      </view>
+    </block>
+    <view class="order-total">
+      <text>共{{order.totalCount}}件商品，实付</text>
+      <text class="total-price">¥{{order.totalPrice}}</text>
+    </view>
+  </view>
+
+  <!-- 订单基础信息 -->
+  <view class="order-info-card">
+    <view class="info-row">
+      <text class="label">下单时间</text>
+      <text class="value">{{order.createTime}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">订单编号</text>
+      <text class="value">{{order.orderNo}}</text>
+      <text class="copy-btn" bindtap="copyOrderNo">复制</text>
+    </view>
+    <view class="info-row">
+      <text class="label">备注信息</text>
+      <text class="value">{{order.remark || '无'}}</text>
     </view>
   </view>
 </view>

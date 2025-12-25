@@ -1,216 +1,155 @@
-page {
-    background-color: #f7f8fa;
-    padding-bottom: 140rpx; /* 底部留白 */
-    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
+.container {
+    min-height: 100vh;
+    background-color: #f7f7f7;
+    padding: 20rpx;
+    padding-bottom: 120rpx; /* 底部留白 */
 }
 
-/* 顶部切换 */
-.switch-container {
+/* --- 用餐方式 --- */
+.dining-type-card {
     background: #fff;
-    padding: 20rpx 30rpx;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    border-radius: 16rpx;
+    padding: 30rpx;
+    margin-bottom: 20rpx;
 }
-.switch-box {
+
+.type-switch {
     display: flex;
-    background: #f5f5f5;
-    border-radius: 36rpx;
+    background: #f2f2f2;
+    border-radius: 40rpx;
     padding: 4rpx;
-    width: 320rpx;
-    margin: 0 auto;
+    margin-bottom: 30rpx;
 }
+
 .switch-item {
     flex: 1;
     text-align: center;
-    height: 64rpx;
-    line-height: 64rpx;
+    height: 70rpx;
+    line-height: 70rpx;
+    border-radius: 36rpx;
     font-size: 28rpx;
     color: #666;
-    border-radius: 32rpx;
-    transition: all 0.2s;
-}
-.switch-item.active {
-    background: #0022AB; /* 瑞幸蓝 */
-    color: #fff;
-    font-weight: bold;
-    box-shadow: 0 4rpx 8rpx rgba(0, 34, 171, 0.2);
 }
 
-/* 通用卡片规范 */
-.card {
+.switch-item.active {
     background: #fff;
-    margin: 20rpx 30rpx; /* 统一外边距 */
-    padding: 30rpx;      /* 统一内边距 */
+    color: #0022AB; /* 瑞幸蓝 */
+    font-weight: bold;
+    box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+}
+
+.address-info .store-name {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10rpx;
+}
+
+.address-info .store-address {
+    font-size: 24rpx;
+    color: #999;
+}
+.text-gray { color: #ccc; }
+
+/* --- 订单明细 --- */
+.order-detail-card {
+    background: #fff;
     border-radius: 16rpx;
-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.02);
+    padding: 30rpx;
 }
 
 .card-title {
-    font-size: 32rpx;
+    font-size: 30rpx;
     font-weight: bold;
-    color: #333;
-    margin-bottom: 24rpx;
+    margin-bottom: 30rpx;
+    border-bottom: 1rpx solid #f9f9f9;
+    padding-bottom: 20rpx;
 }
 
-/* 地址卡片 */
-.address-card .store-name {
-    font-size: 32rpx;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 12rpx;
-}
-.address-card .store-address {
-    font-size: 26rpx;
-    color: #666;
-    margin-bottom: 12rpx;
-}
-.address-card .map-guide {
-    font-size: 24rpx;
-    color: #999;
-}
-
-/* 表单样式 */
-.input-group {
-    display: flex;
-    align-items: center;
-    padding: 10rpx 0;
-}
-.input-group.border-top {
-    border-top: 1rpx solid #f5f5f5;
-    margin-top: 20rpx;
-    padding-top: 20rpx;
-}
-.input-group .label {
-    width: 140rpx;
-    font-size: 28rpx;
-    color: #333;
-    font-weight: 500;
-}
-.input-group .input {
-    flex: 1;
-    font-size: 28rpx;
-    color: #333;
-}
-
-/* 商品列表 */
-.product-item {
+.cart-item {
     display: flex;
     margin-bottom: 30rpx;
 }
-.product-item:last-child {
-    margin-bottom: 0;
-}
-.prod-img {
-    width: 112rpx;
-    height: 112rpx;
+
+.item-img {
+    width: 100rpx;
+    height: 100rpx;
     border-radius: 8rpx;
-    background: #f5f5f5;
-    margin-right: 24rpx;
-}
-.prod-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-.prod-name {
-    font-size: 28rpx;
-    color: #333;
-    font-weight: 500;
-}
-.prod-desc {
-    font-size: 24rpx;
-    color: #999;
-}
-.prod-price-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-}
-.prod-price-row .price {
-    font-size: 30rpx;
-    font-weight: bold;
-    color: #333;
-}
-.prod-price-row .count {
-    font-size: 26rpx;
-    color: #999;
+    background: #eee;
+    margin-right: 20rpx;
 }
 
-/* 行项目 */
-.row-item {
+.item-info {
+    flex: 1;
+}
+
+.item-name { font-size: 28rpx; color: #333; margin-bottom: 8rpx; }
+.item-spec { font-size: 22rpx; color: #999; }
+
+.item-right { text-align: right; }
+.item-count { font-size: 24rpx; color: #999; margin-bottom: 8rpx; }
+.item-price { font-size: 28rpx; font-weight: bold; }
+
+.remark-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 16rpx 0;
+    padding: 20rpx 0;
+    border-top: 1rpx solid #f9f9f9;
+    border-bottom: 1rpx solid #f9f9f9;
     font-size: 28rpx;
+}
+
+.remark-input {
+    flex: 1;
+    margin-left: 20rpx;
+    text-align: right;
     color: #333;
 }
-.row-label.bold {
-    font-weight: bold;
-    font-size: 30rpx;
+
+.total-row {
+    margin-top: 30rpx;
+    text-align: right;
+    font-size: 26rpx;
 }
-.row-val {
-    color: #333;
-}
-.row-val.highlight {
-    color: #ff5722; /* 优惠高亮色 */
-    font-weight: 500;
-}
-.row-val .arrow {
-    color: #ccc;
-    font-size: 24rpx;
-    margin-left: 8rpx;
-}
-.price-large {
+
+.total-row .total-price {
     font-size: 36rpx;
     font-weight: bold;
     color: #333;
-}
-.divider {
-    height: 1rpx;
-    background: #f0f0f0;
-    margin: 20rpx 0;
+    margin-left: 10rpx;
 }
 
-/* 底部栏 */
+/* --- 底部支付栏 --- */
 .footer-bar {
     position: fixed;
     bottom: 0;
     left: 0;
-    right: 0;
-    height: 110rpx;
+    width: 100%;
+    height: 100rpx;
     background: #fff;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 30rpx;
+    box-sizing: border-box;
     box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05);
-    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 999;
 }
-.footer-left {
-    display: flex;
-    align-items: baseline;
-}
-.pay-label {
-    font-size: 26rpx;
-    color: #333;
-    margin-right: 12rpx;
-}
-.pay-price {
-    font-size: 40rpx;
-    color: #333;
-    font-weight: bold;
-}
+
+.price-section { display: flex; align-items: baseline; }
+.price-section .label { font-size: 24rpx; margin-right: 10rpx; }
+.price-section .price { font-size: 40rpx; font-weight: bold; color: #d93025; }
+
 .pay-btn {
-    margin: 0;
-    background: #0022AB; /* 瑞幸蓝 */
+    width: 240rpx;
+    height: 80rpx;
+    line-height: 80rpx;
+    text-align: center;
+    background: #0022AB;
     color: #fff;
     font-size: 30rpx;
     font-weight: bold;
-    border-radius: 50rpx;
-    padding: 0 60rpx;
-    height: 80rpx;
-    line-height: 80rpx;
+    border-radius: 40rpx;
 }
+.pay-btn:active { opacity: 0.9; }

@@ -1,98 +1,119 @@
-<view class="container"> 
-  <!-- 顶部店铺信息 (模拟瑞幸头部) --> 
-  <view class="shop-header"> 
-    <view class="shop-info"> 
-      <text class="shop-name">智座图书馆店 (SmartSeat) ></text> 
-      <text class="shop-distance">距离您 0m</text> 
-    </view> 
-    <view class="delivery-switch"> 
-      <view class="switch-item {{deliveryType===0?'active':''}}" bindtap="switchDelivery" data-type="{{0}}">自取</view> 
-      <view class="switch-item {{deliveryType===1?'active':''}}" bindtap="switchDelivery" data-type="{{1}}">外卖</view> 
-    </view> 
-  </view> 
+<!-- 骨架屏 -->
+<view class="skeleton-wrapper" wx:if="{{loading}}">
+  <view class="sk-left">
+    <view class="skeleton-item sk-menu-item" wx:for="{{[1,2,3,4,5,6,7,8]}}" wx:key="*this"></view>
+  </view>
+  <view class="sk-right">
+    <view class="sk-product-box" wx:for="{{[1,2,3,4]}}" wx:key="*this">
+      <view class="skeleton-item sk-img"></view>
+      <view class="sk-info">
+        <view>
+          <view class="skeleton-item sk-title"></view>
+          <view class="skeleton-item sk-desc"></view>
+        </view>
+        <view class="sk-price-row">
+          <view class="skeleton-item sk-price"></view>
+          <view class="skeleton-item sk-add"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
 
-  <!-- 核心点单区域：左右联动 --> 
-  <view class="menu-content"> 
-    <!-- 左侧分类导航 --> 
-    <scroll-view class="left-menu" scroll-y> 
-      <block wx:for="{{categories}}" wx:key="id"> 
-        <view class="menu-item {{activeCategoryIndex === index ? 'active' : ''}}" 
-              bindtap="handleCategoryClick" data-index="{{index}}" data-id="{{'cat-' + index}}"> 
-          <text>{{item.name}}</text> 
-          <!-- 分类上的小红点 (可选) --> 
-          <view wx:if="{{item.count > 0}}" class="cat-badge">{{item.count}}</view> 
-        </view> 
-      </block> 
-    </scroll-view> 
+<!-- 真实内容 -->
+<view class="container" wx:else>
+  <!-- 抛物线动画小球容器 -->
+  <block wx:for="{{balls}}" wx:key="id">
+    <view
+            class="parabola-flyer-outer"
+            hidden="{{!item.inUse}}"
+            style="{{item.styleOuter}}"
+    >
+      <view class="parabola-flyer-inner" style="{{item.styleInner}}"></view>
+    </view>
+  </block>
 
-    <!-- 右侧商品列表 --> 
-    <scroll-view class="right-list" scroll-y scroll-into-view="{{toView}}" bindscroll="onRightScroll" scroll-with-animation> 
-      <block wx:for="{{categories}}" wx:for-item="cat" wx:key="id" wx:for-index="catIdx"> 
-        <!-- 分类标题锚点 --> 
-        <view class="category-title" id="{{'cat-' + catIdx}}">{{cat.name}}</view> 
-        
-        <view class="product-list"> 
-          <block wx:for="{{cat.products}}" wx:for-item="prod" wx:key="id"> 
-            <view class="product-item"> 
-              <image class="prod-img" src="{{prod.imgUrl || '/assets/images/book-default.png'}}" mode="aspectFill"></image> 
-              <view class="prod-info"> 
-                <text class="prod-name">{{prod.name}}</text> 
-                <text class="prod-desc">{{prod.description}}</text> 
-                <view class="prod-bottom"> 
-                  <view class="price-box"> 
-                    <text class="currency">¥</text> 
-                    <text class="price">{{prod.price}}</text> 
-                    <text class="origin-price" wx:if="{{prod.originalPrice}}">¥{{prod.originalPrice}}</text> 
-                  </view> 
-                  <!-- 加减购组件 --> 
-                  <view class="stepper"> 
-                    <view class="btn minus" wx:if="{{prod.cartQty > 0}}" catchtap="updateCart" data-item="{{prod}}" data-action="minus">-</view> 
-                    <text class="num" wx:if="{{prod.cartQty > 0}}">{{prod.cartQty}}</text> 
-                    <view class="btn plus" catchtap="updateCart" data-item="{{prod}}" data-action="plus">+</view> 
-                  </view> 
-                </view> 
-              </view> 
-            </view> 
-          </block> 
-        </view> 
-      </block> 
-      <!-- 底部垫高，防止被购物车遮挡 --> 
-      <view style="height: 120rpx;"></view> 
-    </scroll-view> 
-  </view> 
+  <!-- 顶部搜索栏 -->
+  <view class="header">
+    <view class="search-bar">
+      <text>搜索您喜欢的商品</text>
+    </view>
+  </view>
 
-  <!-- 底部结算条 --> 
-  <view class="cart-bar" wx:if="{{totalQty > 0}}"> 
-    <view class="cart-icon-wrap" bindtap="toggleCartDetail"> 
-      <image src="/assets/images/cart.png" class="cart-icon"></image> 
-      <view class="badge">{{totalQty}}</view> 
-    </view> 
-    <view class="price-info" bindtap="toggleCartDetail"> 
-      <view class="total-price">¥ {{totalPrice}}</view> 
-      <view class="tips">预计 {{deliveryType===0 ? '5分钟可取' : '15分钟送达'}}</view> 
-    </view> 
-    <button class="pay-btn" bindtap="goSettle">去结算</button> 
-  </view> 
-  
-  <!-- 购物车详情弹窗 (简易版) --> 
-  <view class="cart-popup-mask" wx:if="{{showCartDetail}}" bindtap="toggleCartDetail"></view> 
-  <view class="cart-popup" wx:if="{{showCartDetail}}"> 
-    <view class="cp-header"> 
-      <text>已选商品</text> 
-      <text class="clear-btn" bindtap="clearCart">清空</text> 
-    </view> 
-    <scroll-view scroll-y style="max-height: 400rpx;"> 
-      <view class="cp-item" wx:for="{{cartList}}" wx:key="id"> 
-        <text class="name">{{item.name}}</text> 
-        <view class="cp-right"> 
-          <text class="price">¥{{item.price * item.quantity}}</text> 
-          <view class="stepper small"> 
-             <view class="btn minus" catchtap="updateCart" data-item="{{item}}" data-action="minus">-</view> 
-             <text class="num">{{item.quantity}}</text> 
-             <view class="btn plus" catchtap="updateCart" data-item="{{item}}" data-action="plus">+</view> 
-          </view> 
-        </view> 
-      </view> 
-    </scroll-view> 
-  </view> 
+  <!-- 中间内容区域 (增加 padding-bottom 防止被底部购物车遮挡) -->
+  <view class="main-content">
+    <scroll-view scroll-y class="category-sidebar">
+      <view
+              wx:for="{{categories}}"
+              wx:key="*this"
+              class="category-item {{index === activeCategory ? 'active' : ''}}"
+              bindtap="switchCategory"
+              data-index="{{index}}"
+      >
+        {{item}}
+      </view>
+    </scroll-view>
+
+    <scroll-view
+            scroll-y
+            class="product-scroll"
+            scroll-into-view="{{scrollIntoView}}"
+            scroll-with-animation
+    >
+      <block wx:for="{{products}}" wx:key="id" wx:for-item="category">
+        <view class="category-group" id="{{category.id}}">
+          <view class="category-title">{{category.name}}</view>
+          <view class="product-list">
+            <view class="product-item" wx:for="{{category.items}}" wx:key="id" wx:for-item="product">
+              <!-- 商品图片区域 -->
+              <view class="product-image-box">
+                <image class="product-img" src="{{product.image}}" mode="aspectFill"></image>
+                
+                <!-- 收藏按钮 -->
+                <view 
+                  class="favorite-btn" 
+                  catchtap="onToggleFavorite" 
+                  data-id="{{product.id}}"
+                >
+                  <!-- 根据 favoriteMap 判断显示实心还是空心图标 -->
+                  <image 
+                    src="{{favoriteMap[product.id] ? '/assets/icons/heart-filled.png' : '/assets/icons/heart-outline.png'}}" 
+                    class="icon-heart {{favoriteMap[product.id] ? 'animate-bounce' : ''}}" 
+                  />
+                </view>
+              </view>
+              <view class="product-info">
+                <view>
+                  <view class="name">{{product.name}}</view>
+                  <view class="desc">{{product.desc}}</view>
+                </view>
+                <view class="price-row">
+                  <text class="price">{{product.price}}</text>
+                  <!-- 绑定 addToCart -->
+                  <view class="add-btn" bindtap="addToCart" data-item="{{product}}">+</view>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </block>
+      <!-- 底部垫高，防止最后几个商品被购物车挡住 -->
+      <view style="height: 120rpx;"></view>
+    </scroll-view>
+  </view>
+
+  <!-- 底部悬浮购物车栏 -->
+  <view class="cart-bar">
+    <view class="cart-icon-wrapper {{cartScale}}" bindtap="goToCheckout">
+      <image class="cart-icon" src="/assets/images/cart.png" mode="aspectFit"></image> <!-- 请确保图片存在，或使用 iconfont -->
+      <view class="badge" wx:if="{{cartCount > 0}}">{{cartCount}}</view>
+    </view>
+    <view class="cart-info">
+      <view class="total-price" wx:if="{{cartCount > 0}}">¥{{totalPrice}}</view>
+      <view class="empty-tip" wx:else>未选购商品</view>
+    </view>
+    <view class="checkout-btn {{cartCount > 0 ? 'active' : ''}}" bindtap="goToCheckout">
+      去结算
+    </view>
+  </view>
 </view>

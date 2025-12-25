@@ -1,95 +1,60 @@
 <view class="container">
-    <!-- 顶部 Tab 栏 -->
+    <!-- 顶部 Tab -->
     <view class="tabs">
-        <view
-                class="tab-item {{currentTab === index ? 'active' : ''}}"
-                wx:for="{{tabs}}"
-                wx:key="id"
-                bindtap="onTabClick"
-                data-index="{{index}}"
-        >
-            {{item.name}}
-            <view class="tab-line" wx:if="{{currentTab === index}}"></view>
+        <view class="tab-item {{currentTab === 0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">
+            当前订单
+            <view class="line" wx:if="{{currentTab === 0}}"></view>
+        </view>
+        <view class="tab-item {{currentTab === 1 ? 'active' : ''}}" bindtap="switchTab" data-index="1">
+            历史订单
+            <view class="line" wx:if="{{currentTab === 1}}"></view>
         </view>
     </view>
 
-    <!-- 订单列表 -->
-    <scroll-view class="order-list" scroll-y bindscrolltolower="onReachBottom">
+    <!-- 列表内容 -->
+    <scroll-view scroll-y class="list-scroll" refresher-enabled bindrefresherrefresh="onPullDownRefresh" refresher-triggered="{{false}}">
 
         <!-- 空状态 -->
-        <view class="empty-state" wx:if="{{!loading && orders.length === 0}}">
-            <image src="/assets/images/book-default.png" mode="aspectFit"></image>
-            <text>您还没有咖啡订单哦</text>
-            <button class="btn-go-menu" bindtap="onGoToMenu">去喝一杯</button>
+        <view class="empty-state" wx:if="{{!loading && list.length === 0}}">
+            <image class="empty-img" src="/assets/images/cart.png" mode="aspectFit" style="filter: grayscale(100%); opacity: 0.3;"></image>
+            <text class="empty-text">暂无相关订单</text>
+            <button class="go-btn" bindtap="reOrder">去喝一杯</button>
         </view>
 
-        <!-- 订单卡片 -->
-        <view
-                class="order-card"
-                wx:for="{{orders}}"
-                wx:key="id"
-                bindtap="goToDetail"
-                data-id="{{item.id}}"
-        >
-            <!-- 卡片头部：门店与状态 -->
-            <view class="card-header">
-                <view class="store-info">
-                    <text class="store-name">瑞幸咖啡 (软件园店)</text>
-                    <text class="order-tag">自提</text>
-                </view>
-                <view class="order-status" style="color: {{item.statusColor}}">
-                    {{item.statusText}}
-                </view>
-            </view>
+        <!-- 订单卡片列表 -->
+        <view class="order-list" wx:else>
+            <block wx:for="{{list}}" wx:key="id">
+                <view class="order-card" bindtap="goToDetail" data-id="{{item.id}}">
 
-            <!-- 核心区域：取餐码 (仅待取餐状态显示) -->
-            <view class="pickup-section" wx:if="{{item.showPickupCode}}">
-                <view class="pickup-info">
-                    <text class="label">取餐码</text>
-                    <text class="code">{{item.pickupCode}}</text>
-                </view>
-                <view class="qr-placeholder">
-                    <image src="/assets/images/seat-active.png" class="qr-icon" />
-                </view>
-            </view>
+                    <!-- 头部：店名 + 状态 -->
+                    <view class="card-header">
+                        <text class="shop-name">{{item.shopName}}</text>
+                        <text class="status {{item.status}}">{{item.statusText}}</text>
+                    </view>
 
-            <!-- 核心区域：商品缩略图列表 (横向滚动) -->
-            <view class="product-section">
-                <scroll-view class="product-scroll" scroll-x="true" enable-flex="true">
-                    <view class="product-list-wrapper">
-                        <view
-                                class="product-item"
-                                wx:for="{{item.items}}"
-                                wx:key="index"
-                                wx:for-item="product"
-                        >
-                            <image class="product-img" src="{{product.image}}" mode="aspectFill"></image>
-                            <text class="product-name">{{product.shortName}}</text>
-                            <!-- 数量角标 -->
-                            <view class="item-badge" wx:if="{{product.quantity > 1}}">x{{product.quantity}}</view>
+                    <!-- 内容：简单描述 + 时间 -->
+                    <view class="card-content">
+                        <view class="info-row">
+                            <text class="order-desc">{{item.desc}}</text>
+                            <text class="order-price">¥{{item.totalPrice}}</text>
+                        </view>
+                        <text class="order-time">{{item.time}}</text>
+                    </view>
+
+                    <!-- 底部：按钮 -->
+                    <view class="card-footer">
+                        <view class="btn-group">
+                            <view class="action-btn outline" catchtap="reOrder">再来一单</view>
+                            <!-- 仅当前订单显示查看进度 -->
+                            <view class="action-btn primary" wx:if="{{currentTab === 0}}">查看进度</view>
                         </view>
                     </view>
-                </scroll-view>
-            </view>
 
-            <!-- 信息摘要 -->
-            <view class="info-row">
-                <text class="time">{{item.createTime}}</text>
-                <view class="price-info">
-                    <text class="count">共 {{item.goodsName ? (item.goodsDesc.includes('等') ? item.goodsDesc.split('等')[1].replace('件商品', '').trim() : '1') : '1'}} 件</text>
-                    <text class="price">¥{{item.realAmount}}</text>
                 </view>
-            </view>
-
-            <!-- 底部按钮区 -->
-            <view class="card-footer">
-                <button class="btn-outline" catchtap="onOrderAgain">再来一单</button>
-                <button class="btn-outline btn-cancel" wx:if="{{item.status === 0 || item.status === 1}}" catchtap="cancelOrder" data-id="{{item.id}}">取消订单</button>
-            </view>
+            </block>
         </view>
 
-        <!-- 加载中提示 -->
-        <view class="loading-more" wx:if="{{loading}}">正在加载...</view>
-        <view class="no-more" wx:if="{{!hasMore && orders.length > 0}}">没有更多了</view>
+        <!-- 底部垫高 -->
+        <view style="height: 40rpx;"></view>
     </scroll-view>
 </view>

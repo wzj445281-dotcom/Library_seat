@@ -1,93 +1,118 @@
-import { getUserInfo } from '../../api/user.js';
-import request from '../../utils/request.js';
+const app = getApp();
+const authApi = require('../../api/auth.js');
 
 Page({
     data: {
-        userName: '',
-        creditScore: 0,
-        creditLevel: '普通', // 默认为普通
-        stats: {
-            totalCups: 0,
-            totalSaved: '0.0'
-        }
+        isLogin: false,
+        userInfo: {
+            nickName: '点击登录',
+            avatarUrl: '/assets/images/user.png', // 默认头像
+            level: 0
+        },
+        // 资产数据 (Mock)
+        assets: {
+            points: 0,
+            couponCount: 0,
+            balance: 0.00
+        },
+        // 功能菜单配置
+        menuList: [
+            { id: 'orders', icon: '🧾', title: '我的订单', url: '/pages/orders/list/list', type: 'page' },
+            { id: 'address', icon: '📍', title: '地址管理', url: '', type: 'toast', tip: '功能开发中' },
+            { id: 'service', icon: '🤖', title: 'AI 客服', url: '/pages/ai_chat/ai_chat', type: 'page' },
+            { id: 'about', icon: 'ℹ️', title: '关于我们', url: '', type: 'toast', tip: '版本 v1.0.0' }
+        ]
     },
 
     onShow() {
-        this.fetchUserInfo();
-        this.fetchUserStats(); // 获取统计数据
+        this.checkLogin();
     },
 
-    async fetchUserInfo() {
-        try {
-            const user = await getUserInfo();
-            // 根据信用分计算简单的会员等级
-            let level = '普通';
-            if (user.creditScore > 200) level = '钻石';
-            else if (user.creditScore > 100) level = '黄金';
+    checkLogin() {
+        // 从全局或缓存获取登录状态
+        const token = wx.getStorageSync('token');
+        const user = wx.getStorageSync('userInfo');
 
+        if (token && user) {
             this.setData({
-                userName: user.name || '微信用户',
-                creditScore: user.creditScore || 0,
-                creditLevel: level
+                isLogin: true,
+                userInfo: {
+                    nickName: user.nickName || '瑞幸会员',
+                    avatarUrl: user.avatarUrl || '/assets/images/user-active.png', // 登录后头像
+                    level: user.level || 1
+                },
+                // 模拟已登录用户的资产数据
+                assets: {
+                    points: 128,
+                    couponCount: 3,
+                    balance: 50.00
+                }
             });
-
-            // 缓存用户ID供其他页面使用
-            if (user.id) {
-                wx.setStorageSync('userId', user.id);
-            }
-        } catch (err) {
-            console.error('获取用户信息失败', err);
-            // 失败时引导登录（可选）
+        } else {
+            this.setData({
+                isLogin: false,
+                userInfo: {
+                    nickName: '点击登录',
+                    avatarUrl: '/assets/images/user.png',
+                    level: 0
+                },
+                assets: { points: '-', couponCount: '-', balance: '-' }
+            });
         }
     },
 
-    // 模拟获取用户消费统计
-    async fetchUserStats() {
-        // 实际开发中，这里应该调用类似 /api/app/user/stats 的接口
-        // 这里我们使用模拟数据，或者基于本地缓存计算
+    handleLogin() {
+        if (this.data.isLogin) return;
 
-        // 模拟延迟
+        // 触发全局登录逻辑 (通常会弹窗授权，这里简化为静默/模拟登录)
+        wx.showLoading({ title: '登录中...' });
+
+        // 模拟登录过程 (实际应调用 app.doLogin 或跳转登录页)
         setTimeout(() => {
-            this.setData({
-                stats: {
-                    totalCups: 12, // 累计杯数
-                    totalSaved: '45.0' // 累计节省金额
-                }
-            });
-        }, 500);
-    },
+            // 模拟后端返回用户信息
+            const mockUser = {
+                nickName: '微信用户_888',
+                avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+                level: 2
+            };
 
-    // 页面跳转逻辑
-    navigateToOrders() {
-        wx.switchTab({ url: '/pages/orders/list' }); // 如果是 tabBar 页面用 switchTab
-        // 如果 orders 不是 tabBar 页面，改用:
-        // wx.navigateTo({ url: '/pages/orders/list' });
-    },
+            wx.setStorageSync('token', 'mock-token-123456');
+            wx.setStorageSync('userInfo', mockUser);
 
-    goToCredit() {
-        wx.navigateTo({ url: '/pages/credit/credit' });
-    },
-
-    goToFeedback() {
-        wx.navigateTo({ url: '/pages/feedback/feedback' });
-    },
-
-    goToAiChat() {
-        wx.navigateTo({ url: '/pages/ai_chat/ai_chat' });
+            this.checkLogin(); // 刷新页面状态
+            wx.hideLoading();
+            wx.showToast({ title: '欢迎回来', icon: 'success' });
+        }, 1000);
     },
 
     handleLogout() {
         wx.showModal({
             title: '提示',
             content: '确定要退出登录吗？',
-            confirmColor: '#0022AB',
             success: (res) => {
                 if (res.confirm) {
                     wx.removeStorageSync('token');
-                    wx.removeStorageSync('userId');
-                    wx.reLaunch({ url: '/pages/login/login' });
+                    wx.removeStorageSync('userInfo');
+                    this.checkLogin(); // 恢复未登录状态
+                    authApi.logout().catch(() => {}); // 通知后端
                 }
             }
         });
+    },
+
+    onMenuClick(e) {
+        const item = e.currentTarget.dataset.item;
+
+        // 某些功能需要登录
+        if (['orders', 'address'].includes(item.id) && !this.data.isLogin) {
+            wx.showToast({ title: '请先登录', icon: 'none' });
+            return;
+        }
+
+        if (item.type === 'page' && item.url) {
+            wx.navigateTo({ url: item.url });
+        } else if (item.type === 'toast') {
+            wx.showToast({ title: item.tip || '敬请期待', icon: 'none' });
+        }
     }
 });

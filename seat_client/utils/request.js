@@ -1,65 +1,76 @@
-import config from '../config/config.js'
+// 基础URL，开发环境通常指向本地，上线后替换为真实域名
+// const BASE_URL = 'http://localhost:8080/api';
+// 如果真机调试，请使用局域网IP，例如 http://192.168.1.5:8080/api
+const BASE_URL = 'http://localhost:8080/api';
 
-/**
- * 封装 wx.request
- * @param {String} url 请求地址 (如 /auth/login)
- * @param {String} method GET/POST/PUT/DELETE
- * @param {Object} data 请求参数
- * @param {Boolean} needLogin 是否需要登录权限 (默认true)
- */
-const request = (url, method = 'GET', data = {}, needLogin = true) => {
+const request = (url, method, data) => {
     return new Promise((resolve, reject) => {
+        // 1. 获取 Token
+        const token = wx.getStorageSync('token');
 
+        // 2. 构造 Header
         let header = {
-            'content-type': 'application/json' // 默认 JSON
+            'content-type': 'application/json'
         };
-
-        // 1. 自动携带 Token
-        if (needLogin) {
-            const token = wx.getStorageSync('token');
-            if (token) {
-                header['Authorization'] = 'Bearer ' + token;
-            } else {
-                // 如果没Token但接口需要登录，直接跳转
-                wx.navigateTo({ url: '/pages/login/login' });
-                return reject('未登录');
-            }
+        if (token) {
+            // 这里的 'Bearer ' 是 JWT 标准前缀，需与后端确认
+            header['Authorization'] = 'Bearer ' + token;
         }
 
         wx.request({
-            url: config.BASE_URL + url,
+            url: BASE_URL + url,
             method: method,
             data: data,
             header: header,
-            success: (res) => {
-                // 2. 统一拦截处理
+            success(res) {
+                // 3. 统一处理响应状态
                 if (res.statusCode === 200) {
-                    // 后端业务逻辑成功 (ApiResponse.code = 200)
+                    // 业务逻辑成功
                     if (res.data.code === 200) {
-                        resolve(res.data.data);
+                        resolve(res.data);
+                    }
+                    // 401: Token 过期或无效
+                    else if (res.data.code === 401) {
+                        // 清除旧 Token
+                        wx.removeStorageSync('token');
+                        // 触发 App.js 中的重登录方法
+                        const app = getApp();
+                        if (app && app.doLogin) {
+                            app.doLogin();
+                        }
+                        reject(res.data);
                     } else {
-                        wx.showToast({ title: res.data.message || '操作失败', icon: 'none' });
+                        // 其他业务错误，如库存不足
+                        wx.showToast({
+                            title: res.data.message || '系统繁忙',
+                            icon: 'none'
+                        });
                         reject(res.data);
                     }
-                } else if (res.statusCode === 403) {
-                    // 3. Token 过期处理
-                    wx.showToast({ title: '登录过期，请重新登录', icon: 'none' });
-                    wx.removeStorageSync('token');
-                    setTimeout(() => {
-                        wx.redirectTo({ url: '/pages/login/login' });
-                    }, 1500);
-                    reject('Token Expired');
                 } else {
-                    wx.showToast({ title: '服务器开小差了', icon: 'none' });
+                    // HTTP 错误 (404, 500 等)
+                    wx.showToast({
+                        title: '网络服务异常',
+                        icon: 'none'
+                    });
                     reject(res);
                 }
             },
-            fail: (err) => {
-                wx.showToast({ title: '网络连接失败', icon: 'none' });
+            fail(err) {
+                wx.showToast({
+                    title: '网络连接失败',
+                    icon: 'none'
+                });
                 reject(err);
             }
         });
     });
-}
+};
 
-export default request;
+module.exports = {
+    get: (url, data) => request(url, 'GET', data),
+    post: (url, data) => request(url, 'POST', data),
+    put: (url, data) => request(url, 'PUT', data),
+    delete: (url, data) => request(url, 'DELETE', data),
+    BASE_URL // 导出以便其他地方使用
+};

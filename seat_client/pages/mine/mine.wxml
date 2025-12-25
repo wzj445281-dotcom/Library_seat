@@ -1,74 +1,57 @@
 <view class="container">
-    <!-- 头部个人卡片 -->
-    <view class="header-card">
-        <view class="user-row">
-            <view class="avatar-box">
-                <!-- 这里的头像可以使用 open-data 或者默认图 -->
-                <image class="avatar" src="/assets/images/user-active.png" mode="aspectFill"></image>
+    <!-- 顶部用户信息卡片 (瑞幸蓝背景) -->
+    <view class="user-header">
+        <view class="user-info" bindtap="handleLogin">
+            <image class="avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+            <view class="info-text">
+                <view class="nickname">
+                    {{userInfo.nickName}}
+                    <text class="level-tag" wx:if="{{isLogin}}">Lv.{{userInfo.level}}</text>
+                </view>
+                <view class="tips" wx:if="{{!isLogin}}">登录享受更多会员权益</view>
+                <view class="tips" wx:else>再升一级可享免运费</view>
             </view>
-            <view class="info-box">
-                <view class="name">{{userName || '点击登录'}}</view>
-                <view class="credit-row">
-                    <!-- 根据积分动态显示等级 -->
-                    <text class="level-tag">{{creditLevel}}会员</text>
+        </view>
+
+        <!-- 设置按钮 (仅登录显示) -->
+        <view class="settings-btn" wx:if="{{isLogin}}" catchtap="handleLogout">退出</view>
+    </view>
+
+    <!-- 资产看板 (Stats) -->
+    <view class="stats-card">
+        <view class="stat-item">
+            <text class="stat-value">{{assets.points}}</text>
+            <text class="stat-label">积分</text>
+        </view>
+        <view class="stat-item">
+            <text class="stat-value">{{assets.couponCount}}</text>
+            <text class="stat-label">优惠券</text>
+        </view>
+        <view class="stat-item">
+            <text class="stat-value">{{assets.balance}}</text>
+            <text class="stat-label">钱包</text>
+        </view>
+    </view>
+
+    <!-- 广告 Banner -->
+    <view class="banner-area">
+        <image class="banner-img" src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80" mode="aspectFill"></image>
+    </view>
+
+    <!-- 功能菜单列表 -->
+    <view class="menu-list">
+        <block wx:for="{{menuList}}" wx:key="id">
+            <view class="menu-item" bindtap="onMenuClick" data-item="{{item}}">
+                <view class="menu-left">
+                    <text class="menu-icon">{{item.icon}}</text>
+                    <text class="menu-title">{{item.title}}</text>
+                </view>
+                <view class="menu-right">
+                    <view class="arrow"></view>
                 </view>
             </view>
-            <!-- AI 客服入口 -->
-            <view class="ai-entry" bindtap="goToAiChat">
-                <text>🎧 专属客服</text>
-            </view>
-        </view>
-
-        <!-- 新增：数据统计栏 (对应 wxss 中的 .stats-row) -->
-        <view class="stats-row">
-            <view class="stat-item">
-                <view class="stat-num">{{stats.totalCups || 0}}</view>
-                <view class="stat-label">累计消费(杯)</view>
-            </view>
-            <view class="line"></view>
-            <view class="stat-item">
-                <view class="stat-num">¥{{stats.totalSaved || 0}}</view>
-                <view class="stat-label">累计节省</view>
-            </view>
-            <view class="line"></view>
-            <view class="stat-item">
-                <view class="stat-num">{{creditScore}}</view>
-                <view class="stat-label">当前积分</view>
-            </view>
-        </view>
+        </block>
     </view>
 
-    <!-- 功能菜单 -->
-    <view class="menu-list">
-        <view class="menu-item" bindtap="navigateToOrders">
-            <view class="item-left">
-                <!-- 使用 Emoji 作为简单图标，或替换为 image -->
-                <text class="menu-icon-text">📄</text>
-                <text>我的订单</text>
-            </view>
-            <text class="arrow">></text>
-        </view>
-
-        <!-- 移除了信用记录入口，增加咖啡钱包入口占位 -->
-        <view class="menu-item">
-            <view class="item-left">
-                <text class="menu-icon-text">☕️</text>
-                <text>咖啡钱包</text>
-            </view>
-            <text class="arrow">></text>
-        </view>
-
-        <view class="menu-item" bindtap="goToFeedback">
-            <view class="item-left">
-                <text class="menu-icon-text">🔧</text>
-                <text>帮助反馈</text>
-            </view>
-            <text class="arrow">></text>
-        </view>
-    </view>
-
-    <!-- 底部按钮 -->
-    <view class="btn-area">
-        <button class="btn-logout" bindtap="handleLogout">退出登录</button>
-    </view>
+    <view class="footer-version">Designed by Gemini v1.0</view>
 </view>

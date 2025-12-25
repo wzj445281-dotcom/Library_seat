@@ -1,0 +1,145 @@
+/* 全局背景 */
+page {
+  background-color: #f5f5f5;
+  padding-bottom: 40rpx;
+}
+
+/* Tab 样式 */
+.tabs {
+  display: flex;
+  background: #fff;
+  padding: 20rpx 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.tab-item {
+  flex: 1;
+  text-align: center;
+  font-size: 30rpx;
+  color: #666;
+  position: relative;
+  padding-bottom: 10rpx;
+}
+.tab-item.active {
+  color: #0022AB; /* 瑞幸蓝 */
+  font-weight: bold;
+}
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background: #0022AB;
+}
+
+/* 卡片样式 */
+.coupon-list {
+  padding: 20rpx;
+}
+.coupon-card {
+  background: #fff;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  display: flex;
+  height: 180rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  overflow: hidden;
+  position: relative;
+}
+
+/* 左侧金额 */
+.coupon-card .left {
+  width: 180rpx;
+  background: linear-gradient(135deg, #0022AB, #2b4cce);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.coupon-card .left .amount {
+  font-size: 60rpx;
+  font-weight: bold;
+}
+.coupon-card .left .currency {
+  font-size: 24rpx;
+  margin-right: 4rpx;
+}
+
+/* 中间详情 */
+.coupon-card .center {
+  flex: 1;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.center .title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+.center .desc {
+  font-size: 22rpx;
+  color: #999;
+  margin-bottom: 12rpx;
+}
+/* 进度条 */
+.progress-bar {
+  width: 100%;
+  height: 6rpx;
+  background: #eee;
+  border-radius: 6rpx;
+  overflow: hidden;
+  margin-bottom: 6rpx;
+}
+.progress-inner {
+  height: 100%;
+  background: #ff8d1a;
+}
+.stock-text {
+  font-size: 20rpx;
+  color: #999;
+}
+
+/* 右侧按钮 */
+.coupon-card .right {
+  width: 160rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1rpx dashed #eee;
+}
+.btn-acquire {
+  font-size: 24rpx;
+  background: #0022AB;
+  color: #fff;
+  border-radius: 30rpx;
+  padding: 10rpx 20rpx;
+  line-height: 1.5;
+  margin: 0;
+}
+.btn-acquire.disabled {
+  background: #ccc;
+  color: #fff;
+}
+
+/* 我的卡包差异样式 */
+.my-card .left {
+  background: #fff;
+  border-right: 1rpx dashed #eee;
+  color: #0022AB;
+}
+.my-card .status-tag {
+  font-size: 24rpx;
+  color: #0022AB;
+  border: 1rpx solid #0022AB;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  transform: rotate(-15deg);
+}

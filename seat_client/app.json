@@ -23,16 +23,10 @@
     "borderStyle": "black",
     "list": [
       {
-        "pagePath": "pages/index/index",
-        "text": "首页",
-        "iconPath": "assets/images/book-default.png",
-        "selectedIconPath": "assets/images/book-default.png"
-      },
-      {
         "pagePath": "pages/menu/index",
         "text": "点餐",
-        "iconPath": "assets/images/book-default.png",
-        "selectedIconPath": "assets/images/book-default.png"
+        "iconPath": "assets/images/cart.png",
+        "selectedIconPath": "assets/images/cart.png"
       },
       {
         "pagePath": "pages/orders/list",

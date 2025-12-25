@@ -1,270 +1,309 @@
 const app = getApp();
-const request = require('../../utils/request.js'); // 假设 utils 中有 request 封装
+const productApi = require('../../api/product.js'); // 引入API
+
+// 假设你封装了 request 工具，如果没有，稍后可以用 wx.request 替换
+const { request } = require('../../utils/request');
 
 Page({
   data: {
-    // 配送类型：0-自取，1-外卖
-    deliveryType: 0,
-    
-    // 分类数据
+    loading: true,
     categories: [],
-    
-    // 当前激活的分类索引
-    activeCategoryIndex: 0,
-    
-    // 右侧滚动目标
-    toView: '',
-    
-    // 购物车数据
-    cartList: [],
-    
-    // 购物车总数量
-    totalQty: 0,
-    
-    // 购物车总价
+    products: [],
+    activeCategory: 0,
+    scrollIntoView: '',
+
+    // --- 购物车相关 ---
+    cartCount: 0,
     totalPrice: 0,
+    cartScale: '',
+
+    // --- 抛物线动画相关 ---
+    balls: [
+      { inUse: false, id: 0, styleOuter: '', styleInner: '' },
+      { inUse: false, id: 1, styleOuter: '', styleInner: '' },
+      { inUse: false, id: 2, styleOuter: '', styleInner: '' },
+      { inUse: false, id: 3, styleOuter: '', styleInner: '' },
+      { inUse: false, id: 4, styleOuter: '', styleInner: '' }
+    ],
+
+    // 当前门店ID，用于判断是否需要刷新
+    currentStoreId: null,
     
-    // 是否显示购物车详情
-    showCartDetail: false
+    // --- 收藏相关 ---
+    favoriteMap: {}, // 用对象存储收藏状态，key为productId，value为true，O(1)查找
   },
 
-  onLoad() {
-    this.loadMenuData();
+  cartPos: { x: 40, y: 0 },
+
+  onLoad(options) {
+    // 首次加载
+    // 注意：Tab页的 onLoad 只会执行一次，数据刷新逻辑主要放在 onShow
   },
 
-  // 加载菜单数据
-  loadMenuData() {
-    wx.showLoading({ title: '加载中' });
+  onShow() {
+    this.checkStoreAndLoadData();
+    this.updateCartFromStorage(); // 每次显示页面时同步购物车状态
     
-    // 从服务器获取菜单数据
-    request.get('/api/app/store/menu').then(res => {
-      wx.hideLoading();
-      if (res.code === 200) {
-        // 将产品按分类分组
-        const products = res.data || [];
-        const categoriesMap = {};
-        
-        products.forEach(product => {
-          const categoryId = product.categoryId || 0;
-          if (!categoriesMap[categoryId]) {
-            categoriesMap[categoryId] = {
-              id: categoryId,
-              name: product.categoryName || `分类${categoryId}`,
-              count: 0,
-              products: []
-            };
-          }
-          
-          categoriesMap[categoryId].products.push({
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            originalPrice: product.originalPrice,
-            imgUrl: product.imgUrl || "",
-            cartQty: 0
-          });
-        });
-        
-        const categories = Object.values(categoriesMap);
-        
-        this.setData({
-          categories: categories,
-          toView: 'cat-0'
-        });
+    // 每次显示页面时，刷新收藏状态（保证从详情页返回时状态同步）
+    if (app.globalData.token) {
+      this.fetchFavoriteIds();
+    }
+  },
+
+  onReady() {
+    this.queryCartLocation();
+  },
+
+  // 检查门店是否变化，并加载数据
+  checkStoreAndLoadData() {
+    const store = wx.getStorageSync('currentStore');
+    const storeId = store ? store.id : 1; // 默认门店ID 1
+
+    // 如果没有门店信息，或者门店变了，或者是首次加载
+    if (!this.data.currentStoreId || this.data.currentStoreId !== storeId) {
+      this.setData({
+        currentStoreId: storeId,
+        loading: true
+      });
+
+      this.loadMenuData(storeId);
+    }
+  },
+
+  // 加载真实菜单数据
+  loadMenuData(storeId) {
+    productApi.getStoreMenu(storeId).then(res => {
+      // 假设后端返回结构: { code: 200, data: [ { categoryName: '咖啡', items: [...] } ] }
+      // 如果后端接口尚未就绪，这里会报错，我们可以暂时加一个 catch 来使用兜底 Mock 数据
+      if (res && res.code === 200) {
+        this.transformAndSetData(res.data);
       } else {
-        // 如果接口失败，使用模拟数据
-        this.loadMockData();
-        wx.showToast({ title: '使用模拟数据', icon: 'none' });
+        // 接口异常或非200，使用兜底数据
+        console.warn('菜单接口调用失败，使用Mock数据');
+        this.mockData();
       }
     }).catch(err => {
-      wx.hideLoading();
-      console.error('获取菜单失败:', err);
-      // 如果接口失败，使用模拟数据
-      this.loadMockData();
-      wx.showToast({ title: '使用模拟数据', icon: 'none' });
+      console.error('菜单请求网络错误', err);
+      this.mockData(); // 网络错误也使用 Mock 数据兜底，保证演示效果
+    }).finally(() => {
+      // 确保 loading 至少显示一小会儿，避免闪烁
+      setTimeout(() => {
+        this.setData({ loading: false }, () => {
+          this.queryCartLocation();
+        });
+      }, 500);
     });
   },
 
-  // 加载模拟数据
-  loadMockData() {
-    const mockCategories = [
-      {
-        id: 1,
-        name: "本周热销",
-        count: 0,
-        products: [
-          { id: 101, name: "Java并发编程实战", description: "深入理解Java线程核心", price: 59.90, originalPrice: 89.90, imgUrl: "", cartQty: 0 },
-          { id: 102, name: "深入理解计算机系统", description: "CSAPP黑皮书", price: 128.00, imgUrl: "", cartQty: 0 },
-          { id: 103, name: "算法导论", description: "经典算法教材", price: 98.00, originalPrice: 128.00, imgUrl: "", cartQty: 0 }
-        ]
-      },
-      {
-        id: 2,
-        name: "文学小说",
-        count: 0,
-        products: [
-          { id: 201, name: "三体全集", description: "刘慈欣科幻巨作", price: 68.50, imgUrl: "", cartQty: 0 },
-          { id: 202, name: "百年孤独", description: "马尔克斯代表作", price: 45.00, imgUrl: "", cartQty: 0 },
-          { id: 203, name: "挪威的森林", description: "村上春树经典", price: 38.00, imgUrl: "", cartQty: 0 }
-        ]
-      },
-      {
-        id: 3,
-        name: "技术编程",
-        count: 0,
-        products: [
-          { id: 301, name: "Python编程：从入门到实践", description: "Python入门经典", price: 69.00, imgUrl: "", cartQty: 0 },
-          { id: 302, name: "Vue.js实战", description: "前端框架实战指南", price: 79.00, imgUrl: "", cartQty: 0 },
-          { id: 303, name: "React Native实战", description: "移动端开发实战", price: 89.00, imgUrl: "", cartQty: 0 }
-        ]
-      },
-      {
-        id: 4,
-        name: "人文历史",
-        count: 0,
-        products: [
-          { id: 401, name: "明朝那些事儿", description: "当年明月历史著作", price: 168.00, imgUrl: "", cartQty: 0 },
-          { id: 402, name: "人类简史", description: "尤瓦尔·赫拉利", price: 68.00, imgUrl: "", cartQty: 0 }
-        ]
+  // 将后端数据转换为前端 UI 需要的格式
+  transformAndSetData(backendData) {
+    // 根据实际后端返回调整，这里假设后端直接返回了分类列表
+    // 构造左侧分类名列表
+    const categories = backendData.map(cat => cat.name || cat.categoryName);
+
+    // 构造右侧商品列表
+    // 必须保证每个分类都有 id (用于 scroll-into-view)
+    const products = backendData.map((cat, index) => ({
+      id: `cat-${index}`,
+      name: cat.name || cat.categoryName,
+      items: cat.productList || cat.items || [] // 兼容不同字段名
+    }));
+
+    this.setData({
+      categories,
+      products
+    });
+  },
+
+  // 兜底 Mock 数据 (保持原有逻辑，以防后端没通)
+  mockData() {
+    const categories = ['人气Top', '生椰家族', '大师咖啡', '瑞纳冰', '烘焙轻食', '经典饮品'];
+    const products = [];
+
+    categories.forEach((cat, index) => {
+      const items = [];
+      for (let i = 0; i < 4; i++) {
+        items.push({
+          id: `${index}-${i}`,
+          name: `${cat} - 产品${i+1}`,
+          desc: '香醇浓郁，回味无穷',
+          price: (18 + i * 2),
+          image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200&fit=crop'
+        });
       }
-    ];
-    
+      products.push({
+        id: `cat-${index}`,
+        name: cat,
+        items: items
+      });
+    });
+
     this.setData({
-      categories: mockCategories,
-      toView: 'cat-0'
+      categories,
+      products
     });
   },
 
-  // 切换配送类型
-  switchDelivery(e) {
-    const type = parseInt(e.currentTarget.dataset.type);
-    this.setData({ deliveryType: type });
+  queryCartLocation() {
+    const query = wx.createSelectorQuery().in(this);
+    query.select('.cart-icon-wrapper').boundingClientRect(rect => {
+      if (rect) {
+        this.cartPos.x = rect.left + rect.width / 2;
+        this.cartPos.y = rect.top + rect.height / 2;
+      }
+    }).exec();
   },
 
-  // 点击左侧分类
-  handleCategoryClick(e) {
+  switchCategory(e) {
     const index = e.currentTarget.dataset.index;
-    const id = e.currentTarget.dataset.id;
-    
     this.setData({
-      activeCategoryIndex: index,
-      toView: id
+      activeCategory: index,
+      scrollIntoView: `cat-${index}`
     });
   },
 
-  // 右侧滚动监听
-  onRightScroll(e) {
-    // 简化处理：实际需要根据滚动位置计算当前分类
-    // 这里暂时不实现复杂的联动逻辑
+  addToCart(e) {
+    const product = e.currentTarget.dataset.item;
+    this.runParabola(e);
+
+    // 调用购物车逻辑 (此处仅为前端 UI 更新，后续需对接后端 addCart)
+    setTimeout(() => {
+      this.updateCartData(product);
+    }, 500);
   },
 
-  // 更新购物车
-  updateCart(e) {
-    const { item, action } = e.currentTarget.dataset;
-    const { categories } = this.data;
-    
-    // 更新商品数量
-    const newCategories = categories.map(cat => {
-      const newProducts = cat.products.map(prod => {
-        if (prod.id === item.id) {
-          if (action === 'plus') {
-            prod.cartQty = (prod.cartQty || 0) + 1;
-          } else if (action === 'minus' && prod.cartQty > 0) {
-            prod.cartQty--;
-          }
-        }
-        return prod;
-      });
-      
-      // 更新分类上的数量标记
-      const count = newProducts.reduce((sum, prod) => sum + (prod.cartQty || 0), 0);
-      return { ...cat, products: newProducts, count };
-    });
-    
-    this.setData({ categories: newCategories });
-    
-    // 更新购物车数据
-    this.updateCartData();
-  },
-
-  // 更新购物车数据
-  updateCartData() {
-    const { categories } = this.data;
-    
-    // 提取购物车商品
-    const cartList = [];
-    let totalQty = 0;
-    let totalPrice = 0;
-    
-    categories.forEach(cat => {
-      cat.products.forEach(prod => {
-        if (prod.cartQty > 0) {
-          cartList.push({
-            id: prod.id,
-            name: prod.name,
-            price: prod.price,
-            quantity: prod.cartQty
-          });
-          
-          totalQty += prod.cartQty;
-          totalPrice += prod.price * prod.cartQty;
-        }
-      });
-    });
-    
+  updateCartData(product) {
+    // 简单的前端购物车统计
     this.setData({
-      cartList,
-      totalQty,
-      totalPrice: totalPrice.toFixed(2)
+      cartCount: this.data.cartCount + 1,
+      totalPrice: this.data.totalPrice + product.price,
+      cartScale: 'scale-animate'
+    });
+
+    setTimeout(() => {
+      this.setData({ cartScale: '' });
+    }, 200);
+
+    // 实际项目中，这里应该调用 App 实例或 Storage 保存购物车数据
+    this.saveCartToStorage();
+  },
+
+  saveCartToStorage() {
+    // 简易保存，用于 Tab 切换保持状态
+    wx.setStorageSync('cart_temp', {
+      count: this.data.cartCount,
+      total: this.data.totalPrice
     });
   },
 
-  // 切换购物车详情显示
-  toggleCartDetail() {
-    this.setData({
-      showCartDetail: !this.data.showCartDetail
-    });
-  },
-
-  // 清空购物车
-  clearCart() {
-    const { categories } = this.data;
-    
-    // 重置所有商品数量
-    const newCategories = categories.map(cat => {
-      const newProducts = cat.products.map(prod => {
-        prod.cartQty = 0;
-        return prod;
+  updateCartFromStorage() {
+    const cart = wx.getStorageSync('cart_temp');
+    if (cart) {
+      this.setData({
+        cartCount: cart.count,
+        totalPrice: cart.total
       });
-      return { ...cat, products: newProducts, count: 0 };
-    });
-    
-    this.setData({
-      categories: newCategories,
-      cartList: [],
-      totalQty: 0,
-      totalPrice: '0.00',
-      showCartDetail: false
-    });
-  },
-
-  // 去结算
-  goSettle() {
-    if (this.data.totalQty === 0) {
-      wx.showToast({
-        title: '请先选择商品',
-        icon: 'none'
-      });
-      return;
     }
-    
-    // 存储购物车数据到本地，供结算页使用
-    wx.setStorageSync('cart_items', this.data.cartList);
-    
-    // 跳转到结算页面
+  },
+
+  runParabola(e) {
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+    const endX = this.cartPos.x;
+    const endY = this.cartPos.y;
+
+    const balls = this.data.balls;
+    const index = balls.findIndex(b => !b.inUse);
+
+    if (index === -1) return;
+
+    balls[index].inUse = true;
+    balls[index].styleOuter = `left: ${startX}px; top: ${startY}px; transition: none; transform: translate3d(0,0,0);`;
+    balls[index].styleInner = `transition: none; transform: translate3d(0,0,0);`;
+
+    this.setData({ balls });
+
+    setTimeout(() => {
+      const diffX = endX - startX;
+      const diffY = endY - startY;
+      balls[index].styleOuter = `left: ${startX}px; top: ${startY}px; transition: all 0.5s cubic-bezier(0.5, -0.2, 1, 1); transform: translate3d(0, ${diffY}px, 0); opacity: 0.5;`;
+      balls[index].styleInner = `transition: all 0.5s linear; transform: translate3d(${diffX}px, 0, 0);`;
+      this.setData({ balls });
+    }, 30);
+
+    setTimeout(() => {
+      balls[index].inUse = false;
+      this.setData({ balls });
+    }, 550);
+  },
+
+  goToCheckout() {
+    if (this.data.cartCount === 0) return;
     wx.navigateTo({
-      url: '/pages/orders/checkout/checkout'
+      url: '/pages/orders/checkout/checkout',
+    });
+  },
+
+  /**
+   * 1. 获取用户所有收藏的商品ID
+   * 接口: GET /api/app/favorite/ids
+   */
+  fetchFavoriteIds() {
+    request({
+      url: '/api/app/favorite/ids',
+      method: 'GET'
+    }).then(res => {
+      if (res.code === 200) {
+        // 将数组转换为 Map 结构 {101: true, 102: true}，方便 WXML 判断
+        const map = {};
+        res.data.forEach(id => {
+          map[id] = true;
+        });
+        
+        this.setData({
+          favoriteMap: map
+        });
+      }
+    }).catch(err => {
+      console.error('获取收藏列表失败', err);
+    });
+  },
+
+  /**
+   * 2. 核心交互：点击爱心收藏/取消
+   * 接口: POST /api/app/favorite/toggle
+   */
+  onToggleFavorite(e) {
+    // 震动反馈，提升手感 (瑞幸风格)
+    wx.vibrateShort({ type: 'light' });
+
+    const { id, index, categoryIndex } = e.currentTarget.dataset;
+    
+    // === 乐观更新 (Optimistic UI) ===
+    // 不等接口返回，直接修改前端状态，让用户感觉"零延迟"
+    const isFavorite = !!this.data.favoriteMap[id];
+    const newStatus = !isFavorite;
+    
+    const key = `favoriteMap.${id}`;
+    this.setData({
+      [key]: newStatus
+    });
+
+    // 发送请求
+    request({
+      url: '/api/app/favorite/toggle',
+      method: 'POST',
+      data: { productId: id }
+    }).then(res => {
+      if (res.code !== 200) {
+        // 如果失败，回滚状态
+        this.setData({ [key]: isFavorite });
+        wx.showToast({ title: '操作失败', icon: 'none' });
+      }
+    }).catch(() => {
+      // 网络错误回滚
+      this.setData({ [key]: isFavorite });
     });
   }
 });
