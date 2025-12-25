@@ -18,9 +18,13 @@
             </view>
             <view class="pickup-content">
                 <view class="pickup-code">{{order.pickupCode}}</view>
+
                 <view class="qr-code-box" bindtap="onShowQrCode">
-                    <!-- 暂时用图片代替 Canvas，实际开发请替换为 <canvas canvas-id="myQrcode" /> -->
-                    <image src="/assets/images/seat-active.png" class="qr-image-mock" />
+                    <canvas
+                            class="qr-canvas"
+                            canvas-id="myQrcode"
+                            style="width: 160px; height: 160px;"
+                    ></canvas>
                 </view>
             </view>
             <view class="pickup-tip">请向店员出示取餐码取餐</view>

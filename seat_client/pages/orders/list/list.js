@@ -36,25 +36,36 @@ Page({
 
   loadOrders: function (refresh = false) {
     if (this.data.loading) return;
-
+    
     this.setData({ loading: true });
     const page = refresh ? 1 : this.data.page;
 
-    const params = {
-      page: page,
-      size: 10
-    };
+    // 根据当前选中的标签确定状态参数
+    let status = '';
+    switch (this.data.activeTab) {
+      case 1:
+        status = 'PAID';
+        break;
+      case 2:
+        status = 'READY';
+        break;
+      case 3:
+        status = 'COMPLETED';
+        break;
+      default:
+        status = '';
+    }
 
-    OrderAPI.listOrders(params).then(res => {
-      const newOrders = (res.data || res.records || []).map(order => this.formatOrder(order));
-
+    OrderAPI.getMyOrders(status).then(res => {
+      const newOrders = (res || []).map(order => this.formatOrder(order));
+      
       this.setData({
         orders: refresh ? newOrders : this.data.orders.concat(newOrders),
         page: page + 1,
         hasMore: newOrders.length === 10,
         loading: false
       });
-
+      
       if (refresh) wx.stopPullDownRefresh();
     }).catch(err => {
       console.error(err);
@@ -65,25 +76,29 @@ Page({
 
   formatOrder: function (order) {
     let statusText = '';
-    let statusColorClass = '';
-    let isReady = false;
+    let statusColorClass = ''; 
+    let isReady = false; 
 
-    // 状态映射
+    // 状态映射 - 使用后端返回的状态字符串
     switch (order.status) {
-      case 0:
+      case 'PENDING':
         statusText = '待支付';
         statusColorClass = 'text-orange';
         break;
-      case 1:
+      case 'PAID':
         statusText = '制作中';
         statusColorClass = 'text-orange';
         break;
-      case 2:
-        statusText = '待取餐';
-        statusColorClass = 'text-luckin';
-        isReady = true;
+      case 'READY':
+        statusText = '待取餐'; 
+        statusColorClass = 'text-luckin'; 
+        isReady = true; 
         break;
-      case 3:
+      case 'COMPLETED':
+        statusText = '已完成';
+        statusColorClass = 'text-green';
+        break;
+      case 'CANCELLED':
         statusText = '已取消';
         statusColorClass = 'text-gray';
         break;
@@ -132,9 +147,6 @@ Page({
 
   onViewDetail: function (e) {
     const orderId = e.currentTarget.dataset.id;
-    // 跳转到详情页
-    wx.navigateTo({
-      url: `/pages/orders/detail/detail?id=${orderId}`
-    });
+    console.log("查看详情", orderId);
   }
 });
