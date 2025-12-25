@@ -1,25 +1,27 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/library/index",
     "pages/menu/index",
+    "pages/orders/list/list",
+    "pages/orders/detail/detail",
+    "pages/orders/checkout/checkout",
     "pages/mine/mine",
-    "pages/orders/list",
     "pages/login/login",
     "pages/ai_chat/ai_chat",
-    "pages/feedback/feedback",
-    "pages/credit/credit"
+    "pages/credit/credit",
+    "pages/feedback/feedback"
   ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "智座 SmartSeat",
+    "navigationBarTitleText": "瑞幸咖啡",
     "navigationBarTextStyle": "black"
   },
   "tabBar": {
     "color": "#999999",
-    "selectedColor": "#1296db",
+    "selectedColor": "#0022AB",
     "backgroundColor": "#ffffff",
+    "borderStyle": "black",
     "list": [
       {
         "pagePath": "pages/index/index",
@@ -28,10 +30,16 @@
         "selectedIconPath": "assets/images/seat-active.png"
       },
       {
-        "pagePath": "pages/library/index",
-        "text": "借阅",
-        "iconPath": "assets/images/seat.png",
-        "selectedIconPath": "assets/images/seat-active.png"
+        "pagePath": "pages/menu/index",
+        "text": "菜单",
+        "iconPath": "assets/images/book-default.png",
+        "selectedIconPath": "assets/images/book-default.png"
+      },
+      {
+        "pagePath": "pages/orders/list/list",
+        "text": "订单",
+        "iconPath": "assets/images/cart.png",
+        "selectedIconPath": "assets/images/cart.png"
       },
       {
         "pagePath": "pages/mine/mine",
@@ -41,5 +49,6 @@
       }
     ]
   },
+  "style": "v2",
   "sitemapLocation": "sitemap.json"
 }

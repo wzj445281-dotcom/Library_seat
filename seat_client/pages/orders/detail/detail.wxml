@@ -1,0 +1,108 @@
+<view class="container" wx:if="{{!loading}}">
+    <!-- 顶部状态栏背景 -->
+    <view class="header-bg">
+        <view class="status-title">{{order.statusText}}</view>
+        <view class="status-desc">感谢您对瑞幸的支持，期待再次光临</view>
+    </view>
+
+    <view class="content-wrapper">
+
+        <!-- 取餐码卡片 (核心区域) -->
+        <view class="card pickup-card" wx:if="{{order.status === 2}}">
+            <view class="pickup-header">
+                <text>取餐码</text>
+                <view class="qr-btn" bindtap="onShowQrCode">
+                    <image src="/assets/images/seat-active.png" class="mini-icon" />
+                    <text>点击放大</text>
+                </view>
+            </view>
+            <view class="pickup-content">
+                <view class="pickup-code">{{order.pickupCode}}</view>
+                <view class="qr-code-box" bindtap="onShowQrCode">
+                    <!-- 暂时用图片代替 Canvas，实际开发请替换为 <canvas canvas-id="myQrcode" /> -->
+                    <image src="/assets/images/seat-active.png" class="qr-image-mock" />
+                </view>
+            </view>
+            <view class="pickup-tip">请向店员出示取餐码取餐</view>
+        </view>
+
+        <!-- 进度条 -->
+        <view class="card step-card">
+            <view class="steps-box">
+                <view class="step-item {{item.active ? 'active' : ''}}" wx:for="{{steps}}" wx:key="index">
+                    <view class="dot-wrapper">
+                        <view class="dot"></view>
+                        <view class="line" wx:if="{{index < steps.length - 1}}"></view>
+                    </view>
+                    <view class="text-wrapper">
+                        <text class="step-title">{{item.text}}</text>
+                        <text class="step-time">{{item.time}}</text>
+                    </view>
+                </view>
+            </view>
+        </view>
+
+        <!-- 门店信息 -->
+        <view class="card store-card">
+            <view class="store-info">
+                <view class="name">{{order.storeName}}</view>
+                <view class="address">{{order.storeAddress}}</view>
+            </view>
+            <view class="store-actions">
+                <image src="/assets/images/user.png" class="action-icon" bindtap="onCallStore" />
+            </view>
+        </view>
+
+        <!-- 商品列表 -->
+        <view class="card product-card">
+            <view class="product-item" wx:for="{{order.items}}" wx:key="id">
+                <image class="thumb" src="{{item.productImage}}" mode="aspectFill"></image>
+                <view class="info">
+                    <view class="name">{{item.productName}}</view>
+                    <view class="spec">{{item.spec}}</view>
+                </view>
+                <view class="price-box">
+                    <view class="quantity">x{{item.quantity}}</view>
+                    <view class="price">¥{{item.price}}</view>
+                </view>
+            </view>
+
+            <!-- 金额汇总 -->
+            <view class="bill-row">
+                <text>商品总价</text>
+                <text>¥{{order.totalAmount}}</text>
+            </view>
+            <view class="bill-row discount">
+                <text>优惠抵扣</text>
+                <text>-¥{{order.discountAmount}}</text>
+            </view>
+            <view class="bill-total">
+                <text>实付</text>
+                <text class="real-price">¥{{order.realAmount}}</text>
+            </view>
+        </view>
+
+        <!-- 订单信息 -->
+        <view class="card info-card">
+            <view class="info-row">
+                <text class="label">下单时间</text>
+                <text class="val">{{order.createTime}}</text>
+            </view>
+            <view class="info-row">
+                <text class="label">订单编号</text>
+                <text class="val">{{order.orderNo}}</text>
+                <text class="copy-btn">复制</text>
+            </view>
+            <view class="info-row">
+                <text class="label">支付方式</text>
+                <text class="val">微信支付</text>
+            </view>
+        </view>
+
+    </view>
+
+    <!-- 底部操作栏 -->
+    <view class="footer-bar">
+        <button class="reorder-btn" bindtap="onOrderAgain">再来一单</button>
+    </view>
+</view>

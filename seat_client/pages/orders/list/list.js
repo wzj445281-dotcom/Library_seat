@@ -1,94 +1,140 @@
-const orderApi = require('../../api/order.js')
-const app = getApp()
+const OrderAPI = require('../../../api/order.js');
 
 Page({
-    data: {
-        tabs: ['全部', '待取餐', '已完成'],
-        activeTab: 0,
-        orders: [],
-        loading: false
-    },
+  data: {
+    tabs: ['全部', '制作中', '待取餐', '历史订单'],
+    activeTab: 0,
+    orders: [],
+    loading: false,
+    page: 1,
+    hasMore: true
+  },
 
-    onShow() {
-        this.loadOrders()
-    },
+  onLoad: function (options) {
+    this.loadOrders(true);
+  },
 
-    // 切换 Tab
-    onTabChange(e) {
-        const index = e.currentTarget.dataset.index
-        this.setData({ activeTab: index, orders: [] })
-        this.loadOrders()
-    },
+  onShow: function () {
+    this.loadOrders(true);
+  },
 
-    // 加载订单
-    async loadOrders() {
-        this.setData({ loading: true })
-        try {
-            // 简单的状态映射：0=全部, 1=READY(待取), 2=COMPLETED(已完成)
-            // 注意：这里为了简化，Tab 1 只查 READY。实际业务可能需要查 PAID + READY
-            let status = ''
-            if (this.data.activeTab === 1) status = 'READY'
-            if (this.data.activeTab === 2) status = 'COMPLETED'
+  onPullDownRefresh: function () {
+    this.loadOrders(true);
+  },
 
-            const res = await orderApi.getMyOrders(status)
-
-            // 格式化数据 (处理时间、状态显示)
-            const list = (res.data || []).map(item => {
-                item.statusText = this.getStatusText(item.status)
-                item.totalCount = item.products ? item.products.reduce((sum, p) => sum + p.quantity, 0) : 0
-                return item
-            })
-
-            this.setData({ orders: list })
-        } catch (err) {
-            console.error(err)
-            wx.showToast({ title: '加载失败', icon: 'none' })
-        } finally {
-            this.setData({ loading: false })
-        }
-    },
-
-    // 辅助：状态文案
-    getStatusText(status) {
-        const map = {
-            'PENDING': '待付款',
-            'PAID': '制作中', // 瑞幸模式：支付完就是制作中
-            'READY': '待取餐',
-            'COMPLETED': '已完成',
-            'CANCELLED': '已取消'
-        }
-        return map[status] || status
-    },
-
-    // 取消订单
-    async handleCancel(e) {
-        const orderNo = e.currentTarget.dataset.no
-        wx.showModal({
-            title: '提示',
-            content: '确定要取消订单吗？',
-            success: async (res) => {
-                if (res.confirm) {
-                    try {
-                        await orderApi.cancelOrder(orderNo)
-                        wx.showToast({ title: '已取消' })
-                        this.loadOrders() // 刷新列表
-                    } catch (err) {
-                        wx.showToast({ title: err.msg || '取消失败', icon: 'none' })
-                    }
-                }
-            }
-        })
-    },
-
-    // 去支付 (兜底逻辑，防止有漏网之鱼)
-    async handlePay(e) {
-        const orderNo = e.currentTarget.dataset.no
-        try {
-            await orderApi.payOrder(orderNo)
-            wx.showToast({ title: '支付成功' })
-            this.loadOrders()
-        } catch (err) {
-            wx.showToast({ title: '支付失败', icon: 'none' })
-        }
+  onReachBottom: function () {
+    if (this.data.hasMore && !this.data.loading) {
+      this.loadOrders(false);
     }
-})
+  },
+
+  onTabClick: function (e) {
+    const index = e.currentTarget.dataset.index;
+    this.setData({ activeTab: index });
+    this.loadOrders(true);
+  },
+
+  loadOrders: function (refresh = false) {
+    if (this.data.loading) return;
+
+    this.setData({ loading: true });
+    const page = refresh ? 1 : this.data.page;
+
+    const params = {
+      page: page,
+      size: 10
+    };
+
+    OrderAPI.listOrders(params).then(res => {
+      const newOrders = (res.data || res.records || []).map(order => this.formatOrder(order));
+
+      this.setData({
+        orders: refresh ? newOrders : this.data.orders.concat(newOrders),
+        page: page + 1,
+        hasMore: newOrders.length === 10,
+        loading: false
+      });
+
+      if (refresh) wx.stopPullDownRefresh();
+    }).catch(err => {
+      console.error(err);
+      this.setData({ loading: false });
+      if (refresh) wx.stopPullDownRefresh();
+    });
+  },
+
+  formatOrder: function (order) {
+    let statusText = '';
+    let statusColorClass = '';
+    let isReady = false;
+
+    // 状态映射
+    switch (order.status) {
+      case 0:
+        statusText = '待支付';
+        statusColorClass = 'text-orange';
+        break;
+      case 1:
+        statusText = '制作中';
+        statusColorClass = 'text-orange';
+        break;
+      case 2:
+        statusText = '待取餐';
+        statusColorClass = 'text-luckin';
+        isReady = true;
+        break;
+      case 3:
+        statusText = '已取消';
+        statusColorClass = 'text-gray';
+        break;
+      default:
+        statusText = '未知状态';
+        statusColorClass = 'text-gray';
+    }
+
+    let totalCount = 0;
+    let formattedItems = [];
+
+    if (order.items) {
+      order.items.forEach(item => {
+        totalCount += item.quantity;
+        formattedItems.push({
+          ...item,
+          // 如果没有图片，使用默认咖啡占位图
+          // 实际项目中应从 item.productImage 获取
+          image: item.productImage || '/assets/images/book-default.png',
+          // 简化过长的商品名
+          shortName: item.productName.length > 5 ? item.productName.substring(0, 5) + '...' : item.productName
+        });
+      });
+    }
+
+    const pickupCode = order.pickupCode || (order.id ? order.id.toString().slice(-3) : '888');
+
+    return {
+      ...order,
+      statusText,
+      statusColorClass,
+      isReady,
+      pickupCode,
+      totalCount,
+      // 将处理好的商品列表传给前端
+      items: formattedItems,
+      createTimeFormatted: order.createTime ? order.createTime.replace('T', ' ') : ''
+    };
+  },
+
+  onOrderAgain: function (e) {
+    wx.switchTab({
+      url: '/pages/menu/index'
+    });
+  },
+
+  onViewDetail: function (e) {
+    const orderId = e.currentTarget.dataset.id;
+    // 跳转到详情页
+    wx.navigateTo({
+      url: `/pages/orders/detail/detail?id=${orderId}`
+    });
+  }
+});
