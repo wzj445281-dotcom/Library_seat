@@ -1,0 +1,167 @@
+/* 保持原有样式，新增骨架屏相关样式 */
+
+.container {
+    min-height: 100vh;
+    background-color: #f7f7f7;
+    padding-bottom: 30rpx;
+}
+
+/* 骨架屏容器 */
+.skeleton-container {
+    padding: 0;
+    width: 100%;
+    height: 100vh;
+    background: #fff;
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 999;
+}
+
+/* 骨架屏动画效果 - 呼吸灯 */
+@keyframes skeleton-blink {
+    0% { opacity: 0.6; }
+    50% { opacity: 0.3; }
+    100% { opacity: 0.6; }
+}
+
+.skeleton-item {
+    background-color: #e0e0e0;
+    animation: skeleton-blink 1.5s infinite ease-in-out;
+    border-radius: 8rpx;
+}
+
+/* 首页特定骨架布局 */
+.sk-banner {
+    width: 100%;
+    height: 500rpx; /* 对应头部高度 */
+    border-radius: 0 0 20rpx 20rpx;
+}
+
+.sk-card {
+    margin: -60rpx 30rpx 30rpx;
+    background: #fff;
+    padding: 30rpx;
+    border-radius: 16rpx;
+    box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.05);
+}
+
+.sk-store-info {
+    height: 40rpx;
+    width: 60%;
+    margin-bottom: 20rpx;
+}
+
+.sk-distance {
+    height: 30rpx;
+    width: 40%;
+    margin-bottom: 40rpx;
+}
+
+.sk-buttons {
+    display: flex;
+    justify-content: space-between;
+}
+
+.sk-btn {
+    width: 48%;
+    height: 120rpx;
+    border-radius: 12rpx;
+}
+
+/* 原有样式保留... */
+.header {
+    position: relative;
+    width: 100%;
+    height: 560rpx;
+}
+
+.banner-swiper {
+    width: 100%;
+    height: 100%;
+}
+
+.slide-image {
+    width: 100%;
+    height: 100%;
+}
+
+.content-card {
+    position: relative;
+    margin: -80rpx 30rpx 0;
+    background: #fff;
+    border-radius: 20rpx;
+    padding: 40rpx;
+    box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+.store-info {
+    margin-bottom: 40rpx;
+}
+
+.store-name {
+    font-size: 36rpx;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10rpx;
+    display: block;
+}
+
+.store-address {
+    font-size: 26rpx;
+    color: #666;
+    display: flex;
+    align-items: center;
+}
+
+.distance {
+    margin-left: 20rpx;
+    color: #999;
+}
+
+.action-area {
+    display: flex;
+    justify-content: space-between;
+    gap: 20rpx;
+}
+
+.order-btn {
+    flex: 1;
+    height: 160rpx;
+    border-radius: 16rpx;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.order-btn.ziqu {
+    background: linear-gradient(135deg, #e6f3ff 0%, #f0f7ff 100%);
+    color: #0056b3;
+}
+
+.order-btn.waimai {
+    background: linear-gradient(135deg, #fff0f0 0%, #fff8f8 100%);
+    color: #d93025;
+}
+
+.btn-title {
+    font-size: 36rpx;
+    font-weight: bold;
+    margin-bottom: 8rpx;
+}
+
+.btn-desc {
+    font-size: 24rpx;
+    opacity: 0.8;
+}
+
+.icon {
+    width: 64rpx;
+    height: 64rpx;
+    margin-bottom: 10rpx;
+}

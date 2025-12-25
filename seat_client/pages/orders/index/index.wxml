@@ -1,0 +1,53 @@
+<!-- 骨架屏 (Loading状态下显示) -->
+<view class="skeleton-container" wx:if="{{loading}}">
+  <view class="skeleton-item sk-banner"></view>
+  <view class="sk-card">
+    <view class="skeleton-item sk-store-info"></view>
+    <view class="skeleton-item sk-distance"></view>
+    <view class="sk-buttons">
+      <view class="skeleton-item sk-btn"></view>
+      <view class="skeleton-item sk-btn"></view>
+    </view>
+  </view>
+</view>
+
+<!-- 真实内容 -->
+<view class="container" wx:else>
+  <!-- 顶部 Banner -->
+  <view class="header">
+    <swiper class="banner-swiper" indicator-dots="{{true}}" autoplay="{{true}}" interval="3000" duration="1000" circular="{{true}}" indicator-active-color="#fff">
+      <block wx:for="{{banners}}" wx:key="*this">
+        <swiper-item>
+          <image src="{{item}}" class="slide-image" mode="aspectFill" />
+        </swiper-item>
+      </block>
+    </swiper>
+  </view>
+
+  <!-- 核心入口卡片 -->
+  <view class="content-card">
+    <!-- 门店信息 -->
+    <view class="store-info">
+      <text class="store-name">{{storeInfo.name}}</text>
+      <view class="store-address">
+        <text class="iconfont icon-location"></text>
+        <text>{{storeInfo.address}}</text>
+        <text class="distance">距您 {{storeInfo.distance}}</text>
+      </view>
+    </view>
+
+    <!-- 点单按钮 -->
+    <view class="action-area">
+      <view class="order-btn ziqu" bindtap="navigateToMenu" data-type="self">
+        <image class="icon" src="/assets/images/coffee-cup.png" mode="aspectFit"></image> <!-- 需确保图片存在，这里用逻辑占位 -->
+        <text class="btn-title">到店取</text>
+        <text class="btn-desc">提前点单 免排队</text>
+      </view>
+      <view class="order-btn waimai" bindtap="navigateToMenu" data-type="delivery">
+        <image class="icon" src="/assets/images/delivery-bike.png" mode="aspectFit"></image> <!-- 需确保图片存在，这里用逻辑占位 -->
+        <text class="btn-title">外卖配送</text>
+        <text class="btn-desc">无接触 放心送</text>
+      </view>
+    </view>
+  </view>
+</view>

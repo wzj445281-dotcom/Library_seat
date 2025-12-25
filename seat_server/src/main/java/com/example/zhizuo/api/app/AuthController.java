@@ -60,7 +60,7 @@ public class AuthController {
         String token = jwtUtil.generateToken(loginDTO.getStudentId());
 
         QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", loginDTO.getStudentId());
+        query.eq("username", loginDTO.getStudentId());
         User user = userMapper.selectOne(query);
 
         Map<String, String> result = new HashMap<>();
@@ -76,14 +76,14 @@ public class AuthController {
     @Transactional(rollbackFor = Exception.class) // 开启事务，保证两张表同时成功
     public ApiResponse<String> register(@RequestBody @Validated UserRegisterDTO registerDTO) {
         QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", registerDTO.getStudentId());
+        query.eq("username", registerDTO.getStudentId());
         if (userMapper.selectCount(query) > 0) {
             return ApiResponse.error(400, "该学号已注册");
         }
 
         // 1. 创建用户
         User user = new User();
-        user.setStudentId(registerDTO.getStudentId());
+        user.setUsername(registerDTO.getStudentId());
         user.setName(registerDTO.getName());
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
         user.setCreditScore(100);

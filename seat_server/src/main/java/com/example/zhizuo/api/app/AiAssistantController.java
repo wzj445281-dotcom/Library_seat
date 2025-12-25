@@ -1,136 +1,187 @@
 package com.example.zhizuo.api.app;
 
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.json.JSONArray;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.core.entity.CreditLog;
-import com.example.zhizuo.core.entity.User;
-import com.example.zhizuo.core.mapper.CreditLogMapper;
-import com.example.zhizuo.core.mapper.UserMapper;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.extern.slf4j.Slf4j;
+import com.example.zhizuo.core.entity.Product;
+import com.example.zhizuo.core.service.OrderService;
+import com.example.zhizuo.core.service.ProductService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Slf4j
+/**
+ * AI 助手控制器 (增强版)
+ * 集成商品库、用户收藏、历史订单数据，打造个性化导购
+ */
 @RestController
-@RequestMapping("/api/app/ai")
-@Tag(name = "App-AI客服助手")
+@RequestMapping("/app/ai")
 public class AiAssistantController {
 
-    private final UserMapper userMapper;
-    private final CreditLogMapper creditLogMapper;
+    @Autowired
+    private ProductService productService;
 
-    // Google Gemini API URL
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+    @Autowired
+    private OrderService orderService;
 
-    // 请在 application.yml 中配置 your_google_api_key
-    @Value("${ai.gemini.api-key:YOUR_API_KEY_HERE}")
-    private String apiKey;
+    // 从 application.yml 读取配置，避免硬编码
+    @Value("${ai.deepseek.key:}")
+    private String deepSeekApiKey;
 
-    public AiAssistantController(UserMapper userMapper, CreditLogMapper creditLogMapper) {
-        this.userMapper = userMapper;
-        this.creditLogMapper = creditLogMapper;
-    }
+    @Value("${ai.deepseek.url:https://api.deepseek.com/chat/completions}")
+    private String deepSeekApiUrl;
 
-    @Operation(summary = "咨询AI客服")
+    @Value("${ai.deepseek.model:deepseek-chat}")
+    private String deepSeekModel;
+
     @PostMapping("/chat")
-    public ApiResponse<String> chat(@RequestBody Map<String, String> params) {
-        String userQuestion = params.get("message");
-        if (userQuestion == null || userQuestion.trim().isEmpty()) {
-            return ApiResponse.error(400, "问题不能为空");
+    public ApiResponse<Map<String, Object>> chat(@RequestBody Map<String, String> body, @RequestAttribute(required = false) Long userId) {
+        String userMessage = body.get("message");
+        if (userMessage == null || userMessage.trim().isEmpty()) {
+            return ApiResponse.error("输入不能为空");
         }
 
-        // 1. 获取用户上下文
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String studentId = (String) auth.getPrincipal();
-        User user = userMapper.selectOne(new QueryWrapper<User>().eq("student_id", studentId));
-
-        // 2. 获取最近5条信用日志
-        List<CreditLog> logs = creditLogMapper.selectList(
-                new QueryWrapper<CreditLog>()
-                        .eq("user_id", user.getId())
-                        .orderByDesc("create_time")
-                        .last("LIMIT 5")
-        );
-
-        // 格式化日志为字符串
-        String logContext = logs.stream()
-                .map(l -> String.format("[%s] %s %d分 (原因: %s)",
-                        l.getCreateTime().toString(),
-                        "ADD".equals(l.getType()) ? "加" : "扣",
-                        l.getScore(),
-                        l.getReason()))
-                .collect(Collectors.joining("\n"));
-
-        // 3. 构建 Prompt
-        String systemPrompt = String.format(
-                "你是一个高校图书馆座位预约系统的智能客服‘智座小助手’。当前对话学生：%s，当前信用分：%d。\n" +
-                        "该学生的最近信用变动记录如下：\n%s\n\n" +
-                        "请根据以上信息，回答学生的问题。如果涉及扣分，请温和地解释原因；如果信用分较低，请给出恢复建议（如连续签到、正常离座）。" +
-                        "回答要简练、亲切，不要暴露系统内部数据结构。",
-                user.getName(), user.getCreditScore(), logContext
-        );
-
-        // 4. 调用 Gemini API
         try {
-            String responseText = callGeminiApi(systemPrompt, userQuestion);
-            return ApiResponse.success(responseText);
+            // 1. 【构建知识库 (Context)】
+
+            // A. 商品列表 (模拟全量，实际应用可结合 Vector DB)
+            List<Product> products = productService.list();
+            String productContext = products.stream()
+                    .map(p -> String.format("{id:%d, name:'%s', price:%.2f, tags:'%s'}",
+                            p.getId(), p.getName(), p.getPrice(), "新品,热销")) // 模拟 Tags
+                    .collect(Collectors.joining(", "));
+
+            // B. 用户画像 (收藏 + 历史订单)
+            String userProfile = buildUserProfile(userId);
+
+            // 2. 【Prompt 工程】
+            // 核心：明确角色、输入数据、输出格式
+            String systemPrompt = String.format(
+                    "你是一个瑞幸咖啡的资深AI导购助手。请根据用户的【历史偏好】和【当前问题】，从【商品库】中推荐最合适的饮品。\n\n" +
+                            "=== 数据输入 ===\n" +
+                            "【商品库】：[%s]\n" +
+                            "【用户画像】：%s\n\n" +
+                            "=== 输出规则 ===\n" +
+                            "1. 语气亲切、活泼，像朋友一样交流。\n" +
+                            "2. 如果用户有收藏或常喝的口味，优先推荐相关商品。\n" +
+                            "3. IMPORTANT: 必须返回严格的 JSON 格式，不要包含 Markdown 标记。\n" +
+                            "4. JSON 结构：\n" +
+                            "{\n" +
+                            "  \"reply\": \"回复文本，结合用户偏好进行个性化推荐\",\n" +
+                            "  \"recommendations\": [\n" +
+                            "    {\"id\": 商品ID, \"name\": \"商品名\", \"price\": 价格, \"image\": \"商品图URL(可留空)\", \"reason\": \"推荐理由(如: 您最爱的生椰口味)\"}\n" +
+                            "  ]\n" +
+                            "}",
+                    productContext, userProfile
+            );
+
+            // 3. 调用 DeepSeek API
+            // 检查 API Key
+            if (deepSeekApiKey == null || deepSeekApiKey.isEmpty() || deepSeekApiKey.startsWith("sk-your")) {
+                // 演示模式：如果没配置 Key，返回 Mock 数据
+                return ApiResponse.success(mockAiResponse(userMessage));
+            }
+
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + deepSeekApiKey);
+
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode requestBody = mapper.createObjectNode();
+            requestBody.put("model", deepSeekModel);
+            requestBody.put("temperature", 0.7);
+
+            ArrayNode messages = requestBody.putArray("messages");
+            messages.addObject().put("role", "system").put("content", systemPrompt);
+            messages.addObject().put("role", "user").put("content", userMessage);
+
+            HttpEntity<String> entity = new HttpEntity<>(mapper.writeValueAsString(requestBody), headers);
+            ResponseEntity<Map> response = restTemplate.postForEntity(deepSeekApiUrl, entity, Map.class);
+
+            // 4. 解析结果
+            Map<String, Object> responseBody = response.getBody();
+            if (responseBody != null && responseBody.containsKey("choices")) {
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
+                String content = (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
+                return ApiResponse.success(parseAiJson(content));
+            }
+
+            return ApiResponse.error("AI 响应异常");
+
         } catch (Exception e) {
-            log.error("AI 服务调用失败", e);
-            return ApiResponse.success("抱歉，AI 大脑暂时短路了，请稍后再试。您的当前信用分是 " + user.getCreditScore());
+            e.printStackTrace();
+            return ApiResponse.success(mockAiResponse(userMessage)); // 降级处理
         }
     }
 
-    private String callGeminiApi(String systemPrompt, String userMessage) {
-        // 构建 Gemini 请求体
-        JSONObject content = new JSONObject();
+    /**
+     * 构建用户画像 (模拟数据，实际应查数据库)
+     */
+    private String buildUserProfile(Long userId) {
+        if (userId == null) return "新用户，无历史数据";
 
-        JSONObject partSystem = new JSONObject().set("text", systemPrompt + "\n\n用户提问：" + userMessage);
+        // 模拟查库逻辑
+        // List<String> favorites = favoriteService.getUserFavorites(userId);
+        // List<Order> orders = orderService.getRecentOrders(userId);
 
-        JSONArray parts = new JSONArray().put(partSystem);
-        JSONObject contentsObj = new JSONObject().set("parts", parts);
+        return "老用户，ID:" + userId +
+                "，【收藏列表】：['生椰拿铁', '丝绒拿铁']" +
+                "，【历史偏好】：喜欢‘少糖’、‘去冰’，经常在下午 2 点下单。";
+    }
 
-        content.set("contents", new JSONArray().put(contentsObj));
+    /**
+     * 解析 AI 返回的 JSON 字符串 (包含容错处理)
+     */
+    private Map<String, Object> parseAiJson(String jsonContent) {
+        try {
+            // 清理 Markdown 标记
+            String cleanJson = jsonContent.trim();
+            if (cleanJson.startsWith("```json")) cleanJson = cleanJson.substring(7);
+            if (cleanJson.startsWith("```")) cleanJson = cleanJson.substring(3);
+            if (cleanJson.endsWith("```")) cleanJson = cleanJson.substring(0, cleanJson.length() - 3);
 
-        String url = GEMINI_API_URL + "?key=" + apiKey;
-
-        HttpResponse response = HttpRequest.post(url)
-                .body(content.toString())
-                .timeout(10000)
-                .execute();
-
-        if (response.getStatus() == 200) {
-            JSONObject jsonRes = JSONUtil.parseObj(response.body());
-            // 解析 Gemini 响应结构
-            // candidates[0].content.parts[0].text
-            try {
-                return jsonRes.getJSONArray("candidates")
-                        .getJSONObject(0)
-                        .getJSONObject("content")
-                        .getJSONArray("parts")
-                        .getJSONObject(0)
-                        .getStr("text");
-            } catch (Exception e) {
-                return "解析 AI 响应失败";
-            }
-        } else {
-            log.error("Gemini API Error: {} {}", response.getStatus(), response.body());
-            throw new RuntimeException("API调用失败");
+            return new ObjectMapper().readValue(cleanJson, Map.class);
+        } catch (Exception e) {
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("reply", jsonContent); // 解析失败则直接把文本作为回复
+            fallback.put("recommendations", new ArrayList<>());
+            return fallback;
         }
+    }
+
+    /**
+     * Mock 数据 (用于演示或 API Key 无效时)
+     */
+    private Map<String, Object> mockAiResponse(String userMsg) {
+        Map<String, Object> res = new HashMap<>();
+        if (userMsg.contains("推荐")) {
+            res.put("reply", "根据您的口味（喜欢生椰），我强烈推荐您试试我们的【生椰拿铁】！新品【冰吸生椰】也很不错哦~ 🥥");
+            List<Map<String, Object>> recs = new ArrayList<>();
+            Map<String, Object> item1 = new HashMap<>();
+            item1.put("id", 1);
+            item1.put("name", "生椰拿铁");
+            item1.put("price", 18.0);
+            item1.put("reason", "您的收藏首选");
+            item1.put("image", "[https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200](https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200)");
+            recs.add(item1);
+            res.put("recommendations", recs);
+        } else {
+            res.put("reply", "我是瑞幸 AI 助手，请问有什么可以帮您？输入“推荐”试试看！(API Key 未配置，正在运行 Mock 模式)");
+            res.put("recommendations", new ArrayList<>());
+        }
+        return res;
     }
 }

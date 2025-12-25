@@ -1,43 +1,26 @@
-# =========================================================
-# 阶段一：构建 (使用 Debian 版镜像，解决 SSL 握手失败问题)
-# =========================================================
-FROM maven:3.8.6-eclipse-temurin-8 AS build
+# 第一阶段：构建 (Maven Build)
+FROM maven:3.8.6-openjdk-18 AS build
 WORKDIR /app
 
-# [关键步骤] 强行覆盖 Maven 全局配置，强制使用阿里云镜像
-# 这样无论 pom.xml 怎么写，都会走阿里云，速度起飞且不会报错
-RUN echo '<?xml version="1.0" encoding="UTF-8"?> \
-<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" \
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
-          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd"> \
-    <mirrors> \
-        <mirror> \
-            <id>aliyunmaven</id> \
-            <mirrorOf>*</mirrorOf> \
-            <name>阿里云公共仓库</name> \
-            <url>https://maven.aliyun.com/repository/public</url> \
-        </mirror> \
-    </mirrors> \
-</settings>' > /usr/share/maven/conf/settings.xml
-
-# 复制 pom.xml 和源码
+# 优化：先复制 pom.xml 下载依赖，利用缓存
 COPY pom.xml .
-COPY src ./src
+# 这一步会下载依赖，如果 pom.xml 没变，这层会被缓存
+RUN mvn dependency:go-offline -B
 
-# 执行构建 (跳过测试)
+# 复制源码并打包
+COPY src ./src
 RUN mvn clean package -DskipTests
 
-# =========================================================
-# 阶段二：运行 (使用轻量级 Alpine 镜像运行，减小体积)
-# =========================================================
-FROM eclipse-temurin:8-jre-alpine
+# 第二阶段：运行 (Run)
+FROM openjdk:18-slim
 WORKDIR /app
 
-# 从构建阶段复制生成的 jar 包
+# 从构建阶段复制 jar 包
 COPY --from=build /app/target/*.jar app.jar
 
 # 暴露端口
 EXPOSE 8080
 
 # 启动命令
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# 建议加上 -Djava.security.egd=file:/dev/./urandom 加快随机数生成
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]

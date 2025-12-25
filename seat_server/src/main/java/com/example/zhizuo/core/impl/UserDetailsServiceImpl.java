@@ -20,20 +20,20 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String studentId) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         // 1. 查询数据库中的用户
         QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("student_id", studentId);
+        query.eq("username", username);
         User user = userMapper.selectOne(query);
 
         if (user == null) {
-            throw new UsernameNotFoundException("用户不存在: " + studentId);
+            throw new UsernameNotFoundException("用户不存在: " + username);
         }
 
         // 2. 返回 Spring Security 需要的 UserDetails 对象
         // 这里暂时不处理复杂的角色权限，权限列表传空 ArrayList
         return new org.springframework.security.core.userdetails.User(
-                user.getStudentId(),
+                user.getUsername(),
                 user.getPassword(), // 注意：这里应该是加密后的密码
                 new ArrayList<>()
         );

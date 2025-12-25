@@ -47,6 +47,14 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
 
+# --- AI 配置 (DeepSeek) ---
+ai:
+  deepseek:
+    # 填入你的 API Key
+    key: https://api-docs.deepseek.com/zh-cn/api/create-chat-completion
+    url: https://api.deepseek.com/chat/completions
+    model: deepseek-chat
+
 # MyBatis Plus 配置
 mybatis-plus:
   configuration:
