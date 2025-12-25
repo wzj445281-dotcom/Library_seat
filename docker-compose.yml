@@ -12,7 +12,7 @@ services:
     ports:
       - "${DB_PORT}:3306"
     volumes:
-      - ./seat_server/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./pet_server/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
 
@@ -49,7 +49,7 @@ services:
 
   # 5. Java 后端核心
   seat-server:
-    build: ./seat_server
+    build: ./pet_server
     container_name: zhizuo-backend
     ports:
       - "8080:8080"

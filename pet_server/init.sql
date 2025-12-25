@@ -156,3 +156,18 @@ CREATE TABLE IF NOT EXISTS `resource_orders` (
 -- 插入测试数据
 INSERT IGNORE INTO users (student_id, name, credit_score) VALUES ('2021001', '张三', 100), ('2021002', '李四', 50);
 INSERT IGNORE INTO seats (label, grid_x, grid_y) VALUES ('A1', 1, 1), ('A2', 1, 2), ('A3', 1, 3), ('B1', 2, 1), ('B2', 2, 2);
+
+-- ==========================================
+-- 12. 交易流水表 (新增，用于资金对账)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS `transaction_flow` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
+  `amount` decimal(10,2) NOT NULL COMMENT '变动金额(+/-)',
+  `type` varchar(20) NOT NULL COMMENT '类型: RECHARGE(充值)/PAYMENT(支付)/REFUND(退款)',
+  `order_no` varchar(64) DEFAULT NULL COMMENT '关联订单号',
+  `description` varchar(255) DEFAULT NULL COMMENT '描述',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB COMMENT='交易流水表';

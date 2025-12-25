@@ -1,122 +1,81 @@
 from flask import Flask, request, jsonify
-import random
+import joblib
+import numpy as np
+import os
 import datetime
 
-# 1. 必须先初始化 app，后续的 @app.route 才能用
 app = Flask(__name__)
 
-# ----------------------------------------------------
-# 接口 1: 热度预测
-# ----------------------------------------------------
+# 加载模型 (单例模式)
+MODEL_PATH = 'busy_model.pkl'
+model = None
+
+def load_model():
+    global model
+    if os.path.exists(MODEL_PATH):
+        try:
+            model = joblib.load(MODEL_PATH)
+            print("Model loaded successfully.")
+        except Exception as e:
+            print(f"Error loading model: {e}")
+    else:
+        print("Model file not found. Please run train_model.py first.")
+
+# 在应用启动前加载模型
+load_model()
+
 @app.route('/predict', methods=['POST'])
-def predict():
+def predict_busy_score():
+    """
+    预测未来某时刻的工位繁忙度
+    Input: {"slotIds": [1, 2], "date": "2023-12-26"} (date可选，默认明天)
+    """
     try:
         data = request.json
-        seat_ids = data.get('seatIds', [])
+        slot_ids = data.get('slotIds', [])
 
-        # 1. 获取时间特征
+        # 自动训练 (如果模型不存在)
+        if model is None:
+            if not os.path.exists(MODEL_PATH):
+                import train_model
+                train_model.generate_data() # 触发训练逻辑
+                load_model()
+
+        # 构造特征向量
+        # 假设预测明天的平均热度
         tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-        weekday = tomorrow.weekday() # 0=周一, 6=周日
-        is_weekend = weekday >= 5
+        is_weekend = 1 if tomorrow.weekday() >= 5 else 0
 
         results = []
-        for seat_id in seat_ids:
-            sid = int(seat_id)
 
-            # --- 模拟算法逻辑 ---
-            score = random.uniform(60, 75)
+        if model:
+            # 预测明天 10:00, 14:00, 18:00 三个时间点的平均值
+            # 特征顺序: [hour, is_weekend, weather_code(默认0晴天)]
+            features = [
+                [10, is_weekend, 0],
+                [14, is_weekend, 0],
+                [18, is_weekend, 0]
+            ]
+            predictions = model.predict(features)
+            avg_score = float(np.mean(predictions))
+        else:
+            # Fallback
+            avg_score = 0.5
 
-            # 特征1：位置偏好 (假设 ID < 15 的是靠窗/VIP座位)
-            if sid < 15:
-                score += random.uniform(15, 20)
-            elif sid % 2 == 0:
-                score -= random.uniform(2, 5)
-
-            # 特征2：周末效应
-            if is_weekend:
-                score += random.uniform(5, 10)
-
-            final_score = round(max(0, min(99, score)), 1)
+        for slot_id in slot_ids:
+            # 给不同工位加微小扰动，避免所有工位分数一模一样
+            final_score = min(0.99, max(0.01, avg_score + np.random.uniform(-0.1, 0.1)))
 
             results.append({
-                'seatId': seat_id,
-                'heatScore': final_score,
-                'predictionDate': tomorrow.isoformat()
+                "slotId": slot_id,
+                "busyScore": round(final_score, 2),
+                "label": "High" if final_score > 0.7 else "Medium" if final_score > 0.3 else "Low"
             })
 
-        return jsonify({'code': 200, 'message': 'success', 'data': results})
+        return jsonify({"code": 200, "msg": "success", "data": results})
 
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'code': 500, 'message': str(e)})
-
-# ----------------------------------------------------
-# 接口 2: 风控预测 (之前报错就是因为这个放错了位置)
-# ----------------------------------------------------
-@app.route('/predict/risk', methods=['POST'])
-def predict_risk():
-    data = request.json
-    credit_score = data.get('creditScore', 100)
-
-    # --- 模拟逻辑回归模型 ---
-    risk_prob = 0.0
-
-    if credit_score < 80:
-        risk_prob += 0.4
-    if credit_score < 60:
-        risk_prob += 0.3
-
-    risk_prob = min(0.99, max(0.01, risk_prob))
-
-    result = {
-        'riskProbability': round(risk_prob, 2),
-        'action': 'ALLOW'
-    }
-
-    if risk_prob > 0.7:
-        result['action'] = 'WARN'
-
-    return jsonify({'code': 200, 'data': result})
-# ----------------------------------------------------
-# 接口 3: 工单智能分析 (新增修复)
-# ----------------------------------------------------
-@app.route('/analyze/ticket', methods=['POST'])
-def analyze_ticket():
-    try:
-        data = request.json
-        text = data.get('text', '')
-        category = data.get('category', '')
-
-        # --- 简单的关键词规则模拟 AI 分析 ---
-        priority = 0
-        summary = "常规反馈"
-
-        # 1. 关键词检测优先级
-        urgent_keywords = ['漏水', '冒烟', '火花', '紧急', '受伤', '救命']
-        medium_keywords = ['吵', '噪音', '坏了', '故障', '无法使用']
-
-        if any(k in text for k in urgent_keywords):
-            priority = 2
-            summary = f"【紧急】检测到安全隐患关键词，请立即处理。分类：{category}"
-        elif any(k in text for k in medium_keywords):
-            priority = 1
-            summary = f"【关注】设施故障或环境问题。分类：{category}"
-        else:
-            summary = f"普通建议或反馈。分类：{category}"
-
-        return jsonify({
-            'code': 200,
-            'message': 'success',
-            'data': {
-                'priority': priority,
-                'summary': summary
-            }
-        })
-    except Exception as e:
-        print(f"Analysis Error: {e}")
-        return jsonify({'code': 500, 'message': str(e)})
+        return jsonify({"code": 500, "msg": str(e)})
 
 if __name__ == '__main__':
-    print("AI Prediction Server is running...")
-    # 必须监听 0.0.0.0 才能在 Docker 外部访问
     app.run(host='0.0.0.0', port=5000)
