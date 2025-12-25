@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petsaas.mapper.ProductMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.petsaas.common.domain.Product">
+        <id column="id" property="id" />
+        <result column="merchant_id" property="merchantId" />
+        <result column="name" property="name" />
+        <result column="category" property="category" />
+        <result column="price" property="price" />
+        <result column="stock" property="stock" />
+        <result column="image" property="image" />
+        <result column="description" property="description" />
+        <result column="status" property="status" />
+        <result column="sales" property="sales" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, merchant_id, name, category, price, stock, image, description, status, sales, create_time, update_time
+    </sql>
+    
+    <!-- 这里不需要手写 selectList 等基础方法，
+         因为我们的 Mapper 继承了 Mybatis-Plus 的 BaseMapper，
+         Mybatis-Plus 会自动注入基础 SQL。
+         
+         如果需要自定义复杂查询（比如联表查询热销商品），可以在这里添加。
+    -->
+    
+    <!-- 示例：自定义扣减库存（虽然MP有UpdateWrapper，但SQL更安全） -->
+    <update id="deductStock">
+        UPDATE product 
+        SET stock = stock - #{count}, sales = sales + #{count}
+        WHERE id = #{productId} AND stock >= #{count}
+    </update>
+
+</mapper>

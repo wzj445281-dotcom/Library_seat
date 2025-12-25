@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: pet-server
+
+  # 数据库配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 注意：本地运行时用 localhost，Docker 运行时会被环境变量覆盖为 mysql
+    url: jdbc:mysql://localhost:3306/pet_mall?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: "000000"
+
+  # Redis 配置 (Day 1)
+  redis:
+    # 同理，Docker 运行时会被覆盖为 redis
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 10000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1
+        max-idle: 8
+        min-idle: 0
+
+  # RabbitMQ 配置 (Day 2)
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+    # 消息确认机制配置
+    listener:
+      simple:
+        # 开启手动确认模式 (Manual Acknowledge)，确保消息不丢失
+        # 只有当消费者显式调用 basicAck 后，消息才会从队列删除
+        acknowledge-mode: manual
+        prefetch: 1 # 每次只取一条，防止处理不过来
+
+  # Jackson 日期格式化
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+# MyBatis Plus 配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 开启 SQL 日志打印
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted # 逻辑删除字段(如果有)
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 日志配置
+logging:
+  level:
+    com.petsaas: debug
+    org.springframework.web: info

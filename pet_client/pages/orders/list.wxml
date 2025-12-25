@@ -1,0 +1,57 @@
+<view class="container">
+  <view class="header">
+    <text class="title">我的订单</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 订单列表 -->
+  <view class="order-list" wx:elif="{{orders.length > 0}}">
+    <view class="order-card" wx:for="{{orders}}" wx:key="id">
+      <view class="order-header" bindtap="goToDetail" data-id="{{item.id}}">
+        <view class="order-no">订单号: {{item.orderNo}}</view>
+        <view class="order-status">{{item.status === 0 ? '待支付' : item.status === 1 ? '待发货' : item.status === 2 ? '待收货' : '已完成'}}</view>
+      </view>
+      
+      <view class="order-content" bindtap="goToDetail" data-id="{{item.id}}">
+        <view class="order-items">
+          <view class="item" wx:for="{{item.items}}" wx:key="index" wx:for-item="product">
+            <view class="item-name">{{product.name}}</view>
+            <view class="item-info">
+              <text class="item-count">x{{product.count}}</text>
+              <text class="item-price">¥{{product.price}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      
+      <view class="order-footer">
+        <view class="order-time">{{item.createTime}}</view>
+        <view class="order-amount">合计: ¥{{item.totalAmount}}</view>
+      </view>
+      
+      <view class="order-actions">
+        <block wx:if="{{item.status === 0}}">
+          <button class="btn cancel-btn" bindtap="cancelOrder" data-id="{{item.id}}">取消订单</button>
+          <button class="btn primary-btn">去支付</button>
+        </block>
+        <block wx:elif="{{item.status === 2}}">
+          <button class="btn primary-btn" bindtap="confirmOrder" data-id="{{item.id}}">确认收货</button>
+        </block>
+        <block wx:elif="{{item.status === 3}}">
+          <button class="btn default-btn">再次购买</button>
+        </block>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:else>
+    <image src="/assets/images/seat.png" mode="widthFix" style="width: 200rpx; opacity: 0.3;"></image>
+    <text>暂无订单</text>
+    <button class="btn primary-btn" bindtap="goToHome">去逛逛</button>
+  </view>
+</view>
