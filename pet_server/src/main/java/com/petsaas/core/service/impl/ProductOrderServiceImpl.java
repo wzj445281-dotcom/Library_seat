@@ -1,108 +1,103 @@
 package com.petsaas.core.service.impl;
 
-import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.petsaas.core.entity.Product;
 import com.petsaas.core.entity.ProductOrder;
+import com.petsaas.core.entity.TransactionFlow;
 import com.petsaas.core.entity.User;
 import com.petsaas.core.mapper.ProductMapper;
-import com.petsaas.core.mapper.ProductOrderMapper;
+import com.petsaas.core.mapper.ProductOrderMapper; // 确保引用的是这个
+import com.petsaas.core.mapper.TransactionMapper;
 import com.petsaas.core.mapper.UserMapper;
 import com.petsaas.core.service.ProductOrderService;
-import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 
-@Slf4j
 @Service
 public class ProductOrderServiceImpl extends ServiceImpl<ProductOrderMapper, ProductOrder> implements ProductOrderService {
 
-    @Resource
-    private ProductMapper productMapper;
-    @Resource
-    private UserMapper userMapper;
-    @Resource
-    private RedissonClient redissonClient;
+    @Autowired private ProductMapper productMapper;
+    @Autowired private UserMapper userMapper;
+    @Autowired private TransactionMapper transactionMapper;
 
-    /**
-     * 创建商品订单
-     * @param userId 用户ID
-     * @param productId 商品ID
-     * @param quantity 购买数量
-     * @return 订单�?     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String createOrder(Long userId, Long productId, Integer quantity) {
-        // 1. 校验商品信息
+    public ProductOrder createOrder(Long userId, Long productId, Integer quantity) {
+        // 1. 校验商品
         Product product = productMapper.selectById(productId);
         if (product == null || product.getStatus() == 0) {
-            throw new RuntimeException("商品不存在或已下�?);
+            throw new RuntimeException("商品不存在或已下架");
         }
-
-        // 2. 校验库存
         if (product.getStock() < quantity) {
             throw new RuntimeException("库存不足");
         }
 
-        // 3. 计算订单金额
-        BigDecimal totalAmount = product.getPrice().multiply(new BigDecimal(quantity));
+        // 2. 扣减库存 (MyBatis乐观锁 Update 语句)
+        int rows = productMapper.deductStock(productId, quantity);
+        if (rows == 0) {
+            throw new RuntimeException("商品太火爆了，手慢无！(库存扣减失败)");
+        }
 
-        // 4. 校验用户余额
+        // 3. 创建订单
+        ProductOrder order = new ProductOrder();
+        order.setOrderNo(UUID.randomUUID().toString().replace("-", ""));
+        order.setUserId(userId);
+        // 如果是多商户，这里应设置 merchantId: order.setMerchantId(product.getMerchantId());
+        order.setTotalAmount(product.getPrice().multiply(BigDecimal.valueOf(quantity)));
+        order.setStatus("PENDING"); // 待支付
+        order.setCreateTime(LocalDateTime.now());
+
+        this.save(order);
+        return order;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void payOrder(Long userId, String orderNo) {
+        ProductOrder order = this.getOne(new QueryWrapper<ProductOrder>().eq("order_no", orderNo));
+        if (order == null) throw new RuntimeException("订单不存在");
+        if (!"PENDING".equals(order.getStatus())) throw new RuntimeException("订单状态异常");
+
         User user = userMapper.selectById(userId);
-        if (user.getBalance().compareTo(totalAmount) < 0) {
-            throw new RuntimeException("余额不足");
+        if (user.getBalance().compareTo(order.getTotalAmount()) < 0) {
+            throw new RuntimeException("余额不足，请先充值");
         }
 
-        // 5. 使用分布式锁扣减库存
-        String lockKey = "product_stock:" + productId;
-        RLock lock = redissonClient.getLock(lockKey);
-        try {
-            boolean isLocked = lock.tryLock(5, 10, TimeUnit.SECONDS);
-            if (isLocked) {
-                try {
-                    // 双重检查库�?                    Product currentProduct = productMapper.selectById(productId);
-                    if (currentProduct.getStock() < quantity) {
-                        throw new RuntimeException("手慢了，库存不足");
-                    }
+        // 1. 扣款
+        userMapper.deductBalance(userId, order.getTotalAmount());
 
-                    // 扣减库存
-                    currentProduct.setStock(currentProduct.getStock() - quantity);
-                    productMapper.updateById(currentProduct);
+        // 2. 更新订单
+        order.setStatus("PAID");
+        order.setPayTime(LocalDateTime.now());
+        this.updateById(order);
 
-                    // 扣减用户余额
-                    user.setBalance(user.getBalance().subtract(totalAmount));
-                    userMapper.updateById(user);
+        // 3. 记录流水
+        TransactionFlow flow = new TransactionFlow();
+        flow.setUserId(userId);
+        flow.setAmount(order.getTotalAmount().negate());
+        flow.setType("PAYMENT");
+        flow.setDescription("购买商品消费");
+        flow.setOrderNo(orderNo);
+        flow.setCreateTime(LocalDateTime.now());
+        transactionMapper.insert(flow);
+    }
 
-                    // 6. 创建订单
-                    ProductOrder order = new ProductOrder();
-                    order.setOrderNo(IdUtil.getSnowflakeNextIdStr());
-                    order.setUserId(userId);
-                    order.setTotalAmount(totalAmount);
-                    order.setStatus("UNPAID"); // 实际已经支付，这里简化处�?                    order.setCreateTime(LocalDateTime.now());
-                    order.setPayTime(LocalDateTime.now());
-
-                    this.save(order);
-
-                    log.info("商品订单创建成功 OrderNo: {}, Amount: {}", order.getOrderNo(), totalAmount);
-                    return order.getOrderNo();
-
-                } finally {
-                    lock.unlock();
-                }
-            } else {
-                throw new RuntimeException("系统繁忙，请稍后重试");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("系统异常");
+    @Override
+    public IPage<ProductOrder> getMyOrders(Page<ProductOrder> page, Long userId, String status) {
+        QueryWrapper<ProductOrder> query = new QueryWrapper<>();
+        query.eq("user_id", userId);
+        if (status != null && !status.isEmpty()) {
+            query.eq("status", status);
         }
+        query.orderByDesc("create_time");
+        return this.page(page, query);
     }
 }

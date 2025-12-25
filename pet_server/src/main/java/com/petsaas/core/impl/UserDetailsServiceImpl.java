@@ -1,53 +1,51 @@
-package com.petsaas.core.impl; 
- 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper; 
-import com.petsaas.core.entity.User; 
-import com.petsaas.core.mapper.UserMapper; 
-import org.springframework.beans.factory.annotation.Autowired; 
-import org.springframework.security.core.GrantedAuthority; 
-import org.springframework.security.core.authority.SimpleGrantedAuthority; 
-import org.springframework.security.core.userdetails.UserDetails; 
-import org.springframework.security.core.userdetails.UserDetailsService; 
-import org.springframework.security.core.userdetails.UsernameNotFoundException; 
-import org.springframework.stereotype.Service; 
- 
-import java.util.ArrayList; 
-import java.util.List; 
- 
-/** 
- * Spring Security 用户认证逻辑 
- * 适配 Pet Mall �?Users �?
- */ 
-@Service 
-public class UserDetailsServiceImpl implements UserDetailsService { 
- 
-    @Autowired 
-    private UserMapper userMapper; 
- 
-    @Override 
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException { 
-        // 1. 根据用户名查询用�?
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>(); 
-        queryWrapper.eq("username", username); 
-        User user = userMapper.selectOne(queryWrapper); 
- 
-        if (user == null) { 
-            throw new UsernameNotFoundException("用户不存�? " + username); 
-        } 
- 
-        // 2. 构建权限列表 (ROLE_USER, ROLE_ADMIN, ROLE_DOCTOR) 
-        List<GrantedAuthority> authorities = new ArrayList<>(); 
-        if (user.getRole() != null) { 
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole())); 
-        } else { 
-            authorities.add(new SimpleGrantedAuthority("ROLE_USER")); 
-        } 
- 
-        // 3. 返回 Spring Security 需要的 UserDetails 对象 
-        return new org.springframework.security.core.userdetails.User( 
-                user.getUsername(), 
-                user.getPassword(), 
-                authorities 
-        ); 
-    } 
+package com.petsaas.core.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.petsaas.core.entity.User;
+import com.petsaas.core.mapper.UserMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import java.util.Collections;
+
+/**
+ * Spring Security 核心接口实现
+ * 用于根据用户名从数据库加载用户信息
+ */
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // 1. 查询用户 (这里假设 login_name 是登录账号，也可以是 phone 或 student_id)
+        User user = userMapper.selectOne(new QueryWrapper<User>()
+                .eq("username", username)
+                .or()
+                .eq("phone", username));
+
+        if (user == null) {
+            throw new UsernameNotFoundException("用户不存在: " + username);
+        }
+
+        // 2. 检查用户状态
+        if (user.getStatus() == 0) {
+            throw new RuntimeException("账号已被禁用，请联系管理员");
+        }
+
+        // 3. 构建 Security User 对象
+        // 实际项目中，authorities 应该从数据库的角色表加载，这里简化为默认角色
+        String role = user.getIsAdmin() == 1 ? "ROLE_ADMIN" : "ROLE_USER";
+
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(), // 数据库中加密后的密码
+                Collections.singletonList(() -> role)
+        );
+    }
 }

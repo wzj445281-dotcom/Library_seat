@@ -1,47 +1,56 @@
 package com.petsaas.core.service;
 
-import cn.hutool.http.HttpUtil;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.petsaas.core.entity.CreditLog;
+import com.petsaas.core.entity.User;
+import com.petsaas.core.mapper.CreditLogMapper;
+import com.petsaas.core.mapper.UserMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
+/**
+ * 简易 AI 风控服务
+ * 实际项目中可接入 Python 异常检测模型
+ */
 @Service
 public class AiRiskService {
 
-    private static final Logger log = LoggerFactory.getLogger(AiRiskService.class);
-
-    private static final String AI_RISK_URL = "http://localhost:5000/predict/risk";
+    @Autowired private UserMapper userMapper;
+    @Autowired private CreditLogMapper creditLogMapper;
 
     /**
-     * 评估用户风险
-     * @param creditScore 信用�?
-     * @return true=高风�?建议拦截/警告), false=低风�?
+     * 评估用户风险等级
+     * @return LOW(正常), MEDIUM(关注), HIGH(高危)
      */
-    public boolean isHighRiskUser(Integer creditScore) {
-        try {
-            Map<String, Object> param = new HashMap<>();
-            param.put("creditScore", creditScore);
-            // 还可以传 param.put("historyViolations", user.getViolationCount());
+    public String evaluateUserRisk(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) return "UNKNOWN";
 
-            String resultJson = HttpUtil.post(AI_RISK_URL, JSONUtil.toJsonStr(param));
-            JSONObject result = JSONUtil.parseObj(resultJson);
+        // 规则1：信用分过低
+        if (user.getPoints() < 60) return "HIGH";
 
-            if (result.getInt("code") == 200) {
-                JSONObject data = result.getJSONObject("data");
-                double prob = data.getDouble("riskProbability");
-                String action = data.getStr("action");
+        // 规则2：近期频繁扣分 (模拟: 查询最近5条记录是否有3条是扣分)
+        List<CreditLog> logs = creditLogMapper.selectList(new QueryWrapper<CreditLog>()
+                .eq("user_id", userId)
+                .orderByDesc("create_time")
+                .last("LIMIT 5"));
 
-                log.info("AI 风控评估: 信用分{}, 风险概率{}, 建议动作{}", creditScore, prob, action);
-                return "WARN".equals(action) || "BLOCK".equals(action);
-            }
-        } catch (Exception e) {
-            log.error("AI 风控服务调用失败，默认放�?, e);
-        }
-        return false;
+        long negativeCount = logs.stream()
+                .filter(log -> log.getScore() < 0) // 假设扣分记录 score < 0
+                .count();
+
+        if (negativeCount >= 3) return "MEDIUM";
+
+        return "LOW";
+    }
+
+    /**
+     * 检查是否允许预约 (高危用户禁止预约)
+     */
+    public boolean isBookingAllowed(Long userId) {
+        String riskLevel = evaluateUserRisk(userId);
+        return !"HIGH".equals(riskLevel);
     }
 }

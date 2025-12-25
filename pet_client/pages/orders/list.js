@@ -1,113 +1,148 @@
+// pages/orders/list.js
 const app = getApp();
-const { getMyOrders } = require('../../api/order.js');
+// 引入订单 API
+const { getMyOrders, cancelOrder, confirmOrder } = require('../../api/order.js');
 
 Page({
+
+  /**
+   * 页面的初始数据
+   */
   data: {
-    orders: [],
-    loading: false
+    currentTab: 0, // 0:全部, 1:待付款, 2:待发货, 3:待收货, 4:已完成
+    orderList: [],
+    loading: true,
+    isLogin: false
   },
 
-  onLoad: function () {
-    this.loadOrders();
-  },
-
+  /**
+   * 生命周期函数--监听页面显示
+   */
   onShow: function () {
-    // 每次显示页面时刷新订单列表
-    this.loadOrders();
-  },
-
-  // 加载订单列表
-  loadOrders() {
-    this.setData({ loading: true });
-
-    getMyOrders().then(res => {
-      this.setData({ 
-        orders: res.data || [],
-        loading: false 
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      this.setData({ isLogin: false, orderList: [], loading: false });
+      wx.showModal({
+        title: '提示',
+        content: '请先登录查看订单',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({ url: '/pages/login/login' });
+          } else {
+            wx.switchTab({ url: '/pages/index/index' });
+          }
+        }
       });
-    }).catch(err => {
-      console.error('加载订单失败:', err);
-      this.setData({ loading: false });
-      
-      // 模拟数据
-      const mockOrders = [
-        {
-          id: 1,
-          orderNo: 'ORD20231225001',
-          status: 0, // 0-待支付 1-待发货 2-待收货 3-已完成
-          totalAmount: 199.00,
-          createTime: '2023-12-25 10:30:00',
-          items: [
-            { name: '全价猫粮 10kg', count: 1, price: 199.00 }
-          ]
-        },
-        {
-          id: 2,
-          orderNo: 'ORD20231225002',
-          status: 2,
-          totalAmount: 89.00,
-          createTime: '2023-12-25 09:15:00',
-          items: [
-            { name: '宠物自动饮水机', count: 1, price: 89.00 }
-          ]
-        }
-      ];
-      
-      this.setData({ orders: mockOrders });
-    });
+      return;
+    }
+
+    this.setData({ isLogin: true });
+    this.loadOrderList();
   },
 
-  // 取消订单
-  cancelOrder(e) {
-    const orderId = e.currentTarget.dataset.id;
-    
-    wx.showModal({
-      title: '提示',
-      content: '确定要取消此订单吗？',
-      success: (res) => {
-        if (res.confirm) {
-          // 这里应该调用取消订单的API
-          wx.showToast({ title: '订单已取消', icon: 'success' });
-          this.loadOrders();
-        }
-      }
+  /**
+   * 切换 Tab
+   */
+  switchTab: function(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    if (this.data.currentTab === index) return;
+
+    this.setData({
+      currentTab: index,
+      orderList: [], // 切换时先清空，优化体验
+      loading: true
     });
+    this.loadOrderList();
   },
 
-  // 确认收货
-  confirmOrder(e) {
-    const orderId = e.currentTarget.dataset.id;
-    
-    wx.showModal({
-      title: '提示',
-      content: '确认已收到商品吗？',
-      success: (res) => {
-        if (res.confirm) {
-          // 这里应该调用确认收货的API
-          wx.showToast({ title: '已确认收货', icon: 'success' });
-          this.loadOrders();
-        }
-      }
-    });
-  },
+  /**
+   * 加载订单列表 - 真实 API 调用
+   */
+  loadOrderList: function() {
+    if (!this.data.isLogin) return;
 
-  // 跳转到订单详情
-  goToDetail(e) {
-    const orderId = e.currentTarget.dataset.id;
-    wx.navigateTo({
-      url: `/pages/orders/detail?id=${orderId}`
-    });
-  },
-
-  // 获取订单状态文本
-  getStatusText(status) {
+    // 映射前端 Tab 索引到后端状态码
+    // 假设后端: 0-待付款, 1-待发货, 2-待收货, 3-已完成, 4-已取消
     const statusMap = {
-      0: '待支付',
-      1: '待发货',
-      2: '待收货',
-      3: '已完成',
-      4: '已取消'
+      0: null, // 全部
+      1: 0,    // 待付款
+      2: 1,    // 待发货
+      3: 2,    // 待收货
+      4: 3     // 已完成
     };
-    return statusMap[status] || '未知状态';
+
+    const status = statusMap[this.data.currentTab];
+
+    getMyOrders({ status: status }).then(res => {
+      if (res.code === 200) {
+        this.setData({
+          orderList: res.data || [],
+          loading: false
+        });
+      } else {
+        wx.showToast({
+          title: res.msg || '获取订单失败',
+          icon: 'none'
+        });
+        this.setData({ loading: false });
+      }
+    }).catch(err => {
+      console.error("API Error", err);
+      this.setData({ loading: false });
+      wx.showToast({
+        title: '网络异常',
+        icon: 'none'
+      });
+    });
+  },
+
+  /**
+   * 取消订单
+   */
+  handleCancelOrder: function(e) {
+    const orderId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '提示',
+      content: '确定要取消该订单吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '处理中' });
+          cancelOrder(orderId).then(apiRes => {
+            wx.hideLoading();
+            if(apiRes.code === 200) {
+              wx.showToast({ title: '取消成功' });
+              this.loadOrderList(); // 刷新列表
+            } else {
+              wx.showToast({ title: apiRes.msg || '操作失败', icon: 'none' });
+            }
+          });
+        }
+      }
+    });
+  },
+
+  /**
+   * 确认收货
+   */
+  handleConfirmOrder: function(e) {
+    const orderId = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '提示',
+      content: '确认已收到商品？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '处理中' });
+          confirmOrder(orderId).then(apiRes => {
+            wx.hideLoading();
+            if(apiRes.code === 200) {
+              wx.showToast({ title: '收货成功' });
+              this.loadOrderList(); // 刷新列表
+            } else {
+              wx.showToast({ title: apiRes.msg || '操作失败', icon: 'none' });
+            }
+          });
+        }
+      }
+    });
   }
-});
+})

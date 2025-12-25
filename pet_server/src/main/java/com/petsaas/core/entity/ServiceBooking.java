@@ -3,46 +3,29 @@ package com.petsaas.core.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@TableName("service_bookings")
+@Data
+@TableName("sys_service_booking")
 public class ServiceBooking {
     @TableId(type = IdType.AUTO)
     private Long id;
-    
-    private String bookingNo; // 预约单号
-    private Long userId; // 用户ID
-    private Long slotId; // 工位ID
-    private String petName; // 宠物昵称
-    private String petType; // 宠物种类 (Dog/Cat)
+
+    private Long userId;
+    private Long slotId;
+    private Long merchantId; // 所属商户ID
+
+    private String bookingNo; // 预约号/核销码
+    private String petName;
     private LocalDateTime appointmentTime; // 预约时间
-    private Integer durationMinutes; // 预计耗时(分钟)
-    private String status; // 状�? PENDING, CONFIRMED, COMPLETED, CANCELLED
-    private Double totalPrice; // 服务费用
-    private LocalDateTime createTime; // 创建时间
-    
-    // 手动添加getter和setter方法
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getBookingNo() { return bookingNo; }
-    public void setBookingNo(String bookingNo) { this.bookingNo = bookingNo; }
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-    public Long getSlotId() { return slotId; }
-    public void setSlotId(Long slotId) { this.slotId = slotId; }
-    public String getPetName() { return petName; }
-    public void setPetName(String petName) { this.petName = petName; }
-    public String getPetType() { return petType; }
-    public void setPetType(String petType) { this.petType = petType; }
-    public LocalDateTime getAppointmentTime() { return appointmentTime; }
-    public void setAppointmentTime(LocalDateTime appointmentTime) { this.appointmentTime = appointmentTime; }
-    public Integer getDurationMinutes() { return durationMinutes; }
-    public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public Double getTotalPrice() { return totalPrice; }
-    public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
-    public LocalDateTime getCreateTime() { return createTime; }
-    public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
+    private Integer durationMinutes; // 服务时长
+
+    private BigDecimal totalPrice;
+    private String status; // PENDING, CONFIRMED, COMPLETED, CANCELLED, MISSED
+
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

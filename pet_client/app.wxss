@@ -1,0 +1,43 @@
+{
+"pages": [
+"pages/index/index",
+"pages/login/login",
+"pages/mine/mine",
+"pages/orders/list",
+"pages/product/detail",
+"pages/credit/credit",
+"pages/ai_chat/ai_chat",
+"pages/feedback/feedback"
+],
+"window": {
+"backgroundTextStyle": "light",
+"navigationBarBackgroundColor": "#fff",
+"navigationBarTitleText": "萌宠生活馆",
+"navigationBarTextStyle": "black"
+},
+"tabBar": {
+"color": "#999",
+"selectedColor": "#FF6B6B",
+"list": [
+{
+"pagePath": "pages/index/index",
+"text": "首页",
+"iconPath": "assets/icons/home.png",
+"selectedIconPath": "assets/icons/home_active.png"
+},
+{
+"pagePath": "pages/ai_chat/ai_chat",
+"text": "AI助手",
+"iconPath": "assets/icons/chat.png",
+"selectedIconPath": "assets/icons/chat_active.png"
+},
+{
+"pagePath": "pages/mine/mine",
+"text": "我的",
+"iconPath": "assets/icons/user.png",
+"selectedIconPath": "assets/icons/user_active.png"
+}
+]
+},
+"sitemapLocation": "sitemap.json"
+}

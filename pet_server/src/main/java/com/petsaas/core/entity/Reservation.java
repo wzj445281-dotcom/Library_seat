@@ -7,21 +7,21 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("reservation")
+@TableName("service_appointment") // [修复] 修正为 SQL 中的真实表名
 public class Reservation {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
+
+    // 注意：SQL中是 station_id, 这里需要映射一下，或者保持字段名一致
+    // 如果你的 SQL 字段是 station_id，建议这里改名或加注解
+    // 假设你保持 seatId 这个属性名，则需要:
+    @com.baomidou.mybatisplus.annotation.TableField("station_id")
     private Long seatId;
+
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-
-    // 状�? RESERVED(已预�?, CHECKED_IN(已签�?, COMPLETED(已结�?, CANCELLED(已取�?, VIOLATION(违约)
     private String status;
-
-    // 签到时间
     private LocalDateTime checkInTime;
-
-    // 创建时间 (Day 2 新增，用于记录订单生成时�?
     private LocalDateTime createTime;
 }

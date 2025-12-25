@@ -1,221 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>智座 - 运营管理后台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 修改位置 1：浏览器标签页显示的标题 -->
+    <title>宠物服务管理后台</title>
     <!-- 引入样式 -->
     <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    <!-- 新增: 引入 ECharts -->
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
-        html, body { margin: 0; padding: 0; height: 100%; }
-        #app { height: 100%; }
-        .el-header { background-color: #001529; color: #fff; line-height: 60px; display: flex; justify-content: space-between; }
-        .el-aside { background-color: #001529; color: #333; height: 100%; }
-        .el-main { background-color: #f0f2f5; padding: 20px; }
-        .logo { font-size: 20px; font-weight: bold; color: #1890ff; margin-right: 20px; }
-        .stat-card { text-align: center; padding: 20px 0; }
-        .stat-num { font-size: 24px; font-weight: bold; color: #1890ff; margin-top: 10px; }
-
-        /* 菜单样式微调 */
+        body { margin: 0; padding: 0; font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; }
+        .el-header { background-color: #304156; color: #fff; line-height: 60px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 20px; font-weight: bold; }
+        .el-aside { background-color: #304156; min-height: 100vh; }
         .el-menu { border-right: none; }
-        .el-menu-item { color: rgba(255,255,255,0.65); }
-        .el-menu-item:hover, .el-menu-item.is-active { background-color: #1890ff !important; color: #fff; }
+        .el-main { background-color: #f0f2f5; padding: 20px; }
+        iframe { width: 100%; height: calc(100vh - 100px); border: none; }
     </style>
 </head>
 <body>
 <div id="app">
-    <el-container style="height: 100%;">
+    <el-container>
         <el-header>
-            <div style="display: flex; align-items: center;">
-                <span class="logo">智座 SmartSeat</span>
-                <span style="font-size: 14px; color: rgba(255,255,255,0.65);">高校图书馆智能运营平台</span>
-            </div>
+            <!-- 修改位置 2：页面左上角显示的系统名称 -->
+            <div class="logo">PetSaaS 萌宠后台管理</div>
             <div>
-                <el-dropdown>
-                    <span style="color: #fff; cursor: pointer;"> 管理员 <i class="el-icon-arrow-down"></i> </span>
-                    <el-dropdown-menu slot="dropdown">
-                        <el-dropdown-item>个人中心</el-dropdown-item>
-                        <el-dropdown-item divided>退出登录</el-dropdown-item>
-                    </el-dropdown-menu>
-                </el-dropdown>
+                <span style="margin-right: 15px">管理员: {{ username }}</span>
+                <el-button type="text" style="color: #fff" @click="logout">退出</el-button>
             </div>
         </el-header>
-
         <el-container>
-            <el-aside width="220px">
-                <el-menu default-active="1" background-color="#001529" text-color="#fff" active-text-color="#409EFF">
+            <el-aside width="200px">
+                <el-menu
+                        default-active="1"
+                        class="el-menu-vertical-demo"
+                        background-color="#304156"
+                        text-color="#bfcbd9"
+                        active-text-color="#409EFF"
+                        @select="handleSelect">
                     <el-menu-item index="1">
-                        <i class="el-icon-s-home"></i>
-                        <span slot="title">总览仪表盘</span>
+                        <i class="el-icon-s-data"></i>
+                        <span slot="title">数据概览</span>
                     </el-menu-item>
-
-                    <!-- 资源管理入口 -->
-                    <el-menu-item index="2" @click="goToPage('resource_manage.html')">
-                        <i class="el-icon-reading"></i>
-                        <span slot="title">资源入库/库存</span>
+                    <el-menu-item index="2">
+                        <i class="el-icon-goods"></i>
+                        <span slot="title">订单管理</span>
                     </el-menu-item>
-
-                    <el-menu-item index="3" @click="goToPage('monitor.html')">
-                        <i class="el-icon-monitor"></i>
-                        <span slot="title">实时座位监控</span>
+                    <el-menu-item index="3">
+                        <i class="el-icon-message"></i>
+                        <span slot="title">反馈处理</span>
                     </el-menu-item>
-
-                    <el-menu-item index="4" @click="goToPage('feedback_manage.html')">
-                        <i class="el-icon-chat-dot-square"></i>
-                        <span slot="title">用户反馈处理</span>
-                    </el-menu-item>
-
-                    <!-- 新增：借阅履约订单入口 -->
-                    <el-menu-item index="5" @click="goToPage('order_manage.html')">
-                        <i class="el-icon-s-order"></i>
-                        <span slot="title">借阅履约订单</span>
+                    <el-menu-item index="4">
+                        <i class="el-icon-user"></i>
+                        <span slot="title">用户管理</span>
                     </el-menu-item>
                 </el-menu>
             </el-aside>
-
             <el-main>
-                <!-- 仪表盘内容 -->
-                <el-row :gutter="20" style="margin-bottom: 20px;">
-                    <el-col :span="6">
-                        <el-card shadow="hover" class="stat-card">
-                            <div style="color: #666;">今日预约</div>
-                            <div class="stat-num">{{ stats.todayReservations || 0 }}</div>
-                        </el-card>
-                    </el-col>
-                    <el-col :span="6">
-                        <el-card shadow="hover" class="stat-card">
-                            <div style="color: #666;">当前入座率</div>
-                            <div class="stat-num">{{ stats.occupancyRate || '0%' }}</div>
-                        </el-card>
-                    </el-col>
-                    <el-col :span="6">
-                        <el-card shadow="hover" class="stat-card">
-                            <div style="color: #666;">违规记录</div>
-                            <div class="stat-num" style="color: #ff4d4f;">{{ stats.violations || 0 }}</div>
-                        </el-card>
-                    </el-col>
-                    <el-col :span="6">
-                        <el-card shadow="hover" class="stat-card">
-                            <div style="color: #666;">待处理反馈</div>
-                            <div class="stat-num" style="color: #faad14;">{{ stats.pendingFeedback || 0 }}</div>
-                        </el-card>
-                    </el-col>
-                </el-row>
-
-                <el-card shadow="never">
-                    <div slot="header">
-                        <span>📅 近七日预约趋势</span>
-                    </div>
-                    <!-- 修改: 增加 ID 用于 ECharts 渲染 -->
-                    <div id="trendChart" style="height: 350px;"></div>
-                </el-card>
-
-                <div style="margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
-                    © 2025 SmartSeat Admin System V2.1
+                <div v-if="currentIndex === '1'">
+                    <el-card>
+                        <div slot="header">
+                            <span>今日服务热度</span>
+                        </div>
+                        <div id="chart" style="width: 100%; height: 400px;"></div>
+                    </el-card>
                 </div>
+                <iframe v-if="currentIndex === '2'" src="order_manage.html"></iframe>
+                <iframe v-if="currentIndex === '3'" src="feedback_manage.html"></iframe>
             </el-main>
         </el-container>
     </el-container>
 </div>
 
+<!-- Vue & ElementUI & ECharts -->
+<script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
 <script>
     new Vue({
         el: '#app',
         data: {
-            stats: {
-                todayReservations: 128,
-                occupancyRate: '85%',
-                violations: 3,
-                pendingFeedback: 5
-            },
-            chartInstance: null
-        },
-        created() {
-            this.fetchStats();
+            username: 'admin',
+            currentIndex: '1'
         },
         mounted() {
-            // 页面挂载后初始化图表
             this.initChart();
-            window.addEventListener('resize', this.handleResize);
-        },
-        beforeDestroy() {
-            window.removeEventListener('resize', this.handleResize);
-            if (this.chartInstance) {
-                this.chartInstance.dispose();
-            }
         },
         methods: {
-            goToPage(page) {
-                window.location.href = page;
+            handleSelect(key) {
+                this.currentIndex = key;
+                if(key === '1') {
+                    this.$nextTick(() => {
+                        this.initChart();
+                    });
+                }
             },
-            fetchStats() {
-                // 模拟从后端获取数据
-                axios.get('/api/admin/stats/overview').then(res => {
-                    if(res.data.code === 200) {
-                        this.stats = res.data.data;
-                        // 如果后端返回了图表数据，可以在这里调用 updateChart(res.data.chartData)
-                    }
-                }).catch(e => {
-                    console.log('Mock mode used: API not connected');
-                    // 即使API失败，我们也保留默认值，不影响演示
-                });
+            logout() {
+                localStorage.removeItem('token');
+                window.location.href = '/login.html';
             },
             initChart() {
-                const chartDom = document.getElementById('trendChart');
-                this.chartInstance = echarts.init(chartDom);
-
+                const chartDom = document.getElementById('chart');
+                if(!chartDom) return;
+                const myChart = echarts.init(chartDom);
+                // 模拟数据
                 const option = {
-                    tooltip: {
-                        trigger: 'axis'
-                    },
-                    grid: {
-                        left: '3%',
-                        right: '4%',
-                        bottom: '3%',
-                        containLabel: true
-                    },
-                    xAxis: {
-                        type: 'category',
-                        boundaryGap: false,
-                        data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-                    },
-                    yAxis: {
-                        type: 'value'
-                    },
-                    series: [
-                        {
-                            name: '预约人次',
-                            type: 'line',
-                            stack: 'Total',
-                            smooth: true,
-                            data: [120, 132, 101, 134, 90, 230, 210],
-                            itemStyle: { color: '#1890ff' },
-                            areaStyle: { color: 'rgba(24,144,255,0.1)' }
-                        },
-                        {
-                            name: '实际入座',
-                            type: 'line',
-                            stack: 'Total',
-                            smooth: true,
-                            data: [110, 120, 95, 124, 85, 200, 190],
-                            itemStyle: { color: '#52c41a' }
-                        }
-                    ]
+                    title: { text: '服务预约趋势' },
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] },
+                    yAxis: { type: 'value' },
+                    series: [{ data: [12, 18, 15, 25, 30, 45, 40], type: 'line', smooth: true }]
                 };
-
-                this.chartInstance.setOption(option);
-            },
-            handleResize() {
-                if (this.chartInstance) {
-                    this.chartInstance.resize();
-                }
+                myChart.setOption(option);
             }
         }
-    });
+    })
 </script>
 </body>
 </html>

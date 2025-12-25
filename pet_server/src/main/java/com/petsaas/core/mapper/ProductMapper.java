@@ -2,18 +2,12 @@ package com.petsaas.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.petsaas.core.entity.Product;
-import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
-@Mapper
 public interface ProductMapper extends BaseMapper<Product> {
-    
-    /**
-     * 扣减库存
-     * @param productId 商品ID
-     * @param quantity 数量
-     * @return 影响行数
-     */
-    @Update("UPDATE products SET stock = stock - #{quantity} WHERE id = #{productId} AND stock >= #{quantity}")
-    int deductStock(Long productId, Integer quantity);
+
+    // 乐观锁扣减库存：只有库存足够时才扣减
+    @Update("UPDATE sys_product SET stock = stock - #{num} WHERE id = #{id} AND stock >= #{num}")
+    int deductStock(@Param("id") Long id, @Param("num") Integer num);
 }

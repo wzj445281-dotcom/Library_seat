@@ -1,63 +1,59 @@
 <view class="container">
-    <view class="header-card">
-        <view class="avatar-box">
-            <image class="avatar" src="../../assets/images/user-active.png"></image>
-        </view>
-        <view class="info-box">
-            <view class="name">{{userName || '未登录'}}</view>
-            <view class="credit-row" bindtap="goToCredit">
-                <text class="credit-val">信用分: {{creditScore}}</text>
-                <!-- 动态等级标签 -->
-                <text class="level-tag {{creditClass}}">{{creditLevel}}</text>
-            </view>
-        </view>
-        <!-- AI 客服入口图标 -->
-        <view class="ai-entry" bindtap="goToAiChat">
-            <text>🤖 客服</text>
+    <!-- 用户信息卡片 -->
+    <view class="user-card">
+        <image class="avatar" src="{{userInfo.avatarUrl || '/assets/images/default_avatar.png'}}" mode="cover"></image>
+        <view class="info">
+            <view class="nickname">{{userInfo.nickName || '点击登录'}}</view>
+            <view class="vip-tag" wx:if="{{userInfo.isVip}}">萌宠VIP会员</view>
+            <view class="vip-tag normal" wx:else>普通会员</view>
         </view>
     </view>
 
+    <!-- 钱包余额 -->
+    <view class="wallet-card">
+        <view class="balance-item">
+            <text class="num">{{userInfo.balance || 0}}</text>
+            <text class="label">余额</text>
+        </view>
+        <view class="balance-item" bindtap="goToCredit">
+            <text class="num">{{userInfo.credit || 100}}</text>
+            <text class="label">信用分</text>
+        </view>
+        <view class="recharge-btn" bindtap="handleRecharge">充值</view>
+    </view>
+
+    <!-- 菜单列表 -->
     <view class="menu-list">
-        <!-- 新增入口 -->
-        <view class="menu-item" bindtap="navigateToOrders">
-            <view class="item-left">
-                <image src="/assets/images/order.png" class="icon" style="width: 40rpx; height: 40rpx; margin-right: 20rpx; filter: grayscale(1);"></image>
-                <text>我的借阅记录</text>
+        <view class="menu-item" bindtap="goToOrders">
+            <view class="left">
+                <image class="icon" src="/assets/icons/order.png"></image>
+                <text>我的订单</text>
             </view>
             <text class="arrow">></text>
         </view>
 
-        <view class="menu-item" bindtap="goToCredit">
-            <text class="icon">📜</text><text>信用记录</text><text class="arrow">></text>
-        </view>
         <view class="menu-item" bindtap="goToFeedback">
-            <text class="icon">🔧</text><text>报修反馈</text><text class="arrow">></text>
-        </view>
-        <view class="menu-item" bindtap="goToAiChat">
-            <text class="icon">💬</text><text>智能助手</text><text class="arrow">></text>
-        </view>
-    </view>
-
-    <view class="list-container">
-        <view class="section-title">当前预约</view>
-        <block wx:for="{{list}}" wx:key="id">
-            <view class="order-card">
-                <view class="card-header">
-                    <text class="time">{{item.startTime}} 起</text>
-                    <text class="status">{{item.statusStr}}</text>
-                </view>
-
-                <!-- 只有在使用中(CHECKED_IN)才显示结束按钮 -->
-                <view class="card-footer" wx:if="{{item.status === 'CHECKED_IN'}}">
-                    <button class="btn-leave" bindtap="handleLeave" data-id="{{item.id}}">
-                        结束使用 (释放座位)
-                    </button>
-                </view>
+            <view class="left">
+                <image class="icon" src="/assets/icons/feedback.png"></image>
+                <text>意见反馈</text>
             </view>
-        </block>
-    </view>
+            <text class="arrow">></text>
+        </view>
 
-    <view class="btn-area">
-        <button class="btn-logout" bindtap="handleLogout">退出登录</button>
+        <view class="menu-item" bindtap="handleContact">
+            <view class="left">
+                <image class="icon" src="/assets/icons/service.png"></image>
+                <text>联系客服</text>
+            </view>
+            <text class="arrow">></text>
+        </view>
+
+        <view class="menu-item" bindtap="handleLogout" wx:if="{{isLogin}}">
+            <view class="left">
+                <image class="icon" src="/assets/icons/logout.png"></image>
+                <text>退出登录</text>
+            </view>
+            <text class="arrow">></text>
+        </view>
     </view>
 </view>
