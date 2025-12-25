@@ -7,6 +7,7 @@ import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -14,6 +15,7 @@ import java.io.IOException;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "spring.rabbitmq.host")
 public class OrderMqConsumer {
 
     @Resource

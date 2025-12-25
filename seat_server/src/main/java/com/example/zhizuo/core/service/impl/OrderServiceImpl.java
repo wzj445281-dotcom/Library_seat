@@ -5,13 +5,24 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import cn.hutool.core.util.IdUtil;
 import com.example.zhizuo.core.entity.Order;
 import com.example.zhizuo.core.entity.OrderItem;
+import com.example.zhizuo.core.entity.Product;
+import com.example.zhizuo.core.entity.UserCoupon;
 import com.example.zhizuo.core.mapper.OrderItemMapper;
 import com.example.zhizuo.core.mapper.OrderMapper;
+import com.example.zhizuo.core.mapper.ProductMapper;
+import com.example.zhizuo.mapper.UserCouponMapper;
 import com.example.zhizuo.core.service.OrderService;
+import com.example.zhizuo.core.service.OrderSettlementService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,11 +35,21 @@ import java.util.stream.Collectors;
  * 订单表 服务实现类
  * </p>
  */
+@Slf4j
 @Service
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements OrderService {
 
     @Autowired
     private OrderItemMapper orderItemMapper;
+
+    @Autowired
+    private ProductMapper productMapper;
+
+    @Autowired
+    private OrderSettlementService settlementService;
+
+    @Autowired
+    private UserCouponMapper userCouponMapper;
 
     @Override
     public IPage<Order> pageWithItems(Page<Order> page, Wrapper<Order> queryWrapper) {
@@ -101,16 +122,98 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType) {
-        // 简单实现，生成订单号
-        String orderNo = "ORDER" + System.currentTimeMillis();
+    @Transactional(rollbackFor = Exception.class)
+    public String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType, Long userCouponId, String addressInfo, String remark) {
+        // 1. 生成订单号
+        String orderNo = "ORDER" + IdUtil.getSnowflakeNextIdStr();
         
+        // 2. 从数据库查询商品价格，计算订单原价（防止前端篡改）
+        BigDecimal originalTotal = BigDecimal.ZERO;
+        for (Map<String, Object> item : items) {
+            Long productId = Long.valueOf(item.get("productId").toString());
+            Integer count = Integer.valueOf(item.get("count").toString());
+            
+            Product product = productMapper.selectById(productId);
+            if (product == null) {
+                throw new RuntimeException("商品不存在: " + productId);
+            }
+            if (product.getStatus() == null || product.getStatus() != 1) {
+                throw new RuntimeException("商品已下架: " + product.getName());
+            }
+            if (product.getStock() != null && product.getStock() < count) {
+                throw new RuntimeException("商品库存不足: " + product.getName());
+            }
+            
+            // 使用数据库中的价格，而不是前端传的价格
+            BigDecimal itemPrice = product.getPrice().multiply(new BigDecimal(count));
+            originalTotal = originalTotal.add(itemPrice);
+        }
+        
+        // 3. 计算优惠后价格（如果使用了优惠券）
+        BigDecimal finalAmount = originalTotal;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Long couponId = null;
+        
+        if (userCouponId != null) {
+            try {
+                OrderSettlementService.SettlementResult settlement = settlementService.calculateFinalPrice(
+                    originalTotal, userCouponId, userId.toString()
+                );
+                finalAmount = settlement.getFinalPrice();
+                discountAmount = settlement.getDiscountAmount();
+                couponId = settlement.getUsedCouponId();
+                
+                // 4. 标记优惠券为已使用
+                UserCoupon userCoupon = userCouponMapper.selectById(userCouponId);
+                if (userCoupon != null) {
+                    userCoupon.setStatus(1); // 1:已使用
+                    userCoupon.setUseTime(LocalDateTime.now());
+                    userCouponMapper.updateById(userCoupon);
+                }
+            } catch (Exception e) {
+                log.error("优惠券结算失败", e);
+                throw new RuntimeException("优惠券使用失败: " + e.getMessage());
+            }
+        }
+        
+        // 5. 创建订单主表
         Order order = new Order();
         order.setOrderNo(orderNo);
         order.setUserId(userId);
         order.setDeliveryType(deliveryType);
         order.setStatus("PENDING");
+        order.setPayStatus(0); // 0:未支付
+        order.setTotalAmount(finalAmount);
+        order.setOriginalAmount(originalTotal);
+        order.setDiscountAmount(discountAmount);
+        order.setCouponId(couponId);
+        order.setAddressInfo(addressInfo);
+        order.setCreateTime(LocalDateTime.now());
         this.save(order);
+        
+        // 6. 创建订单明细
+        for (Map<String, Object> item : items) {
+            Long productId = Long.valueOf(item.get("productId").toString());
+            Integer count = Integer.valueOf(item.get("count").toString());
+            
+            Product product = productMapper.selectById(productId);
+            
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrderId(order.getId());
+            orderItem.setProductId(productId);
+            orderItem.setProductName(product.getName());
+            orderItem.setPrice(product.getPrice());
+            orderItem.setQuantity(count);
+            // 注意：OrderItem 实体没有 spec 字段，如果需要规格信息可以添加到实体中
+            orderItemMapper.insert(orderItem);
+            
+            // 7. 扣减库存（可选，根据业务需求）
+            // product.setStock(product.getStock() - count);
+            // productMapper.updateById(product);
+        }
+        
+        log.info("订单创建成功：订单号={}, 用户ID={}, 原价={}, 优惠={}, 实付={}", 
+                orderNo, userId, originalTotal, discountAmount, finalAmount);
         
         return orderNo;
     }

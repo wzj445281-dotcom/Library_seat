@@ -64,22 +64,25 @@ services:
       - rabbitmq
     environment:
       # === 数据库连接 ===
-      SPRING_DATASOURCE_URL: jdbc:mysql://zhizuo-db:3306/zhizuo_db?useUnicode=true&characterEncoding=utf-8&useSSL=false
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/zhizuo_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
 
       # === AI 服务连接 ===
-      AI_SERVICE_URL: http://zhizuo-ai:5000
+      AI_SERVICE_URL: http://ai-service:5000
 
-      # === Redis 连接 (使用容器名 zhizuo-redis) ===
-      SPRING_REDIS_HOST: zhizuo-redis
+      # === Redis 连接 (使用容器名 redis) ===
+      SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
 
-      # === RabbitMQ 连接 (使用容器名 zhizuo-rabbitmq) ===
-      SPRING_RABBITMQ_HOST: zhizuo-rabbitmq
+      # === RabbitMQ 连接 (使用容器名 rabbitmq) ===
+      SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
+      
+      # === DeepSeek API Key (可选，如果不配置将使用Mock模式) ===
+      AI_DEEPSEEK_KEY: ${DEEPSEEK_API_KEY:-}
     networks:
       - zhizuo-net
     restart: always

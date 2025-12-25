@@ -46,6 +46,21 @@ public class Order implements Serializable {
 
     private String addressInfo;
 
+    /**
+     * 使用的优惠券ID (UserCoupon.id)
+     */
+    private Long couponId;
+
+    /**
+     * 优惠金额
+     */
+    private BigDecimal discountAmount;
+
+    /**
+     * 订单原价（优惠前）
+     */
+    private BigDecimal originalAmount;
+
     private LocalDateTime payTime;
 
     private LocalDateTime createTime;

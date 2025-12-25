@@ -1,6 +1,7 @@
 package com.example.zhizuo.config;
 
 import org.springframework.amqp.core.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -8,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@ConditionalOnProperty(name = "spring.rabbitmq.host")
 public class RabbitConfig {
 
     // 1. 定义交换机

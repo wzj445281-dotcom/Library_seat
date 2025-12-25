@@ -8,6 +8,7 @@ import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "spring.rabbitmq.host")
 public class ReservationConsumer {
 
     private final ReservationMapper reservationMapper;

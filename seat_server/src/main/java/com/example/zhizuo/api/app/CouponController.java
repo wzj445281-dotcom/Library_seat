@@ -13,9 +13,11 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 优惠券接口 (处理高并发领券)
@@ -137,5 +139,52 @@ public class CouponController {
         // 注意：前端如果需要显示券名和金额，建议根据 couponId 再去匹配 list 接口的数据，
         // 或者让后端在这里进行 VO 转换（需定义 UserCouponVO）
         return ApiResponse.success(userCouponMapper.selectList(query));
+    }
+
+    /**
+     * 获取可用优惠券列表（用于结算页面）
+     * 根据订单金额筛选满足门槛且未使用的优惠券
+     * 
+     * @param totalPrice 订单总金额
+     * @return 可用优惠券列表（包含优惠券详情）
+     */
+    @GetMapping("/available")
+    public ApiResponse<List<Map<String, Object>>> getAvailableCoupons(@RequestParam BigDecimal totalPrice) {
+        String userId = SecurityUtils.getCurrentUserId();
+        
+        // 1. 查询用户所有未使用的优惠券
+        LambdaQueryWrapper<UserCoupon> userCouponQuery = new LambdaQueryWrapper<>();
+        userCouponQuery.eq(UserCoupon::getUserId, userId)
+                .eq(UserCoupon::getStatus, 0) // 0:未使用
+                .orderByDesc(UserCoupon::getCreateTime);
+        List<UserCoupon> userCoupons = userCouponMapper.selectList(userCouponQuery);
+        
+        // 2. 查询优惠券模板，筛选满足门槛的
+        List<Map<String, Object>> availableList = new java.util.ArrayList<>();
+        for (UserCoupon userCoupon : userCoupons) {
+            Coupon coupon = couponMapper.selectById(userCoupon.getCouponId());
+            if (coupon != null && coupon.getStatus() == 1) {
+                // 检查是否满足使用门槛
+                if (totalPrice.compareTo(coupon.getMinPoint()) >= 0) {
+                    Map<String, Object> item = new java.util.HashMap<>();
+                    item.put("userCouponId", userCoupon.getId());
+                    item.put("couponId", coupon.getId());
+                    item.put("title", coupon.getTitle());
+                    item.put("amount", coupon.getAmount());
+                    item.put("minPoint", coupon.getMinPoint());
+                    item.put("createTime", userCoupon.getCreateTime());
+                    availableList.add(item);
+                }
+            }
+        }
+        
+        // 按优惠金额降序排列（优惠力度大的优先）
+        availableList.sort((a, b) -> {
+            BigDecimal amountA = (BigDecimal) a.get("amount");
+            BigDecimal amountB = (BigDecimal) b.get("amount");
+            return amountB.compareTo(amountA);
+        });
+        
+        return ApiResponse.success(availableList);
     }
 }

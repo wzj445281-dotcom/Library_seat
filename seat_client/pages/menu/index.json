@@ -1,6 +1,8 @@
 {
-  "navigationBarTitleText": "智座书局",
+  "navigationBarTitleText": "点餐",
   "navigationBarBackgroundColor": "#ffffff",
   "navigationBarTextStyle": "black",
-  "disableScroll": true
+  "usingComponents": {
+    "lazy-image": "/components/lazy-image/lazy-image"
+  }
 }

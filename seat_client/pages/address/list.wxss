@@ -1,0 +1,135 @@
+.container {
+  min-height: 100vh;
+  background-color: #f7f7f7;
+  padding-bottom: 120rpx;
+}
+
+.loading {
+  text-align: center;
+  padding: 100rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.address-list {
+  padding: 20rpx;
+}
+
+.address-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  position: relative;
+}
+
+.address-card.selected {
+  border: 2rpx solid #0022AB;
+}
+
+.address-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.address-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-right: 20rpx;
+}
+
+.phone {
+  font-size: 28rpx;
+  color: #666;
+  margin-right: 20rpx;
+}
+
+.default-tag {
+  background: #0022AB;
+  color: #fff;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 4rpx;
+}
+
+.address-actions {
+  display: flex;
+  gap: 20rpx;
+}
+
+.action-btn {
+  font-size: 26rpx;
+  color: #0022AB;
+  padding: 8rpx 16rpx;
+  border: 1rpx solid #0022AB;
+  border-radius: 8rpx;
+}
+
+.action-btn.delete {
+  color: #d93025;
+  border-color: #d93025;
+}
+
+.address-detail {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 20rpx;
+}
+
+.address-footer {
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f9f9f9;
+}
+
+.set-default-btn {
+  font-size: 26rpx;
+  color: #0022AB;
+  padding: 8rpx 16rpx;
+  border: 1rpx solid #0022AB;
+  border-radius: 8rpx;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 200rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.footer-btn {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 20rpx;
+  background: #fff;
+  box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05);
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+}
+
+.add-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #0022AB;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: bold;
+  border-radius: 44rpx;
+  border: none;
+}
+
+.add-btn::after {
+  border: none;
+}
+

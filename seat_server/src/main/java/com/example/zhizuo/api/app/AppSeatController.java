@@ -43,6 +43,7 @@ public class AppSeatController {
     public ApiResponse<List<Seat>> getLayout() {
         // 1. 尝试从 Redis 拿缓存
         if (redisUtil.hasKey(SEAT_LAYOUT_KEY)) {
+            @SuppressWarnings("unchecked")
             List<Seat> cachedSeats = (List<Seat>) redisUtil.get(SEAT_LAYOUT_KEY);
             return ApiResponse.success(cachedSeats);
         }

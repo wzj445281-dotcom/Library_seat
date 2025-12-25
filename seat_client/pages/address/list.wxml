@@ -1,0 +1,43 @@
+<view class="container">
+  <!-- 加载中 -->
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 地址列表 -->
+  <view class="address-list" wx:else>
+    <block wx:for="{{addressList}}" wx:key="id">
+      <view class="address-card {{selectedMode && selectedAddressId === item.id ? 'selected' : ''}}" 
+            bindtap="selectAddress" data-id="{{item.id}}">
+        <view class="address-header">
+          <view class="address-info">
+            <text class="name">{{item.name}}</text>
+            <text class="phone">{{item.phone}}</text>
+            <text class="default-tag" wx:if="{{item.isDefault}}">默认</text>
+          </view>
+          <view class="address-actions" wx:if="{{!selectedMode}}" catchtap="">
+            <text class="action-btn" bindtap="editAddress" data-id="{{item.id}}">编辑</text>
+            <text class="action-btn delete" bindtap="deleteAddress" data-id="{{item.id}}">删除</text>
+          </view>
+        </view>
+        <view class="address-detail">
+          <text>{{item.province}}{{item.city}}{{item.district}}{{item.detail}}</text>
+        </view>
+        <view class="address-footer" wx:if="{{!selectedMode && !item.isDefault}}">
+          <text class="set-default-btn" bindtap="setDefault" data-id="{{item.id}}">设为默认</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{addressList.length === 0}}">
+      <text>暂无收货地址</text>
+    </view>
+  </view>
+
+  <!-- 底部添加按钮 -->
+  <view class="footer-btn" wx:if="{{!selectedMode}}">
+    <button class="add-btn" bindtap="addAddress">+ 添加新地址</button>
+  </view>
+</view>
+

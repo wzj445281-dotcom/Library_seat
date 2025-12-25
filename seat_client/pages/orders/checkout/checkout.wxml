@@ -15,9 +15,11 @@
             <view class="store-name">{{storeInfo.name}}</view>
             <view class="store-address">{{storeInfo.address}}</view>
         </view>
-        <view class="address-info" wx:else>
-            <view class="store-name">请选择收货地址</view>
-            <view class="store-address text-gray">暂未支持外卖地址选择，默认配送至当前定位</view>
+        <view class="address-info" wx:else bindtap="selectAddress">
+            <view class="store-name">{{selectedAddress ? selectedAddress.name + ' ' + selectedAddress.phone : '请选择收货地址'}}</view>
+            <view class="store-address {{selectedAddress ? '' : 'text-gray'}}">
+                {{selectedAddress ? selectedAddress.province + selectedAddress.city + selectedAddress.district + selectedAddress.detail : '点击选择收货地址'}}
+            </view>
         </view>
     </view>
 
@@ -44,10 +46,53 @@
             <input class="remark-input" placeholder="口味、包装等要求" value="{{remark}}" bindinput="onRemarkInput" />
         </view>
 
-        <!-- 小计 -->
-        <view class="total-row">
-            <text>共{{totalCount}}件商品，小计</text>
-            <text class="total-price">¥{{totalPrice}}</text>
+        <!-- 优惠券选择 -->
+        <view class="coupon-row" bindtap="toggleCouponPicker">
+            <text>优惠券</text>
+            <view class="coupon-select">
+                <text wx:if="{{selectedCoupon}}" class="coupon-selected">{{selectedCoupon.title}}</text>
+                <text wx:else class="coupon-placeholder">选择优惠券</text>
+                <text class="arrow">></text>
+            </view>
+        </view>
+
+        <!-- 价格明细 -->
+        <view class="price-detail">
+            <view class="price-row">
+                <text>商品小计</text>
+                <text>¥{{originalPrice}}</text>
+            </view>
+            <view class="price-row" wx:if="{{discountAmount > 0}}">
+                <text>优惠金额</text>
+                <text class="discount">-¥{{discountAmount}}</text>
+            </view>
+            <view class="price-row total">
+                <text>实付金额</text>
+                <text class="final-price">¥{{finalPrice}}</text>
+            </view>
+        </view>
+    </view>
+
+    <!-- 优惠券选择弹窗 -->
+    <view class="coupon-picker-mask" wx:if="{{showCouponPicker}}" bindtap="toggleCouponPicker">
+        <view class="coupon-picker" catchtap="">
+            <view class="picker-header">
+                <text>选择优惠券</text>
+                <text class="close" bindtap="toggleCouponPicker">×</text>
+            </view>
+            <scroll-view class="picker-content" scroll-y>
+                <view class="coupon-option" wx:for="{{availableCoupons}}" wx:key="userCouponId" 
+                      bindtap="selectCoupon" data-index="{{index}}">
+                    <view class="coupon-info">
+                        <text class="coupon-title">{{item.title}}</text>
+                        <text class="coupon-desc">满{{item.minPoint}}元可用</text>
+                    </view>
+                    <view class="coupon-amount">¥{{item.amount}}</view>
+                </view>
+                <view wx:if="{{availableCoupons.length === 0}}" class="empty-coupon">
+                    暂无可用优惠券
+                </view>
+            </scroll-view>
         </view>
     </view>
 
@@ -55,7 +100,7 @@
     <view class="footer-bar">
         <view class="price-section">
             <text class="label">合计</text>
-            <text class="price">¥{{totalPrice}}</text>
+            <text class="price">¥{{finalPrice}}</text>
         </view>
         <view class="pay-btn" bindtap="submitOrder">去支付</view>
     </view>

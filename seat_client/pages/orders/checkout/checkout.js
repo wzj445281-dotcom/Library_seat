@@ -5,15 +5,37 @@ Page({
   data: {
     cartItems: [],
     totalPrice: 0,
+    originalPrice: 0, // 原价（优惠前）
+    discountAmount: 0, // 优惠金额
+    finalPrice: 0, // 实付金额（优惠后）
     totalCount: 0,
     storeInfo: {},
     diningType: 'self', // self: 自取, delivery: 外卖
     remark: '',
-    isSubmitting: false // 防止重复提交
+    isSubmitting: false, // 防止重复提交
+    
+    // 优惠券相关
+    availableCoupons: [], // 可用优惠券列表
+    selectedCoupon: null, // 选中的优惠券 { userCouponId, title, amount, minPoint }
+    showCouponPicker: false, // 是否显示优惠券选择器
+    
+    // 地址相关
+    selectedAddress: null // 选中的收货地址
   },
 
   onLoad(options) {
     this.initData();
+    this.loadAvailableCoupons();
+    this.loadDefaultAddress();
+  },
+
+  onShow() {
+    // 从地址选择页返回时，刷新选中的地址
+    const address = wx.getStorageSync('selectedAddress');
+    if (address) {
+      this.setData({ selectedAddress: address });
+      wx.removeStorageSync('selectedAddress');
+    }
   },
 
   initData() {
@@ -36,10 +58,28 @@ Page({
     this.setData({
       storeInfo: store || { name: '瑞幸咖啡 (科技园店)', address: '高新南九道10号' }, // 默认兜底
       diningType,
-      cartItems: mockCartItems
+      cartItems: mockCartItems,
+      addressInfo: null // 地址信息
     });
 
     this.calcTotal();
+  },
+
+  // 加载可用优惠券
+  loadAvailableCoupons() {
+    if (this.data.totalPrice <= 0) return;
+    
+    const couponApi = require('../../api/coupon');
+    couponApi.getAvailableCoupons(this.data.totalPrice)
+      .then(res => {
+        if (res.code === 200) {
+          this.setData({ availableCoupons: res.data || [] });
+        }
+      })
+      .catch(err => {
+        console.error('加载优惠券失败', err);
+        // 静默失败，不影响下单流程
+      });
   },
 
   calcTotal() {
@@ -49,20 +89,93 @@ Page({
       total += item.price * item.count;
       count += item.count;
     });
+    
+    // 计算优惠后价格
+    let discountAmount = 0;
+    let finalPrice = total;
+    if (this.data.selectedCoupon) {
+      discountAmount = parseFloat(this.data.selectedCoupon.amount) || 0;
+      finalPrice = Math.max(0, total - discountAmount);
+    }
+    
     this.setData({
       totalPrice: total,
+      originalPrice: total,
+      discountAmount: discountAmount,
+      finalPrice: finalPrice,
       totalCount: count
     });
+    
+    // 如果价格变化，重新加载可用优惠券
+    if (this.data.availableCoupons.length === 0) {
+      this.loadAvailableCoupons();
+    }
   },
 
   // 切换用餐方式
   switchDiningType(e) {
     const type = e.currentTarget.dataset.type;
     this.setData({ diningType: type });
+    
+    // 如果切换到外卖模式，加载默认地址
+    if (type === 'delivery') {
+      this.loadDefaultAddress();
+    }
   },
 
   onRemarkInput(e) {
     this.setData({ remark: e.detail.value });
+  },
+
+  // 显示/隐藏优惠券选择器
+  toggleCouponPicker() {
+    this.setData({ showCouponPicker: !this.data.showCouponPicker });
+  },
+
+  // 选择优惠券
+  selectCoupon(e) {
+    const index = e.currentTarget.dataset.index;
+    const coupon = this.data.availableCoupons[index];
+    
+    this.setData({
+      selectedCoupon: coupon,
+      showCouponPicker: false
+    });
+    
+    // 重新计算价格
+    this.calcTotal();
+  },
+
+  // 取消选择优惠券
+  removeCoupon() {
+    this.setData({ selectedCoupon: null });
+    this.calcTotal();
+  },
+
+  // 加载默认地址
+  loadDefaultAddress() {
+    if (this.data.diningType === 'delivery') {
+      const addressApi = require('../../api/address');
+      addressApi.getDefaultAddress()
+        .then(res => {
+          if (res.code === 200 && res.data) {
+            this.setData({ selectedAddress: res.data });
+          }
+        })
+        .catch(err => {
+          console.error('加载默认地址失败', err);
+          // 静默失败，用户可以手动选择地址
+        });
+    }
+  },
+
+  // 选择地址
+  selectAddress() {
+    if (this.data.diningType === 'delivery') {
+      wx.navigateTo({
+        url: '/pages/address/list?select=true'
+      });
+    }
   },
 
   // --- 核心：提交订单 ---
@@ -83,6 +196,11 @@ Page({
       storeId: this.data.storeInfo.id || 1, // 默认ID
       diningType: this.data.diningType,
       remark: this.data.remark,
+      userCouponId: this.data.selectedCoupon ? this.data.selectedCoupon.userCouponId : null,
+      addressInfo: this.data.diningType === 'delivery' && this.data.selectedAddress ? 
+        this.data.selectedAddress.province + this.data.selectedAddress.city + 
+        this.data.selectedAddress.district + this.data.selectedAddress.detail + 
+        ' ' + this.data.selectedAddress.name + ' ' + this.data.selectedAddress.phone : null,
       items: this.data.cartItems.map(item => ({
         productId: item.productId,
         count: item.count,

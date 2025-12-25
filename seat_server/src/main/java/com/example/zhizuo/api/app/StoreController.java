@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,7 @@ public class StoreController {
     private OrderService orderService;
     @Resource
     private OrderItemMapper orderItemMapper;
-    @Resource
+    @Autowired(required = false)
     private OrderMqProducer orderMqProducer;
 
     @Operation(summary = "获取菜单")
@@ -54,16 +55,29 @@ public class StoreController {
         }
         try {
             Long userId = SecurityUtils.getUserId();
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> items = (List<Map<String, Object>>) params.get("items");
             Integer deliveryType = Integer.valueOf(params.get("deliveryType").toString());
+            
+            // 获取可选参数
+            Long userCouponId = params.get("userCouponId") != null ? 
+                Long.valueOf(params.get("userCouponId").toString()) : null;
+            String addressInfo = params.get("addressInfo") != null ? 
+                params.get("addressInfo").toString() : null;
+            String remark = params.get("remark") != null ? 
+                params.get("remark").toString() : null;
 
-            String orderNo = orderService.createOrder(userId, items, deliveryType);
+            String orderNo = orderService.createOrder(userId, items, deliveryType, userCouponId, addressInfo, remark);
 
-            // 发送延时消息 (TTL 15分钟)
-            try {
-                orderMqProducer.sendOrderTimeoutMsg(orderNo);
-            } catch (Exception e) {
-                log.error("发送延时消息失败: {}", orderNo, e);
+            // 发送延时消息 (TTL 15分钟) - 如果RabbitMQ未启用则跳过
+            if (orderMqProducer != null) {
+                try {
+                    orderMqProducer.sendOrderTimeoutMsg(orderNo);
+                } catch (Exception e) {
+                    log.error("发送延时消息失败: {}", orderNo, e);
+                }
+            } else {
+                log.warn("RabbitMQ未启用，跳过订单超时消息发送");
             }
             return ApiResponse.success(orderNo);
         } catch (Exception e) {

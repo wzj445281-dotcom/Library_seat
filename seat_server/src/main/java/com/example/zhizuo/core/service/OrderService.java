@@ -56,9 +56,12 @@ public interface OrderService extends IService<Order> {
      * @param userId 用户ID
      * @param items 订单项列表
      * @param deliveryType 配送方式
+     * @param userCouponId 使用的优惠券ID（可选）
+     * @param addressInfo 地址信息（外卖时必需）
+     * @param remark 备注
      * @return 订单号
      */
-    String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType);
+    String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType, Long userCouponId, String addressInfo, String remark);
 
     /**
      * 关闭订单并恢复库存

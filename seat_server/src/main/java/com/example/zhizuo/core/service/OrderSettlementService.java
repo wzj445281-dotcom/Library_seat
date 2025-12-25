@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * 订单结算与算价服务
@@ -87,9 +86,16 @@ public class OrderSettlementService {
         private Long usedCouponId; // 使用的券ID
 
         // Getters & Setters ...
+        public BigDecimal getOriginalPrice() { return originalPrice; }
         public void setOriginalPrice(BigDecimal originalPrice) { this.originalPrice = originalPrice; }
+        
+        public BigDecimal getFinalPrice() { return finalPrice; }
         public void setFinalPrice(BigDecimal finalPrice) { this.finalPrice = finalPrice; }
+        
+        public BigDecimal getDiscountAmount() { return discountAmount; }
         public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
+        
+        public Long getUsedCouponId() { return usedCouponId; }
         public void setUsedCouponId(Long usedCouponId) { this.usedCouponId = usedCouponId; }
     }
 }

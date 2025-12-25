@@ -8,7 +8,25 @@
     "pages/mine/mine",
     "pages/ai_chat/ai_chat",
     "pages/login/login",
-    "pages/feedback/feedback"
+    "pages/feedback/feedback",
+    "pages/address/list",
+    "pages/address/edit"
+  ],
+  "subpackages": [
+    {
+      "root": "subpackages/coupon",
+      "name": "coupon",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "subpackages/ai",
+      "name": "ai",
+      "pages": [
+        "ai_chat"
+      ]
+    }
   ],
   "window": {
     "backgroundTextStyle": "light",

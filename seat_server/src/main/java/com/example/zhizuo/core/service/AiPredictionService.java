@@ -70,7 +70,8 @@ public class AiPredictionService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("timestamp", System.currentTimeMillis());
 
-            Map response = restTemplate.postForObject(url, requestBody, Map.class);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restTemplate.postForObject(url, requestBody, Map.class);
             if (response != null && response.containsKey("prediction")) {
                 Object prediction = response.get("prediction");
                 return Double.valueOf(prediction.toString());

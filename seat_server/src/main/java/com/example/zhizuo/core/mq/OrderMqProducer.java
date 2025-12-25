@@ -2,12 +2,14 @@ package com.example.zhizuo.core.mq;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "spring.rabbitmq.host")
 public class OrderMqProducer {
 
     @Resource

@@ -25,17 +25,25 @@ Page({
 
         try {
             // 调用后端 /api/auth/login 接口
-            // 这里不使用 api/auth.js 封装，直接用 request 演示最直观逻辑
-            // 注意：request.js 封装里 url 前面会自动拼上 BASE_URL
-            const res = await request('/auth/login', 'POST', {
+            // 注意：request.js 的 post 方法会自动拼上 BASE_URL，所以这里只需要 /auth/login
+            const res = await request.post('/auth/login', {
                 studentId: studentId,
                 password: password
-            }, false); // false 表示这个请求不需要 token
+            });
 
             // 登录成功，保存 Token 和用户信息
-            wx.setStorageSync('token', res.token);
-            wx.setStorageSync('userId', res.userId);
-            wx.setStorageSync('userName', res.name);
+            // 后端返回结构：{ code: 200, data: { token, userId, name } }
+            if (res && res.code === 200 && res.data) {
+                wx.setStorageSync('token', res.data.token);
+                wx.setStorageSync('userId', res.data.userId);
+                wx.setStorageSync('userName', res.data.name);
+                wx.setStorageSync('userInfo', {
+                    nickName: res.data.name,
+                    studentId: studentId
+                });
+            } else {
+                throw new Error('登录失败：响应数据格式错误');
+            }
 
             wx.showToast({ title: '登录成功', icon: 'success' });
 
@@ -66,13 +74,17 @@ Page({
             success: async (res) => {
                 if (res.confirm) {
                     try {
-                        await request('/auth/register', 'POST', {
+                        const registerRes = await request.post('/auth/register', {
                             studentId,
                             password,
                             name: '同学' + studentId.substr(-4) // 默认昵称
-                        }, false);
-                        wx.showToast({ title: '注册成功，请登录' });
-                    } catch(e) {}
+                        });
+                        if (registerRes && registerRes.code === 200) {
+                            wx.showToast({ title: '注册成功，请登录', icon: 'success' });
+                        }
+                    } catch(e) {
+                        console.error('注册失败', e);
+                    }
                 }
             }
         });

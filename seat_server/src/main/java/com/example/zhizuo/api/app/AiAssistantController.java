@@ -33,9 +33,6 @@ public class AiAssistantController {
     @Autowired
     private ProductService productService;
 
-    @Autowired
-    private OrderService orderService;
-
     // 从 application.yml 读取配置，避免硬编码
     @Value("${ai.deepseek.key:}")
     private String deepSeekApiKey;
@@ -109,14 +106,22 @@ public class AiAssistantController {
             messages.addObject().put("role", "user").put("content", userMessage);
 
             HttpEntity<String> entity = new HttpEntity<>(mapper.writeValueAsString(requestBody), headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity(deepSeekApiUrl, entity, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(deepSeekApiUrl, entity, 
+                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
 
             // 4. 解析结果
             Map<String, Object> responseBody = response.getBody();
             if (responseBody != null && responseBody.containsKey("choices")) {
+                @SuppressWarnings("unchecked")
                 List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
-                String content = (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
-                return ApiResponse.success(parseAiJson(content));
+                if (choices != null && !choices.isEmpty()) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+                    if (message != null) {
+                        String content = (String) message.get("content");
+                        return ApiResponse.success(parseAiJson(content));
+                    }
+                }
             }
 
             return ApiResponse.error("AI 响应异常");
@@ -153,7 +158,9 @@ public class AiAssistantController {
             if (cleanJson.startsWith("```")) cleanJson = cleanJson.substring(3);
             if (cleanJson.endsWith("```")) cleanJson = cleanJson.substring(0, cleanJson.length() - 3);
 
-            return new ObjectMapper().readValue(cleanJson, Map.class);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = new ObjectMapper().readValue(cleanJson, Map.class);
+            return result;
         } catch (Exception e) {
             Map<String, Object> fallback = new HashMap<>();
             fallback.put("reply", jsonContent); // 解析失败则直接把文本作为回复

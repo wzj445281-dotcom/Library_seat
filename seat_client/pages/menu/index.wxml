@@ -67,7 +67,7 @@
             <view class="product-item" wx:for="{{category.items}}" wx:key="id" wx:for-item="product">
               <!-- 商品图片区域 -->
               <view class="product-image-box">
-                <image class="product-img" src="{{product.image}}" mode="aspectFill"></image>
+                <lazy-image class="product-img" src="{{product.image}}" mode="aspectFill"></lazy-image>
                 
                 <!-- 收藏按钮 -->
                 <view 

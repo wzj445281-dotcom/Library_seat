@@ -1,0 +1,190 @@
+[33mcommit 050ae4aca9b0a666a0541ac22f720135972d546e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32m2025/12/24[m[33m, [m[1;31morigin/2025/12/24[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Fri Dec 26 03:11:10 2025 +0800
+
+    修复数据库连接问题，添加认证路径到安全配置，创建credit_logs表
+
+[33mcommit 0f597c640d9efbd4b49648ccfc98d0a39decacf9[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Fri Dec 26 02:10:06 2025 +0800
+
+    实现收藏功能和优惠券中心功能
+
+[33mcommit 0478508cd33a1887f0aa42c2f2fa5e938d6750d9[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Fri Dec 26 01:03:48 2025 +0800
+
+    添加优惠券和收藏功能
+
+[33mcommit 2db6e1bff3198d5f3828e7bc632d64c4b350c6c4[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Fri Dec 26 00:12:14 2025 +0800
+
+    更新代码
+
+[33mcommit 276fbb20b461b4175b052d417eca878d9650a5d1[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 25 23:14:19 2025 +0800
+
+    修复用户认证问题，更新数据库表结构，完善订单功能
+
+[33mcommit bf876eda8c512d5512902de2853eb167eb45e7d5[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 25 21:59:08 2025 +0800
+
+    修复编译错误：更新Swagger注解、添加缺失的OrderService方法、修复UserDetailsServiceImpl包声明
+
+[33mcommit 8f050f04a7352b136ee037de61c411573d88d11b[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 25 21:27:57 2025 +0800
+
+    完成订单功能实现：添加订单列表、详情、取消订单和库存恢复功能
+
+[33mcommit 4a656a05e8d6774de11e30450754f8fc32ab0bc9[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 25 21:03:46 2025 +0800
+
+    修复订单列表页面的API调用和状态映射
+
+[33mcommit d12261a3bd88231a7a69b768bb09be552157993d[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 25 20:50:41 2025 +0800
+
+    添加订单详情页面和二维码功能
+
+[33mcommit 390b176c540325364d3053f903f01ab7f716359a[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 25 20:22:17 2025 +0800
+
+    实现订单功能：添加菜单、结算、订单列表页面及后端API
+
+[33mcommit 4a663179e5a7d408db81a75bbc0ce1518cb45101[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 25 19:56:40 2025 +0800
+
+    添加点单页面功能，包含购物车逻辑
+
+[33mcommit 208f59b397aeda06e92f8c5f5e828e8d70a1f086[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 25 19:30:17 2025 +0800
+
+    实现点单页面功能，添加购物车逻辑和后端支持
+
+[33mcommit 10cd14bbd527e489a70c5ac8a5c1ff77980329a3[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Wed Dec 24 16:31:51 2025 +0800
+
+    Project update: 2025/12/24 backup
+
+[33mcommit 79219f700668796debe38c8fb7a62ace2c5fb5d8[m[33m ([m[1;31morigin/test3.0[m[33m, [m[1;32mtest3.0[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Fri Dec 19 17:19:23 2025 +0800
+
+    修改了大部分的内容
+
+[33mcommit c405341e5697de74fd4cd3f3c356e4e752e2df9d[m[33m ([m[1;31morigin/test2.0[m[33m, [m[1;32mtest2.0[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Fri Dec 19 16:22:25 2025 +0800
+
+    test2.0
+
+[33mcommit 97dcbef8f5a806a018228d4534dea62d7dbf76f7[m[33m ([m[1;31morigin/archive/feature-credit-mall[m[33m, [m[1;32marchive/feature-credit-mall[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Fri Dec 19 15:40:15 2025 +0800
+
+    chore(archive): deprecate credit mall module
+    
+    Strategic Pivot:
+    - Abandoned the 'Credit Mall' and 'User Wallet' features to avoid excessive commercialization.
+    - Archived MallService, Product entities, and BenefitStrategy patterns.
+    - Preparing to refactor towards 'Library Resource Center' (O2O Lending Service).
+    
+    See ARCHIVE_MANIFEST.md for details.
+
+[33mcommit 3970feabcc8ac8fabec97cf6a70648ddc4596785[m[33m ([m[1;31morigin/version1.20[m[33m, [m[1;32mversion1.20[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Thu Dec 18 21:55:15 2025 +0800
+
+    feat(v1.20): 完成信用日志、报修反馈、离座功能及报表导出
+    
+    1. 核心业务:
+       - 新增 '结束使用/离座' 接口，支持主动释放座位
+       - 完善信用分体系，注册/签到/违约均记录日志 (credit_logs)
+    
+    2. 新增模块:
+       - 报修反馈系统 (小程序端提交 + 后端管理接口)
+       - 数据报表导出 (集成 EasyExcel)
+    
+    3. 前端更新:
+       - 新增 '信用记录' 页面
+       - 新增 '报修反馈' 页面
+       - '我的' 页面增加相关入口
+       - 补全登录页面逻辑
+    
+    4. 管理端:
+       - 新增可视化座位布局设计器 (admin.html)
+       - 监控大屏增加导出按钮
+
+[33mcommit 3fc79e9a8636bbf953e5c5eade873718d9ecc53c[m[33m ([m[1;31morigin/1.10[m[33m, [m[1;32m1.10[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Wed Dec 17 10:44:30 2025 +0800
+
+    Refactor: 升级架构为 Docker + SpringBoot + Python AI 微服务，集成 RabbitMQ 和 Redis
+
+[33mcommit 3480ced8bda9596f15698cc6cb68f84252e34e28[m[33m ([m[1;31morigin/1.01[m[33m, [m[1;32m1.01[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Wed Dec 17 08:54:40 2025 +0800
+
+    Feat(V2.0): 核心架构升级 - 工程化重构与可视化热度图
+    
+    [主要变更]
+    1. 架构升级：引入 DTO/VO 层，规范 API 入参出参，集成 Knife4j 接口文档。
+    2. 基础建设：引入 Validation 参数校验框架，封装 GlobalExceptionHandler 全局异常处理。
+    3. 前端优化：小程序选座页新增“热门座位”可视化标识 (🔥图标)，优化网格布局样式。
+    4. 修复与调整：
+       - 补全 User/Reservation 实体类缺失字段 (password, createTime)。
+       - 适配前端 API 请求方式 (GET Form -> POST JSON Body)。
+       - 暂时移除未启用的 Redis/RabbitMQ 强依赖，确保项目在纯 DB 模式下可直接运行。
+
+[33mcommit 8209bb82b9274d3f98e6eaf917a3612ea08b3b21[m[33m ([m[1;32mversion1.01[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Wed Dec 17 08:46:55 2025 +0800
+
+    Feature(V2.0): 核心架构升级 - 工程化重构与可视化热度图
+    
+    [主要变更]
+    1. 架构升级：引入 DTO/VO 层，规范 API 入参出参，集成 Knife4j 接口文档。
+    2. 基础建设：引入 Validation 参数校验框架，封装 GlobalExceptionHandler 全局异常处理。
+    3. 前端优化：小程序选座页新增“热门座位”可视化标识 (🔥图标)，优化网格布局样式。
+    4. 修复与调整：
+       - 补全 User/Reservation 实体类缺失字段 (password, createTime)。
+       - 适配前端 API 请求方式 (GET Form -> POST JSON Body)。
+       - 暂时移除未启用的 Redis/RabbitMQ 强依赖，确保项目在纯 DB 模式下可直接运行。
+    
+    [详细清单]
+    - feat: 新增 UserLoginDTO, UserRegisterDTO, ReservationRequestDTO
+    - feat: 集成 Knife4j，访问 /doc.html 可查看在线文档
+    - fix: 修复 User 实体缺少 password 导致认证失败的 bug
+    - fix: 修复 Reservation 实体缺少 createTime 导致服务层报错的 bug
+    - refactor: AuthController 与 AppReservationController 改为 @RequestBody 接收参数
+    - style(Client): 新增 .fire-icon 样式与 🔥 热门图例
+    - chore: 更新 pom.xml 依赖与 .gitignore 配置
+    
+    [备注]
+    本次提交为一个完整的 Milestone，系统可独立运行，无外部中间件强依赖。
+
+[33mcommit 36012bc70c7cfab5de892d3a528376588ea06912[m[33m ([m[1;31morigin/version1.00[m[33m, [m[1;32mversion1.00[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Tue Dec 16 10:27:58 2025 +0800
+
+    进行了前端后端的基本实现，整个项目能基本运行详情可看reademe
+
+[33mcommit a191086eeef80eaaaacc693827cc4b1b8702a3f7[m[33m ([m[1;31morigin/base[m[33m, [m[1;32mbase[m[33m)[m
+Author: Y.L <wzj445281@gmail.com>
+Date:   Mon Dec 15 22:33:17 2025 +0800
+
+    feat: 完成项目初始化与架构思考
+    
+    1. 完成了项目的基本构架
+    2. 完成了基本功能的思考架构
+    3. 对项目总体有了思路想法

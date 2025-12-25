@@ -1,3 +1,5 @@
+package com.example.zhizuo.core.entity;
+
 import lombok.Data;
 import java.math.BigDecimal;
 
