@@ -1,15 +1,18 @@
 package com.petsaas.core.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @TableName("users")
 public class User {
     private Long id;
-    private String username; // 用户�?    private String password; // 密码
+    private String username; // 用户�?    private String password; // 密码
     private String role; // 角色：USER/ADMIN/DOCTOR
     private String name; // 真实姓名
-    private String phone; // 手机�?    private BigDecimal balance; // 账户余额
+    private String phone; // 手机号
+    private BigDecimal balance; // 账户余额
     private Integer points; // 会员积分
+    private LocalDateTime createTime; // 创建时间
 
     // 手动添加getter和setter方法
     public Long getId() {
@@ -74,5 +77,22 @@ public class User {
 
     public void setPoints(Integer points) {
         this.points = points;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
+    }
+    
+    // 为了兼容性，添加getCreditScore和setCreditScore方法
+    public Integer getCreditScore() {
+        return points;
+    }
+    
+    public void setCreditScore(int creditScore) {
+        this.points = creditScore;
     }
 }

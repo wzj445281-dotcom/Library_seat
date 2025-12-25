@@ -1,44 +1,49 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/library/index",
-    "pages/mine/mine",
-    "pages/orders/list",
-    "pages/login/login",
+    "pages/shop/index/index",
+    "pages/shop/detail/detail",
+    "pages/doctor/list/list",
+    "pages/doctor/booking/booking",
     "pages/ai_chat/ai_chat",
-    "pages/feedback/feedback",
-    "pages/credit/credit"
+    "pages/orders/list",
+    "pages/mine/mine",
+    "pages/login/login",
+    "pages/credit/credit",
+    "pages/feedback/feedback"
   ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "智座 SmartSeat",
+    "navigationBarTitleText": "PetSaaS",
     "navigationBarTextStyle": "black"
   },
   "tabBar": {
-    "color": "#999999",
+    "color": "#999",
     "selectedColor": "#1296db",
-    "backgroundColor": "#ffffff",
+    "backgroundColor": "#fff",
+    "borderStyle": "black",
     "list": [
       {
         "pagePath": "pages/index/index",
         "text": "首页",
-        "iconPath": "assets/images/seat.png",
-        "selectedIconPath": "assets/images/seat-active.png"
+        "iconPath": "assets/tabbar/home.png",
+        "selectedIconPath": "assets/tabbar/home_active.png"
       },
       {
-        "pagePath": "pages/library/index",
-        "text": "借阅",
-        "iconPath": "assets/images/seat.png",
-        "selectedIconPath": "assets/images/seat-active.png"
+        "pagePath": "pages/ai_chat/ai_chat",
+        "text": "AI问诊",
+        "iconPath": "assets/tabbar/chat.png",
+        "selectedIconPath": "assets/tabbar/chat_active.png"
       },
       {
         "pagePath": "pages/mine/mine",
         "text": "我的",
-        "iconPath": "assets/images/user.png",
-        "selectedIconPath": "assets/images/user-active.png"
+        "iconPath": "assets/tabbar/mine.png",
+        "selectedIconPath": "assets/tabbar/mine_active.png"
       }
     ]
   },
+  "style": "v2",
   "sitemapLocation": "sitemap.json"
 }

@@ -34,7 +34,8 @@ public class AppServiceSlotController {
     @Operation(summary = "获取服务工位布局")
     @GetMapping("/layout")
     public ApiResponse<List<ServiceSlot>> getLayout() {
-        // 1. 尝试�?Redis 拿缓�?        if (redisUtil.hasKey(SERVICE_SLOT_LAYOUT_KEY)) {
+        // 1. 尝试从Redis拿缓存
+        if (redisUtil.hasKey(SERVICE_SLOT_LAYOUT_KEY)) {
             List<ServiceSlot> cachedSlots = (List<ServiceSlot>) redisUtil.get(SERVICE_SLOT_LAYOUT_KEY);
             return ApiResponse.success(cachedSlots);
         }
@@ -42,7 +43,7 @@ public class AppServiceSlotController {
         // 2. 查工位基础信息
         List<ServiceSlot> slots = serviceSlotMapper.selectList(null);
 
-        // 3. 默认繁忙度�?(后续可以集成AI预测)
+        // 3. 默认繁忙度50%(后续可以集成AI预测)
         slots.forEach(s -> s.setBusyScore(50.0));
 
         // 4. 写入 Redis (缓存 30 分钟)

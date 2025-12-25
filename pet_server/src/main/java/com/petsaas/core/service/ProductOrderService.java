@@ -1,18 +1,25 @@
 package com.petsaas.core.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.petsaas.core.dto.OrderCreateDTO;
 import com.petsaas.core.entity.ProductOrder;
+
+import java.util.List;
 
 public interface ProductOrderService extends IService<ProductOrder> {
 
-    // 创建订单
-    ProductOrder createOrder(Long userId, Long productId, Integer quantity);
+    /**
+     * 创建订单
+     */
+    String createOrder(Long userId, OrderCreateDTO dto);
 
-    // 支付
-    void payOrder(Long userId, String orderNo);
+    /**
+     * 获取用户订单
+     */
+    List<ProductOrder> getUserOrders(Long userId, String status);
 
-    // 查询我的订单
-    IPage<ProductOrder> getMyOrders(Page<ProductOrder> page, Long userId, String status);
+    /**
+     * 支付订单
+     */
+    boolean payOrder(Long orderId);
 }

@@ -20,4 +20,11 @@ public interface PetDoctorService extends IService<PetDoctor> {
      * @return 医生列表
      */
     List<PetDoctor> getActiveDoctors();
+    
+    /**
+     * AI医生问诊
+     * @param question 用户问题
+     * @return AI医生回答
+     */
+    String consult(String question);
 }

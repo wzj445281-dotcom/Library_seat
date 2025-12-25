@@ -22,4 +22,53 @@ public class ServiceSlot {
 
     @TableField(exist = false)
     private Double busyScore;
+    
+    // 显式添加getter/setter方法
+    public Long getId() {
+        return id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
+    public void setName(String name) {
+        this.name = name;
+    }
+    
+    public Integer getServiceType() {
+        return serviceType;
+    }
+    
+    public void setServiceType(Integer serviceType) {
+        this.serviceType = serviceType;
+    }
+    
+    public BigDecimal getPrice() {
+        return price;
+    }
+    
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+    
+    public Integer getStatus() {
+        return status;
+    }
+    
+    public void setStatus(Integer status) {
+        this.status = status;
+    }
+    
+    public Double getBusyScore() {
+        return busyScore;
+    }
+    
+    public void setBusyScore(Double busyScore) {
+        this.busyScore = busyScore;
+    }
 }

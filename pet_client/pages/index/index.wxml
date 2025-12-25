@@ -1,65 +1,63 @@
-<view class="container"> 
-  <!-- 顶部搜索栏 (装饰用) --> 
-  <view class="search-bar"> 
-    <view class="search-input"> 
-      <icon type="search" size="14"></icon> 
-      <text>搜索宠物零食/玩具</text> 
-    </view> 
-  </view> 
- 
-  <!-- 轮播图 --> 
-  <swiper class="banner" indicator-dots="{{true}}" autoplay="{{true}}" interval="3000" circular="{{true}}"> 
-    <block wx:for="{{banners}}" wx:key="*this"> 
-      <swiper-item> 
-        <image src="{{item}}" mode="aspectFill" class="banner-image"/> 
-      </swiper-item> 
-    </block> 
-  </swiper> 
- 
-  <!-- 分类导航 --> 
-  <scroll-view scroll-x class="category-nav" enable-flex> 
-    <view 
-      wx:for="{{categories}}" 
-      wx:key="id" 
-      class="category-item {{currentCategory === item.id ? 'active' : ''}}" 
-      bindtap="switchCategory" 
-      data-id="{{item.id}}" 
-    > 
-      <text>{{item.name}}</text> 
-      <view class="indicator" wx:if="{{currentCategory === item.id}}"></view> 
-    </view> 
-  </scroll-view> 
- 
-  <!-- 商品列表 --> 
-  <view class="product-list"> 
-    <block wx:if="{{loading}}"> 
-      <view class="loading-state">加载中...</view> 
-    </block> 
-    
-    <block wx:elif="{{productList.length > 0}}"> 
-      <view class="product-card" wx:for="{{productList}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}"> 
-        <image src="{{item.image}}" mode="aspectFill" class="product-img"/> 
-        <view class="product-info"> 
-          <view class="product-name">{{item.name}}</view> 
-          <view class="product-tags"> 
-            <text class="tag">自营</text> 
-            <text class="sales">已售 {{item.sales}}+</text> 
-          </view> 
-          <view class="price-row"> 
-            <text class="price">¥{{item.price}}</text> 
-            <view class="add-btn" catchtap="handleBuy" data-item="{{item}}"> 
-              <text>购买</text> 
-            </view> 
-          </view> 
-        </view> 
-      </view> 
-    </block> 
- 
-    <block wx:else> 
-      <view class="empty-state"> 
-        <image src="/assets/images/seat.png" mode="widthFix" style="width: 100rpx; opacity: 0.3;"></image> 
-        <text>该分类下暂无商品</text> 
-      </view> 
-    </block> 
-  </view> 
+<view class="container">
+  <!-- 顶部搜索栏 (装饰) -->
+  <view class="search-bar">
+    <view class="search-input">
+      <text class="placeholder">搜索医生、服务或商品...</text>
+    </view>
+  </view>
+
+  <!-- 轮播图 -->
+  <swiper class="banner-swiper" indicator-dots autoplay interval="5000" circular>
+    <block wx:for="{{banners}}" wx:key="id">
+      <swiper-item>
+        <image src="{{item.img}}" class="banner-img" mode="aspectFill"></image>
+      </swiper-item>
+    </block>
+  </swiper>
+
+  <!-- 金刚区导航 -->
+  <view class="menu-grid">
+    <view class="menu-item" wx:for="{{menuList}}" wx:key="name" bindtap="onMenuTap" data-url="{{item.url}}">
+      <view class="menu-icon-box" style="background-color: {{item.color}}">
+        <!-- 暂时用首字代替图标，正式上线请换 image -->
+        <text class="menu-icon-text">{{item.name[0]}}</text>
+      </view>
+      <text class="menu-text">{{item.name}}</text>
+    </view>
+  </view>
+
+  <!-- 热门医生 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">名医推荐</text>
+      <text class="section-more" bindtap="onMenuTap" data-url="/pages/doctor/list/list">全部 ></text>
+    </view>
+    <scroll-view class="doctor-scroll" scroll-x enable-flex>
+      <view class="doctor-card" wx:for="{{recommendDoctors}}" wx:key="id">
+        <image class="doc-avatar" src="{{item.avatar || 'https://via.placeholder.com/100'}}" mode="aspectFill"></image>
+        <text class="doc-name">{{item.name}}</text>
+        <text class="doc-title">{{item.title}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 严选好物 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">严选好物</text>
+    </view>
+    <view class="product-grid">
+      <view class="product-item" wx:for="{{hotProducts}}" wx:key="id" bindtap="toProductDetail" data-id="{{item.id}}">
+        <image class="prod-img" src="{{item.image || 'https://via.placeholder.com/200'}}" mode="aspectFill"></image>
+        <view class="prod-info">
+          <text class="prod-name">{{item.name}}</text>
+          <text class="prod-price">¥{{item.price}}</text>
+        </view>
+      </view>
+      <!-- 缺省展示，如果没数据 -->
+      <view class="empty-tip" wx:if="{{hotProducts.length === 0}}">
+        <text>暂无商品上架</text>
+      </view>
+    </view>
+  </view>
 </view>

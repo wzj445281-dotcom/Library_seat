@@ -5,12 +5,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * 安全上下文工具类
- * 负责统一获取当前登录用户的身份信�?
+ * 负责统一获取当前登录用户的身份信息
  */
 public class SecurityUtils {
 
     /**
-     * 获取当前登录用户的学�?(StudentId)
+     * 获取当前登录用户的学号(StudentId)
      * 基于 JWT Filter 解析后的 Principal
      * @return studentId
      * @throws RuntimeException 如果未获取到认证信息
@@ -18,8 +18,8 @@ public class SecurityUtils {
     public static String getCurrentStudentId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getPrincipal() == null) {
-            // 这里抛出的异常会�?GlobalExceptionHandler 捕获并返�?401
-            throw new RuntimeException("用户未登录或身份已过�?);
+            // 这里抛出的异常会被GlobalExceptionHandler捕获并返回401
+            throw new RuntimeException("用户未登录或身份已过期");
         }
         return (String) auth.getPrincipal();
     }
@@ -29,7 +29,7 @@ public class SecurityUtils {
      * @return userId
      */
     public static Long getCurrentUserId() {
-        // 临时实现，实际应该从数据库查询或JWT中获�?
+        // 临时实现，实际应该从数据库查询或JWT中获取
         // 这里简化处理，假设用户名就是ID的字符串形式
         String username = getCurrentStudentId();
         try {

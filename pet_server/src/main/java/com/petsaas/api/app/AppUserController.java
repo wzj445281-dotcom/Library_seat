@@ -45,7 +45,7 @@ public class AppUserController {
         return ApiResponse.success(user);
     }
 
-    @Operation(summary = "获取我的信用分变动日�?)
+    @Operation(summary = "获取我的信用分变动日志")
     @GetMapping("/credit-logs")
     public ApiResponse<List<CreditLog>> getMyCreditLogs() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

@@ -1,58 +1,38 @@
-package com.petsaas.api.app; 
- 
-import com.petsaas.common.ApiResponse; 
-import com.petsaas.common.util.SecurityUtils; 
-import com.petsaas.core.service.ReservationService; 
-import org.springframework.beans.factory.annotation.Autowired; 
-import org.springframework.web.bind.annotation.*; 
- 
-import java.time.LocalDateTime; 
-import java.time.format.DateTimeFormatter; 
-import java.util.Map; 
- 
-@RestController 
-@RequestMapping("/api/app/reservation") 
-public class AppReservationController { 
- 
-    @Autowired 
-    private ReservationService reservationService; 
- 
-    // 获取可用工位 (BATH, GROOM, MEDICAL) 
-    @GetMapping("/slots") 
-    public ApiResponse getSlots(@RequestParam String type) { 
-        return ApiResponse.success(reservationService.getAvailableSlots(type)); 
-    } 
- 
-    // 提交预约 
-    @PostMapping("/book") 
-    public ApiResponse book(@RequestBody Map<String, Object> payload) { 
-        try { 
-            Long userId = SecurityUtils.getCurrentUserId(); 
-            Long slotId = Long.valueOf(payload.get("slotId").toString()); 
-            String petName = (String) payload.get("petName"); 
-            String timeStr = (String) payload.get("appointmentTime"); // 格式: "2023-10-01 14:00:00" 
-             
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); 
-            LocalDateTime appointmentTime = LocalDateTime.parse(timeStr, formatter); 
- 
-            reservationService.createBooking(userId, slotId, petName, appointmentTime); 
-            return ApiResponse.success("预约成功"); 
-        } catch (Exception e) { 
-            return ApiResponse.error(e.getMessage()); 
-        } 
-    } 
- 
-    // 我的预约 
-    @GetMapping("/my") 
-    public ApiResponse myBookings() { 
-        Long userId = SecurityUtils.getCurrentUserId(); 
-        return ApiResponse.success(reservationService.getMyBookings(userId)); 
-    } 
-     
-    // 取消预约 
-    @PostMapping("/cancel") 
-    public ApiResponse cancel(@RequestBody Map<String, Long> payload) { 
-        reservationService.cancelBooking(payload.get("id")); 
-        return ApiResponse.success("取消成功"); 
-    } 
+package com.petsaas.api.app;
+
+import com.petsaas.api.Result;
+import com.petsaas.common.util.SecurityUtils;
+import com.petsaas.core.dto.ReservationRequestDTO;
+import com.petsaas.core.entity.Reservation;
+import com.petsaas.core.service.ReservationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/app/reservation")
+@Tag(name = "App-预约管理")
+public class AppReservationController {
+
+    @Autowired
+    private ReservationService reservationService;
+
+    @Operation(summary = "提交预约")
+    @PostMapping("/create")
+    public Result<Boolean> createReservation(@RequestBody ReservationRequestDTO dto) {
+        // 获取当前登录用户ID
+        Long userId = SecurityUtils.getUserId();
+        boolean success = reservationService.createReservation(userId, dto);
+        return success ? Result.success(true) : Result.error("预约失败，该时段可能已被占用");
+    }
+
+    @Operation(summary = "获取我的预约列表")
+    @GetMapping("/my")
+    public Result<List<Reservation>> getMyReservations() {
+        Long userId = SecurityUtils.getUserId();
+        return Result.success(reservationService.getUserReservations(userId));
+    }
 }

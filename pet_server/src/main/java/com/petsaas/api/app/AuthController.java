@@ -34,7 +34,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse login(@RequestBody UserLoginDTO loginDTO) {
-        // 使用 username 查询 (�?studentId)
+        // 使用 username 查询 (也叫studentId)
         QueryWrapper<User> query = new QueryWrapper<>();
         query.eq("username", loginDTO.getUsername());
         User user = userMapper.selectOne(query);
@@ -55,7 +55,7 @@ public class AuthController {
         QueryWrapper<User> query = new QueryWrapper<>();
         query.eq("username", registerDTO.getUsername());
         if (userMapper.selectCount(query) > 0) {
-            return ApiResponse.error("用户已存�?);
+            return ApiResponse.error("用户已存在");
         }
 
         User user = new User();

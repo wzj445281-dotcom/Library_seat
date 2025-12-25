@@ -1,59 +1,43 @@
 <view class="container">
-    <!-- 用户信息卡片 -->
-    <view class="user-card">
-        <image class="avatar" src="{{userInfo.avatarUrl || '/assets/images/default_avatar.png'}}" mode="cover"></image>
+    <!-- 用户头部 -->
+    <view class="user-header" bindtap="{{hasUserInfo ? '' : 'toLogin'}}">
+        <image class="avatar" src="{{userInfo.avatarUrl || '/assets/default_avatar.png'}}" mode="aspectFill"></image>
         <view class="info">
-            <view class="nickname">{{userInfo.nickName || '点击登录'}}</view>
-            <view class="vip-tag" wx:if="{{userInfo.isVip}}">萌宠VIP会员</view>
-            <view class="vip-tag normal" wx:else>普通会员</view>
+            <text class="nickname">{{userInfo.nickName || '点击登录'}}</text>
+            <text class="status" wx:if="{{hasUserInfo}}">普通会员</text>
         </view>
     </view>
 
-    <!-- 钱包余额 -->
-    <view class="wallet-card">
-        <view class="balance-item">
-            <text class="num">{{userInfo.balance || 0}}</text>
-            <text class="label">余额</text>
+    <!-- 功能入口 (示例) -->
+    <view class="menu-grid">
+        <view class="menu-item">
+            <text>我的订单</text>
         </view>
-        <view class="balance-item" bindtap="goToCredit">
-            <text class="num">{{userInfo.credit || 100}}</text>
-            <text class="label">信用分</text>
+        <view class="menu-item">
+            <text>收货地址</text>
         </view>
-        <view class="recharge-btn" bindtap="handleRecharge">充值</view>
-    </view>
-
-    <!-- 菜单列表 -->
-    <view class="menu-list">
-        <view class="menu-item" bindtap="goToOrders">
-            <view class="left">
-                <image class="icon" src="/assets/icons/order.png"></image>
-                <text>我的订单</text>
-            </view>
-            <text class="arrow">></text>
-        </view>
-
-        <view class="menu-item" bindtap="goToFeedback">
-            <view class="left">
-                <image class="icon" src="/assets/icons/feedback.png"></image>
-                <text>意见反馈</text>
-            </view>
-            <text class="arrow">></text>
-        </view>
-
-        <view class="menu-item" bindtap="handleContact">
-            <view class="left">
-                <image class="icon" src="/assets/icons/service.png"></image>
-                <text>联系客服</text>
-            </view>
-            <text class="arrow">></text>
-        </view>
-
-        <view class="menu-item" bindtap="handleLogout" wx:if="{{isLogin}}">
-            <view class="left">
-                <image class="icon" src="/assets/icons/logout.png"></image>
-                <text>退出登录</text>
-            </view>
-            <text class="arrow">></text>
+        <view class="menu-item">
+            <text>联系客服</text>
         </view>
     </view>
+
+    <!-- 我的预约列表 -->
+    <view class="section-title">我的挂号预约</view>
+    <view class="reservation-list" wx:if="{{reservations.length > 0}}">
+        <block wx:for="{{reservations}}" wx:key="id">
+            <view class="res-card">
+                <view class="res-row">
+                    <text class="res-doctor">预约单号: {{item.id}}</text>
+                    <text class="res-status {{item.status}}">{{item.status === 'confirmed' ? '预约成功' : item.status}}</text>
+                </view>
+                <view class="res-time">就诊时间: {{item.displayTime}}</view>
+                <view class="res-tips" wx:if="{{item.doctorId}}">医生ID: {{item.doctorId}}</view>
+            </view>
+        </block>
+    </view>
+    <view class="empty-res" wx:else>
+        <text>暂无预约记录</text>
+    </view>
+
+    <button wx:if="{{hasUserInfo}}" class="btn-logout" bindtap="logout">退出登录</button>
 </view>

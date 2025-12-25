@@ -1,86 +1,63 @@
 package com.petsaas.core.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.petsaas.core.entity.ServiceBooking;
-import com.petsaas.core.entity.ServiceSlot;
-import com.petsaas.core.entity.User;
-import com.petsaas.core.mapper.ServiceBookingMapper;
-import com.petsaas.core.mapper.ServiceSlotMapper;
-import com.petsaas.core.mapper.UserMapper;
+import com.petsaas.core.dto.ReservationRequestDTO;
+import com.petsaas.core.entity.Reservation;
+import com.petsaas.core.mapper.ReservationMapper;
 import com.petsaas.core.service.ReservationService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 
+@Slf4j
 @Service
-public class ReservationServiceImpl extends ServiceImpl<ServiceBookingMapper, ServiceBooking> implements ReservationService {
+public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reservation> implements ReservationService {
 
-    @Autowired private ServiceSlotMapper slotMapper;
-    @Autowired private ServiceBookingMapper bookingMapper;
-    @Autowired private UserMapper userMapper;
-
-    @Override
-    public List<ServiceSlot> getAvailableSlots(String type) {
-        return slotMapper.findAvailableByType(type);
-    }
+    private static final DateTimeFormatter DF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void createBooking(Long userId, Long slotId, String petName, LocalDateTime appointmentTime) {
-        // 1. 检查工�?        ServiceSlot slot = slotMapper.selectById(slotId);
-        if (slot == null || slot.getStatus() == 0) {
-            throw new RuntimeException("该工位暂时不可预�?);
+    public boolean createReservation(Long userId, ReservationRequestDTO dto) {
+        // 1. 解析时间
+        LocalDateTime start = LocalDateTime.parse(dto.getStartTime(), DF);
+        LocalDateTime end = start.plusMinutes(30); // 默认一次问诊30分钟
+
+        // 2. 简单的防冲突检查 (同一个医生在同一时间段不能有两个预约)
+        // 注意：生产环境建议使用 Redis 分布式锁或数据库唯一索引(doctor_id + start_time) 防止并发
+        Long count = this.baseMapper.selectCount(new QueryWrapper<Reservation>()
+                .eq("doctor_id", dto.getDoctorId())
+                .eq("start_time", start)
+                .ne("status", "cancelled")); // 排除已取消的
+
+        if (count > 0) {
+            throw new RuntimeException("该时段已被预约，请选择其他时间");
         }
 
-        // 2. 检查时间冲�?(简单示�? 同一小时内只能约一�?
-        String timeStr = appointmentTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:00:00"));
-        // 注意：实际项目中需要更复杂的时间段重叠判断
-        int conflicts = bookingMapper.checkConflict(slotId, timeStr);
-        if (conflicts > 0) {
-            throw new RuntimeException("该时间段已被预约，请更换时间");
-        }
+        // 3. 构建预约对象
+        Reservation reservation = new Reservation();
+        reservation.setUserId(userId);
+        reservation.setDoctorId(dto.getDoctorId());
+        reservation.setStartTime(start);
+        reservation.setEndTime(end);
+        reservation.setStatus("confirmed"); // 默认为已确认，如果有支付流程则为 pending
+        reservation.setCreateTime(LocalDateTime.now());
 
-        // 3. 检查余�?
-        User user = userMapper.selectById(userId); 
-        if (user.getBalance().compareTo(slot.getBasePrice()) < 0) { 
-            throw new RuntimeException("余额不足以支付服务费"); 
-        } 
- 
-        // 4. 创建预约�?
-        ServiceBooking booking = new ServiceBooking(); 
-        booking.setUserId(userId); 
-        booking.setSlotId(slotId); 
-        booking.setPetName(petName); 
-        booking.setAppointmentTime(appointmentTime); 
-        booking.setStatus("CONFIRMED"); 
-        booking.setBookingNo(UUID.randomUUID().toString().replace("-", "").substring(0, 12)); 
-        booking.setTotalPrice(slot.getBasePrice()); 
-        booking.setDurationMinutes(60); // 默认服务时长1小时 
-        booking.setCreateTime(LocalDateTime.now()); 
-        
-        bookingMapper.insert(booking); 
- 
-        // 5. 扣费 (或由线下支付，此处演示预扣费) 
-        userMapper.deductBalance(userId, slot.getBasePrice().doubleValue());
+        // 这里的 seatId (station_id) 暂时留空，或者根据医生分配诊室
+        // reservation.setSeatId(1L);
+
+        return this.save(reservation);
     }
 
     @Override
-    public List<ServiceBooking> getMyBookings(Long userId) {
-        return bookingMapper.findByUserId(userId);
-    }
-
-    @Override 
-    public void cancelBooking(Long bookingId) { 
-        ServiceBooking booking = bookingMapper.selectById(bookingId); 
-        if (booking != null && !"CANCELLED".equals(booking.getStatus())) { 
-            booking.setStatus("CANCELLED"); 
-            bookingMapper.updateById(booking); 
-            // 这里可以加上退款逻辑 
-        } 
+    public List<Reservation> getUserReservations(Long userId) {
+        // 按开始时间倒序排列
+        return this.list(new QueryWrapper<Reservation>()
+                .eq("user_id", userId)
+                .orderByDesc("start_time"));
     }
 }

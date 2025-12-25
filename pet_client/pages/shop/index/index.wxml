@@ -1,0 +1,53 @@
+<view class="container">
+    <!-- 顶部搜索栏 -->
+    <view class="search-wrapper">
+        <view class="search-bar">
+            <icon type="search" size="14" color="#999"></icon>
+            <input placeholder="搜索你喜欢的宠物用品" placeholder-class="ph-color" disabled />
+        </view>
+    </view>
+
+    <!-- 分类 Tabs -->
+    <scroll-view class="category-scroll" scroll-x enable-flex>
+        <view class="cat-item {{index === currentCategoryIndex ? 'active' : ''}}"
+              wx:for="{{categories}}"
+              wx:key="*this"
+              bindtap="onCategoryTap"
+              data-index="{{index}}">
+            {{item}}
+            <view class="indicator" wx:if="{{index === currentCategoryIndex}}"></view>
+        </view>
+    </scroll-view>
+
+    <!-- 商品列表 -->
+    <view class="product-list">
+        <block wx:for="{{productList}}" wx:key="id">
+            <view class="prod-card" bindtap="toDetail" data-id="{{item.id}}">
+                <image class="prod-img" src="{{item.image || 'https://via.placeholder.com/300'}}" mode="aspectFill"></image>
+                <view class="prod-info">
+                    <text class="prod-title">{{item.name}}</text>
+                    <view class="prod-tags" wx:if="{{item.category}}">
+                        <text class="tag">{{item.category}}</text>
+                    </view>
+                    <view class="price-row">
+                        <text class="currency">¥</text>
+                        <text class="price">{{item.price}}</text>
+                        <text class="sales">已售 {{item.sales || 0}}</text>
+                    </view>
+                </view>
+            </view>
+        </block>
+    </view>
+
+    <!-- 加载状态 -->
+    <view class="loading-state" wx:if="{{loading}}">
+        <text>加载中...</text>
+    </view>
+    <view class="empty-state" wx:if="{{!loading && productList.length === 0}}">
+        <image src="/assets/empty_box.png" mode="widthFix" class="empty-icon"></image>
+        <text>暂无相关商品</text>
+    </view>
+    <view class="no-more" wx:if="{{!loading && productList.length > 0 && !hasMore}}">
+        <text>没有更多了</text>
+    </view>
+</view>

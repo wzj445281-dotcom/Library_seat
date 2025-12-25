@@ -1,0 +1,56 @@
+<view class="container">
+    <!-- 医生信息简报 -->
+    <view class="doctor-header">
+        <image class="avatar" src="{{doctorInfo.avatar}}" mode="aspectFill"></image>
+        <view class="info">
+            <text class="name">{{doctorInfo.name}}</text>
+            <text class="title">{{doctorInfo.title}}</text>
+            <text class="tips">请选择合适的就诊时间</text>
+        </view>
+    </view>
+
+    <!-- 日历选择条 -->
+    <scroll-view class="calendar-scroll" scroll-x enable-flex>
+        <view class="date-item {{index === selectedDateIndex ? 'active' : ''}}"
+              wx:for="{{dates}}"
+              wx:key="fullDate"
+              bindtap="onDateSelect"
+              data-index="{{index}}">
+            <text class="week">{{item.weekStr}}</text>
+            <text class="day">{{item.dayNum}}</text>
+        </view>
+    </scroll-view>
+
+    <!-- 时间槽网格 -->
+    <view class="slot-container">
+        <view class="section-title">上午 / 下午</view>
+
+        <view class="slot-grid" wx:if="{{timeSlots.length > 0}}">
+            <view class="slot-item {{item === selectedSlot ? 'selected' : ''}}"
+                  wx:for="{{timeSlots}}"
+                  wx:key="*this"
+                  bindtap="onSlotSelect"
+                  data-slot="{{item}}">
+                {{item}}
+            </view>
+        </view>
+
+        <!-- 空状态 -->
+        <view class="empty-state" wx:else>
+            <image src="/assets/empty_calendar.png" mode="widthFix" class="empty-img"></image>
+            <text>当天暂无可预约时间，请切换日期</text>
+        </view>
+    </view>
+
+    <!-- 底部提交栏 -->
+    <view class="footer-bar">
+        <view class="selected-info">
+            <text>已选：</text>
+            <text class="highlight">{{currentDateStr}} {{selectedSlot || '--:--'}}</text>
+        </view>
+        <button class="btn-submit"
+                bindtap="submitBooking"
+                disabled="{{!selectedSlot || submitting}}"
+                loading="{{submitting}}">立即预约</button>
+    </view>
+</view>
