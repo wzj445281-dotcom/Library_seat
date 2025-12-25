@@ -34,7 +34,60 @@ Page({
 
   // 加载菜单数据
   loadMenuData() {
-    // 模拟数据，实际应该从服务器获取
+    wx.showLoading({ title: '加载中' });
+    
+    // 从服务器获取菜单数据
+    request.get('/api/app/store/menu').then(res => {
+      wx.hideLoading();
+      if (res.code === 200) {
+        // 将产品按分类分组
+        const products = res.data || [];
+        const categoriesMap = {};
+        
+        products.forEach(product => {
+          const categoryId = product.categoryId || 0;
+          if (!categoriesMap[categoryId]) {
+            categoriesMap[categoryId] = {
+              id: categoryId,
+              name: product.categoryName || `分类${categoryId}`,
+              count: 0,
+              products: []
+            };
+          }
+          
+          categoriesMap[categoryId].products.push({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            originalPrice: product.originalPrice,
+            imgUrl: product.imgUrl || "",
+            cartQty: 0
+          });
+        });
+        
+        const categories = Object.values(categoriesMap);
+        
+        this.setData({
+          categories: categories,
+          toView: 'cat-0'
+        });
+      } else {
+        // 如果接口失败，使用模拟数据
+        this.loadMockData();
+        wx.showToast({ title: '使用模拟数据', icon: 'none' });
+      }
+    }).catch(err => {
+      wx.hideLoading();
+      console.error('获取菜单失败:', err);
+      // 如果接口失败，使用模拟数据
+      this.loadMockData();
+      wx.showToast({ title: '使用模拟数据', icon: 'none' });
+    });
+  },
+
+  // 加载模拟数据
+  loadMockData() {
     const mockCategories = [
       {
         id: 1,
@@ -207,16 +260,11 @@ Page({
     }
     
     // 存储购物车数据到本地，供结算页使用
-    wx.setStorageSync('cartData', {
-      items: this.data.cartList,
-      totalQty: this.data.totalQty,
-      totalPrice: this.data.totalPrice,
-      deliveryType: this.data.deliveryType
-    });
+    wx.setStorageSync('cart_items', this.data.cartList);
     
     // 跳转到结算页面
     wx.navigateTo({
-      url: '/pages/orders/checkout'
+      url: '/pages/orders/checkout/checkout'
     });
   }
 });

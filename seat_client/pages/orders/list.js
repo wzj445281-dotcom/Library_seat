@@ -29,7 +29,6 @@ Page({
     if (!this.data.hasMore) return;
 
     // 映射 Tab 到后端状态字段
-    // 假设后端接口: /api/app/store/order/list?status=...
     let status = '';
     switch(this.data.currentTab) {
       case 1: status = 'PENDING_PAY'; break;
@@ -40,17 +39,24 @@ Page({
 
     wx.showLoading({ title: '加载中' });
     
-    // 模拟数据请求
-    // 实际请替换为: request.get('/api/app/store/order/list', { status, page: this.data.page })
-    this.mockFetch(status).then(res => {
+    // 调用后端接口
+    request.get('/api/app/store/order/list', { status }).then(res => {
       wx.hideLoading();
-      const list = res.list.map(item => this.processItem(item));
-      
-      this.setData({
-        orderList: this.data.page === 1 ? list : this.data.orderList.concat(list),
-        hasMore: list.length >= 10, // 假设每页10条
-        page: this.data.page + 1
-      });
+      if (res.code === 200) {
+        const list = res.data.map(item => this.processItem(item));
+        
+        this.setData({
+          orderList: this.data.page === 1 ? list : this.data.orderList.concat(list),
+          hasMore: list.length >= 10, // 假设每页10条
+          page: this.data.page + 1
+        });
+      } else {
+        wx.showToast({ title: res.message || '加载失败', icon: 'none' });
+      }
+    }).catch(err => {
+      wx.hideLoading();
+      wx.showToast({ title: '网络异常', icon: 'none' });
+      console.error('获取订单列表失败:', err);
     });
   },
 
@@ -76,16 +82,54 @@ Page({
 
   // 模拟支付
   payOrder(e) {
-    const id = e.currentTarget.dataset.id;
+    const orderNo = e.currentTarget.dataset.id;
     wx.showModal({
       title: '支付确认',
       content: '模拟支付该订单？',
       success: (res) => {
         if (res.confirm) {
+          wx.showLoading({ title: '支付中...' });
           // 调用后端支付接口
-          request.post('/api/app/store/order/pay', { orderId: id }).then(res => {
-             wx.showToast({ title: '支付成功' });
-             this.onShow(); // 刷新列表
+          request.post('/api/app/store/order/pay', { orderNo }).then(res => {
+            wx.hideLoading();
+            if (res.code === 200) {
+              wx.showToast({ title: '支付成功' });
+              this.onShow(); // 刷新列表
+            } else {
+              wx.showToast({ title: res.message || '支付失败', icon: 'none' });
+            }
+          }).catch(err => {
+            wx.hideLoading();
+            wx.showToast({ title: '支付异常', icon: 'none' });
+            console.error('支付错误:', err);
+          });
+        }
+      }
+    });
+  },
+
+  // 取消订单
+  cancelOrder(e) {
+    const orderNo = e.currentTarget.dataset.id;
+    wx.showModal({
+      title: '取消确认',
+      content: '确定要取消该订单吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '取消中...' });
+          // 调用后端取消订单接口
+          request.post('/api/app/store/order/cancel', { orderNo }).then(res => {
+            wx.hideLoading();
+            if (res.code === 200) {
+              wx.showToast({ title: '订单已取消' });
+              this.onShow(); // 刷新列表
+            } else {
+              wx.showToast({ title: res.message || '取消失败', icon: 'none' });
+            }
+          }).catch(err => {
+            wx.hideLoading();
+            wx.showToast({ title: '取消异常', icon: 'none' });
+            console.error('取消订单错误:', err);
           });
         }
       }

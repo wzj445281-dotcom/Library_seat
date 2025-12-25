@@ -9,20 +9,28 @@ import java.util.Map;
 public interface OrderService extends IService<Order> {
 
     /**
-     * 管理端：获取订单列表 (含商品明细)
-     * @param status 订单状态 (ALL/PAID/READY/COMPLETED)
+     * 商家后台：查询订单列表
      */
     Map<String, Object> getAdminOrderList(String status);
 
     /**
-     * 管理端：更新订单状态
-     * @param orderId 订单ID
-     * @param nextStatus 下一个状态
+     * APP端：创建订单
+     */
+    String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType);
+
+    /**
+     * 通用：更新订单状态 (状态机流转)
      */
     void updateOrderStatus(Long orderId, String nextStatus);
 
     /**
-     * App端：创建订单 (模拟实现，为了闭环)
+     * [新增] 核心业务：关闭订单并恢复库存
+     * 场景：用户主动取消、支付超时自动取消
      */
-    String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType);
+    void closeOrderAndRestoreStock(Long orderId, String reason);
+
+    /**
+     * [新增] APP端：获取用户自己的订单列表
+     */
+    List<Order> getUserOrderList(Long userId, String status);
 }

@@ -2,15 +2,12 @@ package com.example.zhizuo.core.mq;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.zhizuo.core.entity.Order;
-import com.example.zhizuo.core.entity.Product;
 import com.example.zhizuo.core.service.OrderService;
-import com.example.zhizuo.core.service.ProductService;
 import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.io.IOException;
@@ -22,46 +19,35 @@ public class OrderMqConsumer {
     @Resource
     private OrderService orderService;
 
-    // 注意：如果有库存服务应注入库存服务，这里简化为 ProductService
-    @Resource
-    private ProductService productService;
-
     /**
-     * 监听死信队列 (order.release.queue)
+     * 监听死信队列（即超时后的订单消息）
      */
-    @RabbitListener(queues = "order.release.queue")
-    @Transactional(rollbackFor = Exception.class)
-    public void handleOrderTimeout(Message message, Channel channel) throws IOException {
+    @RabbitListener(queues = "zhizuo.order.dlx.queue")
+    public void onOrderTimeout(Message message, Channel channel) throws IOException {
         String orderNo = new String(message.getBody());
-        long deliveryTag = message.getMessageProperties().getDeliveryTag();
-
-        log.info("收到订单超时检查消息: {}", orderNo);
+        log.info("收到订单超时消息, 订单号: {}", orderNo);
 
         try {
+            // 查询订单状态
             Order order = orderService.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
 
-            // 如果订单存在 且 状态为 "PENDING" (待支付)
-            if (order != null && "PENDING".equals(order.getStatus())) {
-                log.info("订单 {} 超时未支付，执行取消操作", orderNo);
-
-                // 1. 更新订单状态为 CANCELLED
-                order.setStatus("CANCELLED");
-                orderService.updateById(order);
-
-                // 2. 恢复库存 (简单示例，真实场景需查询 OrderItem 循环恢复)
-                // List<OrderItem> items = ...
-                // for (OrderItem item : items) { ... productService.addStock(...) }
-                log.info("订单 {} 库存已释放(模拟)", orderNo);
-            } else {
-                log.info("订单 {} 状态为 {}，无需自动取消", orderNo, order == null ? "NULL" : order.getStatus());
+            if (order != null) {
+                // 如果订单还是 PENDING (未支付) 状态，则执行关闭
+                // 注意：如果你的业务逻辑是创建即PAID，这个逻辑可能永远不会触发，除非你把创建时的初始状态改为 PENDING
+                if ("PENDING".equals(order.getStatus()) || "PENDING_PAY".equals(order.getStatus())) {
+                    orderService.closeOrderAndRestoreStock(order.getId(), "支付超时系统自动关闭");
+                } else {
+                    log.info("订单 [{}] 状态为 {}, 无需超时处理", orderNo, order.getStatus());
+                }
             }
 
-            // 手动确认消息
-            channel.basicAck(deliveryTag, false);
+            // 手动确认消息已消费
+            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+
         } catch (Exception e) {
-            log.error("处理订单超时消息失败", e);
-            // 拒绝消息，不重回队列 (避免死循环)
-            channel.basicReject(deliveryTag, false);
+            log.error("处理超时订单失败", e);
+            // 拒绝消息，false表示不再放回队列（或者根据策略放回死信）
+            channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
         }
     }
 }
