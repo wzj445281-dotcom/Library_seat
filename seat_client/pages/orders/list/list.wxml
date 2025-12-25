@@ -2,14 +2,14 @@
     <!-- 顶部 Tab 栏 -->
     <view class="tabs">
         <view
-                class="tab-item {{activeTab === index ? 'active' : ''}}"
+                class="tab-item {{currentTab === index ? 'active' : ''}}"
                 wx:for="{{tabs}}"
-                wx:key="index"
+                wx:key="id"
                 bindtap="onTabClick"
                 data-index="{{index}}"
         >
-            {{item}}
-            <view class="tab-line" wx:if="{{activeTab === index}}"></view>
+            {{item.name}}
+            <view class="tab-line" wx:if="{{currentTab === index}}"></view>
         </view>
     </view>
 
@@ -20,7 +20,7 @@
         <view class="empty-state" wx:if="{{!loading && orders.length === 0}}">
             <image src="/assets/images/book-default.png" mode="aspectFit"></image>
             <text>您还没有咖啡订单哦</text>
-            <button class="btn-go-menu" bindtap="onOrderAgain">去喝一杯</button>
+            <button class="btn-go-menu" bindtap="onGoToMenu">去喝一杯</button>
         </view>
 
         <!-- 订单卡片 -->
@@ -28,7 +28,7 @@
                 class="order-card"
                 wx:for="{{orders}}"
                 wx:key="id"
-                bindtap="onViewDetail"
+                bindtap="goToDetail"
                 data-id="{{item.id}}"
         >
             <!-- 卡片头部：门店与状态 -->
@@ -37,13 +37,13 @@
                     <text class="store-name">瑞幸咖啡 (软件园店)</text>
                     <text class="order-tag">自提</text>
                 </view>
-                <view class="order-status {{item.statusColorClass}}">
+                <view class="order-status" style="color: {{item.statusColor}}">
                     {{item.statusText}}
                 </view>
             </view>
 
             <!-- 核心区域：取餐码 (仅待取餐状态显示) -->
-            <view class="pickup-section" wx:if="{{item.isReady}}">
+            <view class="pickup-section" wx:if="{{item.showPickupCode}}">
                 <view class="pickup-info">
                     <text class="label">取餐码</text>
                     <text class="code">{{item.pickupCode}}</text>
@@ -74,16 +74,17 @@
 
             <!-- 信息摘要 -->
             <view class="info-row">
-                <text class="time">{{item.createTimeFormatted}}</text>
+                <text class="time">{{item.createTime}}</text>
                 <view class="price-info">
-                    <text class="count">共 {{item.totalCount}} 件</text>
-                    <text class="price">¥{{item.totalAmount}}</text>
+                    <text class="count">共 {{item.goodsName ? (item.goodsDesc.includes('等') ? item.goodsDesc.split('等')[1].replace('件商品', '').trim() : '1') : '1'}} 件</text>
+                    <text class="price">¥{{item.realAmount}}</text>
                 </view>
             </view>
 
             <!-- 底部按钮区 -->
             <view class="card-footer">
                 <button class="btn-outline" catchtap="onOrderAgain">再来一单</button>
+                <button class="btn-outline btn-cancel" wx:if="{{item.status === 0 || item.status === 1}}" catchtap="cancelOrder" data-id="{{item.id}}">取消订单</button>
             </view>
         </view>
 

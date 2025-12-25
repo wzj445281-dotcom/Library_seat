@@ -1,36 +1,33 @@
 package com.example.zhizuo.core.service;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.zhizuo.core.entity.Order;
 
-import java.util.List;
-import java.util.Map;
-
+/**
+ * <p>
+ * 订单表 服务类
+ * </p>
+ */
 public interface OrderService extends IService<Order> {
 
     /**
-     * 商家后台：查询订单列表
+     * 分页查询订单（包含商品明细）
+     * 解决 MyBatis Plus 默认查询不带子表的问题
+     *
+     * @param page 分页参数
+     * @param queryWrapper 查询条件
+     * @return 带 items 的分页结果
      */
-    Map<String, Object> getAdminOrderList(String status);
+    IPage<Order> pageWithItems(Page<Order> page, Wrapper<Order> queryWrapper);
 
     /**
-     * APP端：创建订单
+     * 查询订单详情（包含商品明细）
+     *
+     * @param id 订单ID
+     * @return 带 items 的订单对象
      */
-    String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType);
-
-    /**
-     * 通用：更新订单状态 (状态机流转)
-     */
-    void updateOrderStatus(Long orderId, String nextStatus);
-
-    /**
-     * [新增] 核心业务：关闭订单并恢复库存
-     * 场景：用户主动取消、支付超时自动取消
-     */
-    void closeOrderAndRestoreStock(Long orderId, String reason);
-
-    /**
-     * [新增] APP端：获取用户自己的订单列表
-     */
-    List<Order> getUserOrderList(Long userId, String status);
+    Order getDetailWithItems(Long id);
 }

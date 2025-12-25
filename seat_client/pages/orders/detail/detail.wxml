@@ -19,6 +19,8 @@
             <view class="pickup-content">
                 <view class="pickup-code">{{order.pickupCode}}</view>
 
+                <!-- 修改开始：使用 canvas 替代 image -->
+                <!-- 注意：宽高必须与 JS 中设置的保持一致 (160px) -->
                 <view class="qr-code-box" bindtap="onShowQrCode">
                     <canvas
                             class="qr-canvas"
@@ -26,6 +28,8 @@
                             style="width: 160px; height: 160px;"
                     ></canvas>
                 </view>
+                <!-- 修改结束 -->
+
             </view>
             <view class="pickup-tip">请向店员出示取餐码取餐</view>
         </view>

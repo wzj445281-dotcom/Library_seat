@@ -1,92 +1,145 @@
 const OrderAPI = require('../../../api/order.js');
-// 如果你有真实的二维码库，请在这里引入
-// const QRCode = require('../../../utils/qrcode.js');
+// 引入二维码生成库
+const QRCode = require('../../../utils/QRCODE.js');
 
 Page({
     data: {
         order: null,
         loading: true,
         steps: [
-            { text: '已下单', time: '10:00', active: true },
-            { text: '制作中', time: '10:01', active: true },
+            { text: '已下单', time: '', active: false },
+            { text: '制作中', time: '', active: false },
             { text: '请取餐', time: '', active: false },
         ]
     },
 
     onLoad: function (options) {
         const orderId = options.id;
-        this.loadOrderDetail(orderId);
+        // 如果没有 ID，通常是测试，可以给一个默认值或报错
+        if(orderId) {
+            this.loadOrderDetail(orderId);
+        } else {
+            wx.showToast({ title: '订单参数错误', icon: 'none' });
+        }
     },
 
     loadOrderDetail: function (orderId) {
-        // 模拟数据
-        const mockOrder = {
-            id: orderId || 12345,
-            status: 2,
-            statusText: '待取餐',
-            pickupCode: '888',
-            storeName: '瑞幸咖啡 (软件园店)',
-            storeAddress: '高新区天府大道中段1号软件园D区大堂',
-            totalAmount: 32.00,
-            discountAmount: 12.00,
-            realAmount: 20.00,
-            createTime: '2023-10-27 10:00:00',
-            orderNo: 'LK231027888888',
-            items: [
-                {
-                    id: 1,
-                    productName: '生椰拿铁',
-                    productImage: '/assets/images/book-default.png',
-                    spec: '冰/不加糖/标准',
-                    price: 18.00,
-                    quantity: 1
-                },
-                {
-                    id: 2,
-                    productName: '厚乳拿铁',
-                    productImage: '/assets/images/book-default.png',
-                    spec: '热/半糖',
-                    price: 14.00,
-                    quantity: 1
-                }
-            ]
-        };
+        this.setData({ loading: true });
 
-        let steps = this.data.steps;
-        if (mockOrder.status === 2) {
-            steps[2].active = true;
-            steps[2].time = '10:05';
-        }
+        // 1. 调用真实接口
+        OrderAPI.getOrderDetail(orderId).then(res => {
+            // 注意：这里假设 res 是后端返回的完整数据对象
+            // 如果您的 request.js 封装里 res.data 才是数据，请改为 const data = res.data;
+            const backendData = res;
 
-        setTimeout(() => {
+            // 2. 数据适配 (Adapter Pattern)
+            // 将后端字段映射为前端 UI 所需的字段
+            const order = {
+                id: backendData.id,
+                status: backendData.status, // 假设 1:已下单, 2:待取餐, 3:已完成
+                statusText: this.getStatusText(backendData.status),
+                pickupCode: backendData.pickupCode || backendData.fetchCode || '---', // 兼容不同字段名
+                storeName: backendData.storeName || '瑞幸咖啡',
+                storeAddress: backendData.storeAddress || '',
+                totalAmount: backendData.totalAmount,
+                discountAmount: backendData.discountAmount || 0,
+                realAmount: backendData.realAmount || backendData.payAmount,
+                createTime: backendData.createTime,
+                orderNo: backendData.orderNo,
+                items: backendData.items || [] // 确保 items 是数组
+            };
+
+            // 3. 更新时间轴状态 (Timeline)
+            let steps = this.data.steps;
+
+            // 步骤1: 已下单 (总是激活)
+            steps[0].active = true;
+            steps[0].time = order.createTime ? order.createTime.split(' ')[1] : '';
+
+            // 步骤2: 制作中 (status >= 1)
+            if (order.status >= 1) {
+                steps[1].active = true;
+                // 如果后端没有制作时间，暂时用下单时间+1分钟模拟
+                steps[1].time = steps[0].time;
+            }
+
+            // 步骤3: 待取餐 (status == 2)
+            if (order.status === 2) {
+                steps[2].active = true;
+                steps[2].time = new Date().toTimeString().substring(0, 5); // 当前时间
+            }
+
+            // 4. 渲染数据
             this.setData({
-                order: mockOrder,
+                order: order,
                 steps: steps,
                 loading: false
             }, () => {
-                // 数据加载完成后，如果是待取餐状态，绘制二维码
-                if (mockOrder.status === 2) {
-                    this.drawQrCode(mockOrder.pickupCode);
+                // 如果是待取餐状态，绘制二维码
+                if (order.status === 2) {
+                    setTimeout(() => {
+                        this.drawQrCode(order.pickupCode);
+                    }, 200);
                 }
             });
-        }, 500);
+
+        }).catch(err => {
+            console.error('获取订单详情失败', err);
+            wx.hideLoading();
+            wx.showToast({
+                title: '加载失败，请重试',
+                icon: 'none'
+            });
+            // 出错时，为了不让页面空白，可以保留 loading 状态或显示错误页
+            this.setData({ loading: false });
+        });
+    },
+
+    // 辅助方法：状态文案映射
+    getStatusText: function(status) {
+        const map = {
+            0: '待支付',
+            1: '制作中',
+            2: '待取餐',
+            3: '已完成',
+            4: '已取消'
+        };
+        return map[status] || '未知状态';
     },
 
     drawQrCode: function (code) {
-        // 实际项目中调用 weapp-qrcode.js
-        // QRCode.draw(code, 'myQrcode', this);
-
-        // 这里暂时不做真实绘制，因为没有引入库文件
-        // 页面上使用 image 占位即可
-        console.log('Drawing QR Code for:', code);
+        if(!code) return;
+        console.log('开始绘制二维码, 内容:', code);
+        try {
+            new QRCode('myQrcode', {
+                text: String(code),
+                width: 160,
+                height: 160,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } catch (e) {
+            console.error('绘制二维码失败:', e);
+        }
     },
 
-    // 放大二维码
     onShowQrCode: function () {
-        wx.previewImage({
-            urls: ['/assets/images/seat-active.png'], // 替换为真实的二维码临时路径
-            current: '/assets/images/seat-active.png'
-        });
+        wx.canvasToTempFilePath({
+            canvasId: 'myQrcode',
+            success: (res) => {
+                wx.previewImage({
+                    urls: [res.tempFilePath],
+                    current: res.tempFilePath
+                });
+            },
+            fail: () => {
+                wx.previewImage({
+                    urls: ['/assets/images/seat-active.png'],
+                    current: '/assets/images/seat-active.png'
+                });
+            }
+        }, this);
     },
 
     onCallStore: function () {
@@ -96,8 +149,39 @@ Page({
     },
 
     onOrderAgain: function () {
-        wx.switchTab({
-            url: '/pages/menu/index',
-        });
+        const items = this.data.order.items;
+        if (!items || items.length === 0) return;
+
+        wx.showLoading({ title: '正在加入购物车' });
+
+        try {
+            let cart = wx.getStorageSync('cart') || [];
+            items.forEach(orderItem => {
+                const existingIndex = cart.findIndex(c => c.id === orderItem.id && c.spec === orderItem.spec);
+                if (existingIndex > -1) {
+                    cart[existingIndex].quantity += orderItem.quantity;
+                } else {
+                    cart.push({
+                        id: orderItem.id,
+                        name: orderItem.productName,
+                        productName: orderItem.productName,
+                        pic: orderItem.productImage,
+                        productImage: orderItem.productImage,
+                        spec: orderItem.spec,
+                        price: orderItem.price,
+                        quantity: orderItem.quantity,
+                        checked: true
+                    });
+                }
+            });
+            wx.setStorageSync('cart', cart);
+            setTimeout(() => {
+                wx.hideLoading();
+                wx.switchTab({ url: '/pages/menu/index' });
+            }, 500);
+        } catch (err) {
+            console.error(err);
+            wx.hideLoading();
+        }
     }
 });
