@@ -7,11 +7,11 @@ import java.math.BigDecimal;
 public class ServiceSlot {
     private Long id;
 
-    // 原本是 label/seatNumber
-    private String name;  // 例如："洗护位-01"
+    // 座位名称/标签
+    private String name;  // 例如："A-01"、"靠窗-01"
 
-    // 原本是 grid_x/y，现在改为类型
-    private String type;  // 枚举值：BATH, GROOM, MEDICAL
+    // 座位类型/区域
+    private String type;  // 枚举值：WINDOW(靠窗), QUIET(安静区), DISCUSSION(讨论区), REGULAR(普通区)
 
     private Integer status; // 1=可用, 0=维护中
 

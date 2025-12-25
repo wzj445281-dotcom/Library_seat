@@ -12,18 +12,14 @@ public class ServiceBooking {
 
     private Long userId;
 
-    // 原本是 seatId
-    private Long slotId;      // 预约的工位ID
-
-    // 新增宠物信息
-    private String petName;
-    private String petType;   // DOG, CAT
+    // 预约的座位ID
+    private Long slotId;      // 座位ID（对应seat表）
 
     // 时间字段
     private LocalDateTime appointmentTime; // 预约时间点
-    private Integer durationMinutes; // 预计耗时
+    private Integer durationMinutes; // 预计耗时（分钟）
 
-    private String status;    // PENDING, CONFIRMED
+    private String status;    // PENDING(待确认), RESERVED(已预约), CHECKED_IN(已签到), COMPLETED(已完成), CANCELLED(已取消)
 
     private BigDecimal totalPrice; // 订单金额
 
