@@ -9,6 +9,34 @@ Page({
   },
 
   onShow() {
+    // 检查登录状态
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      // 未登录，显示提示
+      this.setData({ 
+        page: 1, 
+        orderList: [],
+        currentTab: 0
+      });
+      wx.showModal({
+        title: '提示',
+        content: '查看订单需要登录，是否去登录？',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({
+              url: '/pages/login/login'
+            });
+          } else {
+            // 取消后返回上一页
+            wx.navigateBack();
+          }
+        }
+      });
+      return;
+    }
+    
     // 每次显示页面刷新数据
     this.setData({ page: 1, orderList: [] });
     this.fetchOrders();
@@ -40,7 +68,7 @@ Page({
     wx.showLoading({ title: '加载中' });
     
     // 调用后端接口
-    request.get('/api/app/store/order/list', { status }).then(res => {
+    request.get('/app/store/order/list', { status }).then(res => {
       wx.hideLoading();
       if (res.code === 200) {
         const list = res.data.map(item => this.processItem(item));
@@ -90,7 +118,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '支付中...' });
           // 调用后端支付接口
-          request.post('/api/app/store/order/pay', { orderNo }).then(res => {
+          request.post('/app/store/order/pay', { orderNo }).then(res => {
             wx.hideLoading();
             if (res.code === 200) {
               wx.showToast({ title: '支付成功' });
@@ -118,7 +146,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '取消中...' });
           // 调用后端取消订单接口
-          request.post('/api/app/store/order/cancel', { orderNo }).then(res => {
+          request.post('/app/store/order/cancel', { orderNo }).then(res => {
             wx.hideLoading();
             if (res.code === 200) {
               wx.showToast({ title: '订单已取消' });

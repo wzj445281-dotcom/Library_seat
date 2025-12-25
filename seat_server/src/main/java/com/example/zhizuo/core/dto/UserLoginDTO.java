@@ -15,7 +15,7 @@ public class UserLoginDTO {
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
-    @Schema(description = "验证码", example = "123456")
-    @NotBlank(message = "验证码不能为空")
-    private String code;
+    @Schema(description = "密码", example = "123456")
+    @NotBlank(message = "密码不能为空")
+    private String password;
 }

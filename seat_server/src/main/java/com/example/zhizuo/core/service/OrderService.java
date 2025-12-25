@@ -79,4 +79,12 @@ public interface OrderService extends IService<Order> {
      * @return 订单列表
      */
     List<Order> getUserOrderList(Long userId, String status);
+
+    /**
+     * 根据订单号查询订单
+     *
+     * @param orderNo 订单号
+     * @return 订单对象
+     */
+    Order getByOrderNo(String orderNo);
 }

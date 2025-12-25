@@ -12,7 +12,7 @@ module.exports = {
      * }
      */
     createOrder(data) {
-        return request.post('/api/app/store/order/create', data);
+        return request.post('/app/store/order/create', data);
     },
 
     /**
@@ -20,7 +20,7 @@ module.exports = {
      * @param {string} orderNo 订单号
      */
     getOrderDetail(orderNo) {
-        return request.get('/api/app/store/order/detail', { orderNo: orderNo });
+        return request.get('/app/store/order/detail', { orderNo: orderNo });
     },
 
     /**
@@ -28,6 +28,6 @@ module.exports = {
      * @param {string} status 状态筛选 (可选)
      */
     getOrderList(status) {
-        return request.get('/api/app/store/order/list', { status });
+        return request.get('/app/store/order/list', { status });
     }
 };

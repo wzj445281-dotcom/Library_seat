@@ -1,6 +1,6 @@
 <view class="container">
     <view class="header">
-        <image class="logo" src="/assets/images/seat-active.png" mode="aspectFit"></image>
+        <image class="logo" src="/assets/images/cart.png" mode="aspectFit"></image>
         <view class="title">瑞幸咖啡</view>
         <view class="subtitle">{{isRegister ? '欢迎注册' : '欢迎登录'}}</view>
     </view>
@@ -19,15 +19,9 @@
         </view>
 
         <view class="input-group">
-            <view class="label">验证码</view>
-            <view class="code-row">
-                <input class="input code-input" type="number" placeholder="请输入验证码" maxlength="6"
-                       value="{{code}}" bindinput="handleInput" data-field="code"/>
-                <button class="code-btn {{countdown > 0 ? 'disabled' : ''}}" 
-                        bindtap="sendCode" disabled="{{countdown > 0}}">
-                    {{codeText}}
-                </button>
-            </view>
+            <view class="label">密码</view>
+            <input class="input" type="password" placeholder="{{isRegister ? '请设置密码（至少6位）' : '请输入密码'}}"
+                   value="{{password}}" bindinput="handleInput" data-field="password"/>
         </view>
 
         <button class="btn-login" bindtap="{{isRegister ? 'handleRegister' : 'handleLogin'}}" 

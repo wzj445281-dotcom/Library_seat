@@ -5,13 +5,13 @@ module.exports = {
      * 获取用户信息
      */
     getUserInfo() {
-        return request.get('/api/app/user/info');
+        return request.get('/app/user/info');
     },
 
     /**
      * 获取信用日志
      */
     getCreditLogs() {
-        return request.get('/api/app/user/credit-logs');
+        return request.get('/app/user/credit-logs');
     }
 };

@@ -36,7 +36,41 @@
   <!-- 顶部搜索栏 -->
   <view class="header">
     <view class="search-bar">
-      <text>搜索您喜欢的商品</text>
+      <view class="search-input-wrapper">
+        <icon class="search-icon" type="search" size="16"></icon>
+        <input 
+          class="search-input" 
+          placeholder="搜索您喜欢的商品" 
+          value="{{searchKeyword}}"
+          bindinput="onSearchInput"
+          bindfocus="onSearchFocus"
+          bindblur="onSearchBlur"
+          confirm-type="search"
+          bindconfirm="onSearchConfirm"
+        />
+        <view class="search-clear" wx:if="{{searchKeyword}}" bindtap="clearSearch">
+          <icon type="clear" size="16"></icon>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 搜索历史 -->
+    <view class="search-history" wx:if="{{showSearchHistory && searchHistory.length > 0}}">
+      <view class="history-header">
+        <text class="history-title">搜索历史</text>
+        <text class="history-clear" bindtap="clearSearchHistory">清除</text>
+      </view>
+      <view class="history-tags">
+        <view 
+          class="history-tag" 
+          wx:for="{{searchHistory}}" 
+          wx:key="*this"
+          bindtap="selectHistory"
+          data-keyword="{{item}}"
+        >
+          {{item}}
+        </view>
+      </view>
     </view>
   </view>
 

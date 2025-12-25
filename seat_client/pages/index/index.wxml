@@ -39,12 +39,12 @@
     <!-- 点单按钮 -->
     <view class="action-area">
       <view class="order-btn ziqu" bindtap="navigateToMenu" data-type="self">
-        <image class="icon" src="/assets/images/coffee-cup.png" mode="aspectFit"></image> <!-- 需确保图片存在，这里用逻辑占位 -->
+        <image class="icon" src="/assets/images/cart.png" mode="aspectFit"></image>
         <text class="btn-title">到店取</text>
         <text class="btn-desc">提前点单 免排队</text>
       </view>
       <view class="order-btn waimai" bindtap="navigateToMenu" data-type="delivery">
-        <image class="icon" src="/assets/images/delivery-bike.png" mode="aspectFit"></image> <!-- 需确保图片存在，这里用逻辑占位 -->
+        <image class="icon" src="/assets/images/cart.png" mode="aspectFit"></image>
         <text class="btn-title">外卖配送</text>
         <text class="btn-desc">无接触 放心送</text>
       </view>

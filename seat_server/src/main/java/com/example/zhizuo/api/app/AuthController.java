@@ -67,18 +67,10 @@ public class AuthController {
         return ApiResponse.success("验证码已发送（开发模式：验证码为 " + code + "）");
     }
 
-    @Operation(summary = "用户登录（手机号+验证码）")
+    @Operation(summary = "用户登录（手机号+密码）")
     @PostMapping("/login")
     public ApiResponse<Map<String, String>> login(@RequestBody @Validated UserLoginDTO loginDTO) {
-        // 1. 验证验证码
-        String key = "sms:code:" + loginDTO.getPhone();
-        String storedCode = redisTemplate.opsForValue().get(key);
-        
-        if (storedCode == null || !storedCode.equals(loginDTO.getCode())) {
-            return ApiResponse.error(401, "验证码错误或已过期");
-        }
-
-        // 2. 查找用户（通过手机号）
+        // 1. 查找用户（通过手机号）
         QueryWrapper<User> query = new QueryWrapper<>();
         query.eq("phone", loginDTO.getPhone());
         User user = userMapper.selectOne(query);
@@ -87,11 +79,13 @@ public class AuthController {
             return ApiResponse.error(404, "用户不存在，请先注册");
         }
 
+        // 2. 验证密码
+        if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+            return ApiResponse.error(401, "密码错误");
+        }
+
         // 3. 生成Token（使用手机号作为标识）
         String token = jwtUtil.generateToken(loginDTO.getPhone());
-
-        // 4. 删除已使用的验证码
-        redisTemplate.delete(key);
 
         Map<String, String> result = new HashMap<>();
         result.put("token", token);
@@ -102,23 +96,20 @@ public class AuthController {
         return ApiResponse.success(result);
     }
 
-    @Operation(summary = "用户注册（手机号+姓名+验证码）")
+    @Operation(summary = "用户注册（手机号+姓名+密码）")
     @PostMapping("/register")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<String> register(@RequestBody @Validated UserRegisterDTO registerDTO) {
-        // 1. 验证验证码
-        String key = "sms:code:" + registerDTO.getPhone();
-        String storedCode = redisTemplate.opsForValue().get(key);
-        
-        if (storedCode == null || !storedCode.equals(registerDTO.getCode())) {
-            return ApiResponse.error(401, "验证码错误或已过期");
-        }
-
-        // 2. 检查手机号是否已注册
+        // 1. 检查手机号是否已注册
         QueryWrapper<User> query = new QueryWrapper<>();
         query.eq("phone", registerDTO.getPhone());
         if (userMapper.selectCount(query) > 0) {
             return ApiResponse.error(400, "该手机号已注册");
+        }
+
+        // 2. 验证密码长度
+        if (registerDTO.getPassword().length() < 6) {
+            return ApiResponse.error(400, "密码至少6位");
         }
 
         // 3. 创建用户
@@ -126,7 +117,7 @@ public class AuthController {
         user.setPhone(registerDTO.getPhone());
         user.setName(registerDTO.getName());
         user.setUsername(registerDTO.getPhone()); // 使用手机号作为用户名
-        user.setPassword(passwordEncoder.encode(registerDTO.getPhone())); // 默认密码为手机号（可后续修改）
+        user.setPassword(passwordEncoder.encode(registerDTO.getPassword())); // 加密存储密码
         user.setCreditScore(100);
         user.setPoints(100);
         userMapper.insert(user);
@@ -139,9 +130,6 @@ public class AuthController {
         log.setReason("新用户注册奖励");
         log.setCreateTime(LocalDateTime.now());
         creditLogMapper.insert(log);
-
-        // 5. 删除已使用的验证码
-        redisTemplate.delete(key);
 
         return ApiResponse.success("注册成功");
     }

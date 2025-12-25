@@ -14,7 +14,7 @@ Page({
 
         this.setData({ loading: true });
 
-        request.post('/api/app/feedback/submit', {
+        request.post('/app/feedback/submit', {
             content: this.data.content,
             contact: this.data.contact
         }).then(res => {

@@ -16,6 +16,7 @@ import com.example.zhizuo.core.mapper.ProductMapper;
 import com.example.zhizuo.mapper.UserCouponMapper;
 import com.example.zhizuo.core.service.OrderService;
 import com.example.zhizuo.core.service.OrderSettlementService;
+import com.example.zhizuo.api.websocket.OrderWebSocketEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -118,6 +119,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (order != null) {
             order.setStatus(status);
             this.updateById(order);
+            
+            // 推送 WebSocket 消息（直接调用静态方法，避免循环依赖）
+            OrderWebSocketEndpoint.pushOrderStatus(order.getOrderNo(), status);
         }
     }
 
@@ -233,5 +237,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 .eq(Order::getUserId, userId)
                 .eq(status != null, Order::getStatus, status)
                 .orderByDesc(Order::getCreateTime));
+    }
+
+    @Override
+    public Order getByOrderNo(String orderNo) {
+        return this.getOne(Wrappers.<Order>lambdaQuery()
+                .eq(Order::getOrderNo, orderNo));
     }
 }

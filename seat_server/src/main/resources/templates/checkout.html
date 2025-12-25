@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结算 - 瑞幸咖啡</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <style>
+        .checkout-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .cart-items {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+        .item-info {
+            flex: 1;
+        }
+        .item-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .item-price {
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        .item-quantity {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .summary {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+        .summary-total {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+            border-top: 2px solid #eee;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/" class="navbar-brand">☕ 瑞幸咖啡</a>
+        <ul class="navbar-nav">
+            <li><a href="/">首页</a></li>
+            <li><a href="/menu">点餐</a></li>
+            <li><a href="/orders">订单</a></li>
+            <li><a href="/mine">我的</a></li>
+        </ul>
+    </div>
+
+    <div class="checkout-container">
+        <h2 style="margin-bottom: 20px;">结算</h2>
+        
+        <div class="cart-items" id="cartItems">
+            <div class="loading">加载中...</div>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-row">
+                <span>商品总价</span>
+                <span>¥<span id="subtotal">0.00</span></span>
+            </div>
+            <div class="summary-row">
+                <span>优惠</span>
+                <span>-¥0.00</span>
+            </div>
+            <div class="summary-row summary-total">
+                <span>实付</span>
+                <span>¥<span id="total">0.00</span></span>
+            </div>
+        </div>
+        
+        <button class="btn btn-primary btn-block" onclick="submitOrder()">提交订单</button>
+    </div>
+
+    <script th:src="@{/js/api.js}"></script>
+    <script>
+        let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                container.innerHTML = '<div class="loading">购物车为空，<a href="/menu">去点餐</a></div>';
+                return;
+            }
+            
+            container.innerHTML = cart.map((item, index) => `
+                <div class="cart-item">
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-price">¥${item.price}</div>
+                    </div>
+                    <div class="item-quantity">
+                        <button class="quantity-btn" onclick="changeQuantity(${index}, -1)">-</button>
+                        <span>${item.quantity}</span>
+                        <button class="quantity-btn" onclick="changeQuantity(${index}, 1)">+</button>
+                    </div>
+                    <div style="width: 80px; text-align: right;">
+                        ¥${(item.price * item.quantity).toFixed(2)}
+                    </div>
+                </div>
+            `).join('');
+            
+            updateSummary();
+        }
+        
+        function changeQuantity(index, delta) {
+            cart[index].quantity += delta;
+            if (cart[index].quantity <= 0) {
+                cart.splice(index, 1);
+            }
+            localStorage.setItem('cart', JSON.stringify(cart));
+            renderCart();
+        }
+        
+        function updateSummary() {
+            const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+            document.getElementById('total').textContent = subtotal.toFixed(2);
+        }
+        
+        function submitOrder() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                if (confirm('请先登录')) {
+                    window.location.href = '/login';
+                }
+                return;
+            }
+            
+            if (cart.length === 0) {
+                alert('购物车为空');
+                return;
+            }
+            
+            const items = cart.map(item => ({
+                productId: item.id,
+                count: item.quantity
+            }));
+            
+            api.post('/app/store/order/create', {
+                items: items,
+                deliveryType: 0, // 0=到店取
+                addressInfo: '',
+                remark: ''
+            }).then(res => {
+                if (res.code === 200) {
+                    alert('订单提交成功！');
+                    localStorage.removeItem('cart');
+                    window.location.href = '/orders';
+                }
+            });
+        }
+        
+        renderCart();
+    </script>
+</body>
+</html>
+

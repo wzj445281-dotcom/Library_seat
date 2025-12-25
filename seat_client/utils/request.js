@@ -1,10 +1,8 @@
-// 基础URL，开发环境通常指向本地，上线后替换为真实域名
-// 【本地开发】后端默认端口是8080，所以用 http://localhost:8080/api
-// 【真机调试】必须使用局域网IP，不能用localhost (如 http://192.168.1.5:8080/api)
-//   获取本机IP：Windows用 ipconfig，Mac/Linux用 ifconfig，找到 IPv4 地址
-//   修改下面的 BASE_URL 为你的局域网IP，例如：http://192.168.1.5:8080/api
-// 【Docker部署】后端端口映射为8081，用 http://你的IP:8081/api
-const BASE_URL = 'http://localhost:8080/api';
+// 基础URL - 完全本地运行，无需外部网络
+// 【本地开发】使用localhost，通过微信开发者工具代理访问
+// 微信开发者工具会自动代理localhost请求到本地后端
+// 配置：详情 → 本地设置 → 勾选"不校验合法域名"
+const BASE_URL = 'http://localhost:8080/api';  // 本地运行，无需网络
 
 const request = (url, method, data) => {
     return new Promise((resolve, reject) => {
@@ -71,9 +69,11 @@ const request = (url, method, data) => {
                 }
             },
             fail(err) {
+                console.error('网络请求失败:', err);
                 wx.showToast({
-                    title: '网络连接失败',
-                    icon: 'none'
+                    title: '网络连接失败: ' + (err.errMsg || '请检查网络'),
+                    icon: 'none',
+                    duration: 3000
                 });
                 reject(err);
             }

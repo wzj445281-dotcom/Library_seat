@@ -28,9 +28,15 @@ public class SecurityConfig {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 前后端分离通常无状态
                 .and()
                 .authorizeRequests()
+                // 放行静态资源：HTML页面、API文档、静态文件
+                .antMatchers("/**/*.html", "/doc.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**", "/static/**").permitAll()
+                // 放行 WebSocket 连接
+                .antMatchers("/ws/**", "/app/**", "/topic/**", "/queue/**").permitAll()
+                // 放行所有API接口（开发阶段，生产环境需要更严格的配置）
+                .antMatchers("/api/**").permitAll()
                 // 放行白名单：登录、商品流、AI接口
                 .antMatchers("/api/app/auth/**", "/api/app/product/**", "/api/app/ai/**").permitAll()
-                .anyRequest().authenticated();
+                .anyRequest().permitAll(); // 开发阶段全部放行，生产环境改为 authenticated()
 
         // http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class); // 确保 JWT 过滤器生效
 

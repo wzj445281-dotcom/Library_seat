@@ -31,7 +31,7 @@ Page({
 
   // 1. 获取可领取的优惠券 
   fetchAvailableCoupons() { 
-    request.get('/api/app/coupon/list').then(res => { 
+    request.get('/app/coupon/list').then(res => { 
       if (res.code === 200) { 
         this.setData({ 
           availableCoupons: res.data, 
@@ -43,7 +43,7 @@ Page({
 
   // 2. 获取我的优惠券 
   fetchMyCoupons() { 
-    request.get('/api/app/coupon/my').then(res => { 
+    request.get('/app/coupon/my').then(res => { 
       if (res.code === 200) { 
         this.setData({ 
           myCoupons: res.data, 

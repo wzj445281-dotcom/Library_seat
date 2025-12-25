@@ -1,14 +1,15 @@
 const app = getApp();
 const productApi = require('../../api/product.js'); // 引入API
 
-// 假设你封装了 request 工具，如果没有，稍后可以用 wx.request 替换
-const { request } = require('../../utils/request');
+// 使用带缓存的请求工具，降低延迟
+const { request } = require('../../utils/request-cached');
 
 Page({
   data: {
     loading: true,
     categories: [],
     products: [],
+    allProducts: [], // 保存所有商品数据，用于搜索过滤
     activeCategory: 0,
     scrollIntoView: '',
 
@@ -31,6 +32,12 @@ Page({
     
     // --- 收藏相关 ---
     favoriteMap: {}, // 用对象存储收藏状态，key为productId，value为true，O(1)查找
+    
+    // --- 搜索相关 ---
+    searchKeyword: '', // 搜索关键词
+    showSearchHistory: false, // 是否显示搜索历史
+    searchHistory: [], // 搜索历史记录
+    isSearching: false, // 是否在搜索状态
   },
 
   cartPos: { x: 40, y: 0 },
@@ -41,23 +48,20 @@ Page({
   },
 
   onShow() {
-    // 检查登录状态
+    // 检查登录状态（不再强制跳转，允许未登录浏览）
     const token = wx.getStorageSync('token');
-    if (!token) {
-      // 未登录，跳转到登录页
-      wx.redirectTo({
-        url: '/pages/login/login'
-      });
-      return;
-    }
-
+    
     this.checkStoreAndLoadData();
     this.updateCartFromStorage(); // 每次显示页面时同步购物车状态
     
     // 每次显示页面时，刷新收藏状态（保证从详情页返回时状态同步）
+    // 只有登录状态下才加载收藏
     if (token) {
       this.fetchFavoriteIds();
     }
+    
+    // 加载搜索历史
+    this.loadSearchHistory();
   },
 
   onReady() {
@@ -142,9 +146,22 @@ Page({
     const products = Object.values(categoryMap).sort((a, b) => a.id - b.id);
     const categories = products.map(cat => cat.name);
 
+    // 保存所有商品数据（扁平化）用于搜索
+    const allProducts = [];
+    products.forEach(cat => {
+      cat.items.forEach(item => {
+        allProducts.push({
+          ...item,
+          categoryId: cat.id,
+          categoryName: cat.name
+        });
+      });
+    });
+
     this.setData({
       categories,
-      products
+      products,
+      allProducts // 保存所有商品用于搜索
     });
   },
 
@@ -171,9 +188,22 @@ Page({
       });
     });
 
+    // 保存所有商品数据（扁平化）用于搜索
+    const allProducts = [];
+    products.forEach(cat => {
+      cat.items.forEach(item => {
+        allProducts.push({
+          ...item,
+          categoryId: cat.id,
+          categoryName: cat.name
+        });
+      });
+    });
+
     this.setData({
       categories,
-      products
+      products,
+      allProducts // 保存所有商品用于搜索
     });
   },
 
@@ -283,7 +313,7 @@ Page({
    * 接口: GET /api/app/favorite/ids
    */
   fetchFavoriteIds() {
-    request.get('/api/app/favorite/ids').then(res => {
+    request.get('/app/favorite/ids').then(res => {
       if (res.code === 200) {
         // 将数组转换为 Map 结构 {101: true, 102: true}，方便 WXML 判断
         const map = {};
@@ -321,7 +351,7 @@ Page({
     });
 
     // 发送请求
-    request.post('/api/app/favorite/toggle', { productId: id }).then(res => {
+    request.post('/app/favorite/toggle', { productId: id }).then(res => {
       if (res.code !== 200) {
         // 如果失败，回滚状态
         this.setData({ [key]: isFavorite });
@@ -330,6 +360,201 @@ Page({
     }).catch(() => {
       // 网络错误回滚
       this.setData({ [key]: isFavorite });
+    });
+  },
+
+  // ========== 搜索相关方法 ==========
+  
+  /**
+   * 加载搜索历史
+   */
+  loadSearchHistory() {
+    const history = wx.getStorageSync('searchHistory') || [];
+    this.setData({
+      searchHistory: history.slice(0, 10) // 最多显示10条
+    });
+  },
+
+  /**
+   * 保存搜索历史
+   */
+  saveSearchHistory(keyword) {
+    if (!keyword || keyword.trim() === '') return;
+    
+    let history = wx.getStorageSync('searchHistory') || [];
+    // 移除重复项
+    history = history.filter(item => item !== keyword);
+    // 添加到开头
+    history.unshift(keyword);
+    // 最多保存20条
+    history = history.slice(0, 20);
+    
+    wx.setStorageSync('searchHistory', history);
+    this.setData({
+      searchHistory: history.slice(0, 10)
+    });
+  },
+
+  /**
+   * 搜索输入
+   */
+  onSearchInput(e) {
+    const keyword = e.detail.value;
+    this.setData({
+      searchKeyword: keyword
+    });
+    
+    // 实时搜索
+    if (keyword.trim()) {
+      this.performSearch(keyword);
+    } else {
+      // 清空搜索，恢复原始数据
+      this.clearSearch();
+    }
+  },
+
+  /**
+   * 搜索框获得焦点
+   */
+  onSearchFocus() {
+    this.setData({
+      showSearchHistory: true
+    });
+  },
+
+  /**
+   * 搜索框失去焦点
+   */
+  onSearchBlur() {
+    // 延迟隐藏，让点击历史记录有时间执行
+    setTimeout(() => {
+      this.setData({
+        showSearchHistory: false
+      });
+    }, 200);
+  },
+
+  /**
+   * 搜索确认（点击搜索按钮或回车）
+   */
+  onSearchConfirm(e) {
+    const keyword = e.detail.value || this.data.searchKeyword;
+    if (keyword && keyword.trim()) {
+      this.performSearch(keyword.trim());
+      this.saveSearchHistory(keyword.trim());
+      this.setData({
+        showSearchHistory: false
+      });
+    }
+  },
+
+  /**
+   * 执行搜索
+   */
+  performSearch(keyword) {
+    if (!keyword || keyword.trim() === '') {
+      this.clearSearch();
+      return;
+    }
+
+    const { allProducts } = this.data;
+    if (!allProducts || allProducts.length === 0) {
+      wx.showToast({
+        title: '暂无商品数据',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 搜索过滤：匹配商品名称或描述
+    const keywordLower = keyword.toLowerCase();
+    const filteredProducts = allProducts.filter(product => {
+      const name = (product.name || '').toLowerCase();
+      const desc = (product.desc || '').toLowerCase();
+      return name.includes(keywordLower) || desc.includes(keywordLower);
+    });
+
+    // 按分类分组
+    const categoryMap = {};
+    filteredProducts.forEach(product => {
+      const categoryId = product.categoryId || 0;
+      const categoryName = product.categoryName || '搜索结果';
+      
+      if (!categoryMap[categoryId]) {
+        categoryMap[categoryId] = {
+          id: categoryId,
+          name: categoryName,
+          items: []
+        };
+      }
+      
+      categoryMap[categoryId].items.push(product);
+    });
+
+    const products = Object.values(categoryMap);
+    const categories = products.map(cat => cat.name);
+
+    this.setData({
+      products,
+      categories,
+      activeCategory: 0,
+      isSearching: true,
+      scrollIntoView: ''
+    });
+
+    if (filteredProducts.length === 0) {
+      wx.showToast({
+        title: '未找到相关商品',
+        icon: 'none'
+      });
+    }
+  },
+
+  /**
+   * 清空搜索
+   */
+  clearSearch() {
+    // 恢复原始数据
+    this.loadMenuData(this.data.currentStoreId || 1);
+    this.setData({
+      searchKeyword: '',
+      isSearching: false,
+      showSearchHistory: false
+    });
+  },
+
+  /**
+   * 选择搜索历史
+   */
+  selectHistory(e) {
+    const keyword = e.currentTarget.dataset.keyword;
+    this.setData({
+      searchKeyword: keyword,
+      showSearchHistory: false
+    });
+    this.performSearch(keyword);
+    this.saveSearchHistory(keyword);
+  },
+
+  /**
+   * 清除搜索历史
+   */
+  clearSearchHistory() {
+    wx.showModal({
+      title: '提示',
+      content: '确定要清除所有搜索历史吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.removeStorageSync('searchHistory');
+          this.setData({
+            searchHistory: []
+          });
+          wx.showToast({
+            title: '已清除',
+            icon: 'success'
+          });
+        }
+      }
     });
   }
 });

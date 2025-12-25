@@ -1236,7 +1236,4 @@ QRBitBuffer.prototype = {
     }
 };
 
-export {
-    QRCode,
-    QRErrorCorrectLevel
-}
+module.exports = { QRCode: QRCode, QRErrorCorrectLevel: QRErrorCorrectLevel };

@@ -200,6 +200,25 @@ Page({
   submitOrder() {
     if (this.data.isSubmitting) return;
 
+    // 0. 检查登录状态
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.showModal({
+        title: '提示',
+        content: '请先登录后再下单',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({
+              url: '/pages/login/login'
+            });
+          }
+        }
+      });
+      return;
+    }
+
     // 1. 基础校验
     if (this.data.totalCount === 0) {
       wx.showToast({ title: '请先选择商品', icon: 'none' });

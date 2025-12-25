@@ -3,6 +3,7 @@ const OrderAPI = require('../../../api/order.js');
 const QRCode = require('../../../utils/qrcode.js');
 const app = getApp();
 const { request } = require('../../utils/request');
+const wsManager = require('../../../utils/websocket.js');
 
 Page({
     data: {
@@ -28,9 +29,16 @@ Page({
             if (app.globalData.token) {
                 this.fetchFavoriteIds();
             }
+            // 连接 WebSocket 接收订单状态更新
+            this.connectWebSocket(orderNo);
         } else {
             wx.showToast({ title: '订单参数错误', icon: 'none' });
         }
+    },
+
+    onUnload: function() {
+        // 页面卸载时关闭 WebSocket 连接
+        wsManager.close();
     },
 
     /**
@@ -258,10 +266,7 @@ Page({
      * 接口: GET /api/app/favorite/ids
      */
     fetchFavoriteIds() {
-        request({
-            url: '/api/app/favorite/ids',
-            method: 'GET'
-        }).then(res => {
+        request.get('/app/favorite/ids').then(res => {
             if (res.code === 200) {
                 // 将数组转换为 Map 结构 {101: true, 102: true}，方便 WXML 判断
                 const map = {};
@@ -299,11 +304,7 @@ Page({
         });
 
         // 发送请求
-        request({
-            url: '/api/app/favorite/toggle',
-            method: 'POST',
-            data: { productId: id }
-        }).then(res => {
+        request.post('/app/favorite/toggle', { productId: id }).then(res => {
             if (res.code !== 200) {
                 // 如果失败，回滚状态
                 this.setData({ [key]: isFavorite });
@@ -313,5 +314,49 @@ Page({
             // 网络错误回滚
             this.setData({ [key]: isFavorite });
         });
+    },
+
+    /**
+     * 连接 WebSocket 接收订单状态更新
+     */
+    connectWebSocket(orderNo) {
+        wsManager.connect(
+            orderNo,
+            (data) => {
+                // 收到订单状态更新消息
+                if (data.type === 'ORDER_STATUS_UPDATE' && data.orderNo === orderNo) {
+                    console.log('收到订单状态更新:', data);
+                    // 更新订单状态
+                    const order = this.data.order;
+                    order.status = data.status;
+                    order.statusText = this.getStatusText(data.status);
+                    
+                    // 更新时间轴
+                    const steps = this.updateSteps(order);
+                    
+                    this.setData({
+                        order: order,
+                        steps: steps
+                    });
+
+                    // 如果状态变为待取餐，绘制二维码
+                    if ((data.status === 'READY' || data.status === 'WAIT_PICKUP') && order.pickupCode) {
+                        this.drawQrCode(order.pickupCode);
+                    }
+
+                    // 显示提示
+                    wx.showToast({
+                        title: '订单状态已更新',
+                        icon: 'success',
+                        duration: 2000
+                    });
+                }
+            },
+            (err) => {
+                console.error('WebSocket 连接错误:', err);
+                // 连接失败不显示错误，避免打扰用户
+                // 可以在这里实现重连逻辑
+            }
+        );
     }
 });
