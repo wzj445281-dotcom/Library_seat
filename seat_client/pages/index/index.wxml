@@ -1,63 +1,52 @@
 <view class="container">
-  <!-- 顶部状态图例 -->
-  <view class="legend-area">
-    <view class="legend-item">
-      <view class="dot available"></view>
-      <text>空闲</text>
+  <!-- 顶部轮播图 -->
+  <swiper class="banner-swiper" indicator-dots="true" autoplay="true" interval="4000" circular="true" indicator-active-color="#fff">
+    <swiper-item>
+      <view class="banner-item bg-blue">
+        <text class="banner-text">生酪拿铁</text>
+        <text class="banner-sub">年度重磅回归</text>
+      </view>
+    </swiper-item>
+    <swiper-item>
+      <view class="banner-item bg-orange">
+        <text class="banner-text">新客首杯 9.9</text>
+        <text class="banner-sub">不限品类任选</text>
+      </view>
+    </swiper-item>
+  </swiper>
+
+  <!-- 核心入口：到店取/外卖送 -->
+  <view class="order-entry-card">
+    <view class="entry-item border-right" bindtap="goToMenu" data-type="1">
+      <view class="entry-title">到店取</view>
+      <view class="entry-desc">提前下单 不排队</view>
+      <image class="entry-icon" src="/assets/images/book-default.png" mode="aspectFit"></image> <!-- 暂用现有图标 -->
     </view>
-    <view class="legend-item">
-      <view class="dot occupied"></view>
-      <text>占用</text>
-    </view>
-    <view class="legend-item">
-      <view class="dot selected"></view>
-      <text>已选</text>
+    <view class="entry-item" bindtap="goToMenu" data-type="2">
+      <view class="entry-title">幸运送</view>
+      <view class="entry-desc">外卖到家 美味直达</view>
+      <image class="entry-icon" src="/assets/images/cart.png" mode="aspectFit"></image> <!-- 暂用现有图标 -->
     </view>
   </view>
 
-  <!-- 座位地图区域 (可滚动) -->
-  <scroll-view scroll-y scroll-x class="map-container">
-    <view class="seat-grid">
-      <block wx:for="{{seats}}" wx:key="id">
-        <!--
-          grid-column/row: 控制网格位置
-          data-index: 用于点击事件获取当前点击的是第几个座位
-        -->
-        <view
-                class="seat-item {{item.status == 0 ? 'maintenance' : ''}} {{item.id === selectedSeat.id ? 'selected' : ''}}"
-                style="grid-column: {{item.gridX}}; grid-row: {{item.gridY}};"
-                bindtap="handleSeatClick"
-                data-index="{{index}}"
-        >
-          {{item.label}}
-        </view>
-      </block>
+  <!-- 会员营销 Banner -->
+  <view class="member-card" bindtap="goToMine">
+    <view class="member-left">
+      <view class="member-title">瑞幸会员</view>
+      <view class="member-desc">积攒幸运豆，兑换好礼</view>
     </view>
-  </scroll-view>
-          <view
-                  class="seat-item {{item.status == 0 ? 'maintenance' : ''}} {{item.id === selectedSeat.id ? 'selected' : ''}}"
-                  style="grid-column: {{item.gridX}}; grid-row: {{item.gridY}};"
-                  bindtap="handleSeatClick"
-                  data-index="{{index}}"
-          >
-            <!-- 原有座位号 -->
-            <text>{{item.label}}</text>
-
-            <!-- 新增：热度火苗 (绝对定位在右上角) -->
-            <view wx:if="{{item.heatScore >= 90}}" class="fire-icon">🔥</view>
-          </view>
-  <view class="ai-recommend-btn" bindtap="handleSmartRecommend">
-    🤖 智能推荐
+    <view class="member-btn">去查看</view>
   </view>
-  <!-- 底部操作栏 -->
-  <view class="footer-bar" wx:if="{{selectedSeat}}">
-    <view class="seat-info">
-      <text class="label">已选座位：</text>
-      <text class="value">{{selectedSeat.label}}</text>
+
+  <!-- 推荐商品流 (简化版) -->
+  <view class="recommend-section">
+    <view class="section-title">猜你喜欢</view>
+    <view class="recommend-list">
+      <view class="rec-item" wx:for="{{recommends}}" wx:key="id" bindtap="goToMenu">
+        <image class="rec-img" src="{{item.image || '/assets/images/book-default.png'}}"></image>
+        <view class="rec-name">{{item.name}}</view>
+        <view class="rec-price">¥{{item.price}}</view>
+      </view>
     </view>
-    <view class="time-info">
-      <text>预约时长：2小时 (默认)</text>
-    </view>
-    <button class="btn-submit" bindtap="handleSubmit">立即预约</button>
   </view>
 </view>

@@ -1,4 +1,4 @@
-package com.example.zhizuo.core.service.impl;
+package com.example.zhizuo.core.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.zhizuo.core.entity.User;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 
-@Service
+@Service("customUserDetailsService")
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserMapper userMapper;

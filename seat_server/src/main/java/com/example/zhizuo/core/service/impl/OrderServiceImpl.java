@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,7 +57,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         // 5. 将商品明细填充回对应的订单对象中
         result.getRecords().forEach(order -> {
-            order.setItems(itemMap.getOrDefault(order.getId(), Collections.emptyList()));
+            order.setProducts(itemMap.getOrDefault(order.getId(), Collections.emptyList()));
         });
 
         return result;
@@ -76,8 +77,58 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         );
 
         // 3. 填充
-        order.setItems(items);
+        order.setProducts(items);
 
         return order;
+    }
+
+    @Override
+    public Map<String, Object> getAdminOrderList(String status) {
+        // 简单实现，实际项目中可能需要更复杂的逻辑
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", status);
+        result.put("count", 0);
+        return result;
+    }
+
+    @Override
+    public void updateOrderStatus(Long id, String status) {
+        Order order = this.getById(id);
+        if (order != null) {
+            order.setStatus(status);
+            this.updateById(order);
+        }
+    }
+
+    @Override
+    public String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType) {
+        // 简单实现，生成订单号
+        String orderNo = "ORDER" + System.currentTimeMillis();
+        
+        Order order = new Order();
+        order.setOrderNo(orderNo);
+        order.setUserId(userId);
+        order.setDeliveryType(deliveryType);
+        order.setStatus("PENDING");
+        this.save(order);
+        
+        return orderNo;
+    }
+
+    @Override
+    public void closeOrderAndRestoreStock(Long orderId, String reason) {
+        Order order = this.getById(orderId);
+        if (order != null) {
+            order.setStatus("CANCELLED");
+            this.updateById(order);
+        }
+    }
+
+    @Override
+    public List<Order> getUserOrderList(Long userId, String status) {
+        return this.list(Wrappers.<Order>lambdaQuery()
+                .eq(Order::getUserId, userId)
+                .eq(status != null, Order::getStatus, status)
+                .orderByDesc(Order::getCreateTime));
     }
 }

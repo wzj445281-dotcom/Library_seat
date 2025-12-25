@@ -4,71 +4,86 @@ Page({
   data: {
     orderType: 1, // 1:自取, 2:外卖
     cartItems: [],
+    itemTotal: '0.00', // 商品原价
     totalCount: 0,
-    totalPrice: '0.00',
+    totalPrice: '0.00', // 最终支付价
+    discountAmount: '0.00',
     address: '',
-    phone: ''
+    phone: '',
+
+    // 优惠券数据
+    coupons: [
+      { id: 101, name: '☕️ 新人首单立减', amount: 5 },
+      { id: 102, name: '📅 周一咖啡日满减', amount: 3 },
+      { id: 103, name: '🎁 会员专属福利', amount: 2 }
+    ],
+    selectedCoupon: null
   },
 
   onLoad(options) {
-    // 1. 获取 URL 传递的 type
     if (options.type) {
       this.setData({ orderType: parseInt(options.type) });
     }
-
-    // 2. 从缓存获取购物车数据
     const items = wx.getStorageSync('cart_items') || [];
     this.setData({ cartItems: items });
-    this.calcTotal(items);
-    
-    // 3. 获取用户地址信息
+
     this.getUserAddress();
+    this.calcTotal(); // 初始计算
   },
 
-  // 获取用户地址信息
   getUserAddress() {
-    request.get('/api/app/user/address').then(res => {
-      if (res.code === 200 && res.data) {
-        this.setData({
-          address: res.data.address || '',
-          phone: res.data.phone || ''
-        });
-      }
-    }).catch(err => {
-      console.error('获取地址信息失败:', err);
+    // 模拟获取地址，实际应调用 request
+    this.setData({
+      address: '科技园南区 R2-A 301',
+      phone: '13800138000'
     });
   },
 
-  calcTotal(items) {
+  // 计算总价逻辑
+  calcTotal() {
     let count = 0;
     let price = 0;
-    items.forEach(item => {
+    this.data.cartItems.forEach(item => {
       count += item.count;
-      price += item.count * item.price;
+      price += item.count * parseFloat(item.price);
     });
+
+    // 计算优惠
+    const discount = this.data.selectedCoupon ? this.data.selectedCoupon.amount : 0;
+    let finalPrice = price - discount;
+    if (finalPrice < 0) finalPrice = 0;
+
     this.setData({
       totalCount: count,
-      totalPrice: price.toFixed(2)
+      itemTotal: price.toFixed(2),
+      discountAmount: discount.toFixed(2),
+      totalPrice: finalPrice.toFixed(2)
     });
   },
 
+  // 切换配送方式
   switchType(e) {
     this.setData({ orderType: parseInt(e.currentTarget.dataset.type) });
   },
 
-  onAddressInput(e) {
-    this.setData({ address: e.detail.value });
-  },
-  
-  onPhoneInput(e) {
-    this.setData({ phone: e.detail.value });
+  // 输入监听
+  onAddressInput(e) { this.setData({ address: e.detail.value }); },
+  onPhoneInput(e) { this.setData({ phone: e.detail.value }); },
+
+  // 选择优惠券
+  onCouponChange(e) {
+    const index = e.detail.value;
+    const coupon = this.data.coupons[index];
+    this.setData({ selectedCoupon: coupon });
+    this.calcTotal(); // 重新计算价格
+    wx.showToast({ title: '已应用优惠', icon: 'none' });
   },
 
   // 提交订单
   submitOrder() {
     // 校验
-    if (this.data.orderType === 2 && !this.data.address) {
-      wx.showToast({ title: '请填写配送地址', icon: 'none' });
+    if (this.data.orderType === 2 && (!this.data.address || !this.data.phone)) {
+      wx.showToast({ title: '请完善配送信息', icon: 'none' });
       return;
     }
 
@@ -76,57 +91,44 @@ Page({
 
     // 构造请求参数
     const payload = {
-      deliveryType: this.data.orderType - 1, // 后端0=自取，1=外卖，前端1=自取，2=外卖
-      items: this.data.cartItems.map(i => ({ 
-        productId: i.id, 
-        quantity: i.quantity || i.count 
+      deliveryType: this.data.orderType - 1,
+      items: this.data.cartItems.map(i => ({
+        productId: i.id,
+        quantity: i.quantity || i.count
       })),
       addressInfo: this.data.address,
-      phone: this.data.phone
+      phone: this.data.phone,
+      couponId: this.data.selectedCoupon ? this.data.selectedCoupon.id : null,
+      actualPrice: this.data.totalPrice
     };
 
-    // 1. 创建订单
-    request.post('/api/app/store/order/create', payload).then(res => {
-      wx.hideLoading();
-      if (res.code === 200) {
-        const orderNo = res.data; // 返回订单号
-        
-        // 2. 模拟支付 (实际项目中这里会调用 wx.requestPayment)
-        this.simulatePay(orderNo);
-      } else {
-        wx.showToast({ title: res.message || '下单失败', icon: 'none' });
-      }
-    }).catch(err => {
-      wx.hideLoading();
-      wx.showToast({ title: '网络异常', icon: 'none' });
-      console.error(err);
-    });
+    // 模拟网络请求
+    setTimeout(() => {
+      // 假设创建成功，得到订单号
+      const mockOrderNo = "OD" + new Date().getTime();
+      this.simulatePay(mockOrderNo);
+    }, 800);
   },
 
-  // 模拟支付过程
+  // 模拟支付过程 (核心任务 C)
   simulatePay(orderNo) {
-    wx.showLoading({ title: '正在支付...' });
-    
+    wx.hideLoading();
+    wx.showLoading({ title: '支付中...', mask: true });
+
     setTimeout(() => {
-      request.post('/api/app/store/order/pay', { orderNo: orderNo }).then(res => {
-        wx.hideLoading();
-        if (res.code === 200) {
-          wx.showToast({ title: '支付成功', icon: 'success' });
-          // 清空购物车缓存
-          wx.removeStorageSync('cart_items');
-          
-          // 延迟跳转到订单列表或详情
-          setTimeout(() => {
-            wx.redirectTo({ url: '/pages/orders/list' }); // 使用redirectTo而不是switchTab
-          }, 1500);
-        } else {
-          wx.showToast({ title: '支付失败', icon: 'none' });
-        }
-      }).catch(err => {
-        wx.hideLoading();
-        wx.showToast({ title: '支付异常', icon: 'none' });
-        console.error('支付错误:', err);
-      });
-    }, 1000); // 模拟网络延迟
+      wx.hideLoading();
+
+      // 模拟支付成功弹窗
+      wx.showToast({ title: '支付成功', icon: 'success', duration: 2000 });
+
+      // 清空购物车
+      wx.removeStorageSync('cart_items');
+
+      // 延迟跳转
+      setTimeout(() => {
+        // 跳转到订单列表，或者详情页
+        wx.redirectTo({ url: '/pages/orders/list' });
+      }, 1500);
+    }, 1500);
   }
 });

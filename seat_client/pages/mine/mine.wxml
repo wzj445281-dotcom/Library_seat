@@ -1,62 +1,73 @@
 <view class="container">
+    <!-- 头部个人卡片 -->
     <view class="header-card">
-        <view class="avatar-box">
-            <image class="avatar" src="../../assets/images/user-active.png"></image>
-        </view>
-        <view class="info-box">
-            <view class="name">{{userName || '未登录'}}</view>
-            <view class="credit-row" bindtap="goToCredit">
-                <text class="credit-val">信用分: {{creditScore}}</text>
-                <!-- 动态等级标签 -->
-                <text class="level-tag {{creditClass}}">{{creditLevel}}</text>
+        <view class="user-row">
+            <view class="avatar-box">
+                <!-- 这里的头像可以使用 open-data 或者默认图 -->
+                <image class="avatar" src="/assets/images/user-active.png" mode="aspectFill"></image>
+            </view>
+            <view class="info-box">
+                <view class="name">{{userName || '点击登录'}}</view>
+                <view class="credit-row">
+                    <!-- 根据积分动态显示等级 -->
+                    <text class="level-tag">{{creditLevel}}会员</text>
+                </view>
+            </view>
+            <!-- AI 客服入口 -->
+            <view class="ai-entry" bindtap="goToAiChat">
+                <text>🎧 专属客服</text>
             </view>
         </view>
-        <!-- AI 客服入口图标 -->
-        <view class="ai-entry" bindtap="goToAiChat">
-            <text>🤖 客服</text>
+
+        <!-- 新增：数据统计栏 (对应 wxss 中的 .stats-row) -->
+        <view class="stats-row">
+            <view class="stat-item">
+                <view class="stat-num">{{stats.totalCups || 0}}</view>
+                <view class="stat-label">累计消费(杯)</view>
+            </view>
+            <view class="line"></view>
+            <view class="stat-item">
+                <view class="stat-num">¥{{stats.totalSaved || 0}}</view>
+                <view class="stat-label">累计节省</view>
+            </view>
+            <view class="line"></view>
+            <view class="stat-item">
+                <view class="stat-num">{{creditScore}}</view>
+                <view class="stat-label">当前积分</view>
+            </view>
         </view>
     </view>
 
+    <!-- 功能菜单 -->
     <view class="menu-list">
-        <!-- 新增入口 -->
         <view class="menu-item" bindtap="navigateToOrders">
             <view class="item-left">
-                <image src="/assets/images/order.png" class="icon" style="width: 40rpx; height: 40rpx; margin-right: 20rpx; filter: grayscale(1);"></image>
-                <text>我的借阅记录</text>
+                <!-- 使用 Emoji 作为简单图标，或替换为 image -->
+                <text class="menu-icon-text">📄</text>
+                <text>我的订单</text>
             </view>
             <text class="arrow">></text>
         </view>
 
-        <view class="menu-item" bindtap="goToCredit">
-            <text class="icon">📜</text><text>信用记录</text><text class="arrow">></text>
-        </view>
-        <view class="menu-item" bindtap="goToFeedback">
-            <text class="icon">🔧</text><text>报修反馈</text><text class="arrow">></text>
-        </view>
-        <view class="menu-item" bindtap="goToAiChat">
-            <text class="icon">💬</text><text>智能助手</text><text class="arrow">></text>
-        </view>
-    </view>
-
-    <view class="list-container">
-        <view class="section-title">当前预约</view>
-        <block wx:for="{{list}}" wx:key="id">
-            <view class="order-card">
-                <view class="card-header">
-                    <text class="time">{{item.startTime}} 起</text>
-                    <text class="status">{{item.statusStr}}</text>
-                </view>
-
-                <!-- 只有在使用中(CHECKED_IN)才显示结束按钮 -->
-                <view class="card-footer" wx:if="{{item.status === 'CHECKED_IN'}}">
-                    <button class="btn-leave" bindtap="handleLeave" data-id="{{item.id}}">
-                        结束使用 (释放座位)
-                    </button>
-                </view>
+        <!-- 移除了信用记录入口，增加咖啡钱包入口占位 -->
+        <view class="menu-item">
+            <view class="item-left">
+                <text class="menu-icon-text">☕️</text>
+                <text>咖啡钱包</text>
             </view>
-        </block>
+            <text class="arrow">></text>
+        </view>
+
+        <view class="menu-item" bindtap="goToFeedback">
+            <view class="item-left">
+                <text class="menu-icon-text">🔧</text>
+                <text>帮助反馈</text>
+            </view>
+            <text class="arrow">></text>
+        </view>
     </view>
 
+    <!-- 底部按钮 -->
     <view class="btn-area">
         <button class="btn-logout" bindtap="handleLogout">退出登录</button>
     </view>

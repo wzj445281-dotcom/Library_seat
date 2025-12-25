@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .antMatchers("/favicon.ico", "/css/**", "/js/**", "/images/**").permitAll()
 
                 // --- 放行认证接口 (登录/注册) ---
+                .antMatchers("/api/auth/**").permitAll()
                 .antMatchers("/api/app/auth/**").permitAll()
                 .antMatchers("/api/admin/auth/**").permitAll()
 

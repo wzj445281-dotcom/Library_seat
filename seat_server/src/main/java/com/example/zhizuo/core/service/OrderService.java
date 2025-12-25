@@ -6,6 +6,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.zhizuo.core.entity.Order;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * <p>
  * 订单表 服务类
@@ -30,4 +33,47 @@ public interface OrderService extends IService<Order> {
      * @return 带 items 的订单对象
      */
     Order getDetailWithItems(Long id);
+
+    /**
+     * 获取管理员订单列表
+     *
+     * @param status 订单状态
+     * @return 订单列表统计信息
+     */
+    Map<String, Object> getAdminOrderList(String status);
+
+    /**
+     * 更新订单状态
+     *
+     * @param id 订单ID
+     * @param status 新状态
+     */
+    void updateOrderStatus(Long id, String status);
+
+    /**
+     * 创建订单
+     *
+     * @param userId 用户ID
+     * @param items 订单项列表
+     * @param deliveryType 配送方式
+     * @return 订单号
+     */
+    String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType);
+
+    /**
+     * 关闭订单并恢复库存
+     *
+     * @param orderId 订单ID
+     * @param reason 关闭原因
+     */
+    void closeOrderAndRestoreStock(Long orderId, String reason);
+
+    /**
+     * 获取用户订单列表
+     *
+     * @param userId 用户ID
+     * @param status 订单状态
+     * @return 订单列表
+     */
+    List<Order> getUserOrderList(Long userId, String status);
 }

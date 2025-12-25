@@ -1,23 +1,38 @@
 <view class="chat-container">
-    <scroll-view scroll-y class="msg-list" scroll-top="{{scrollTop}}">
+    <scroll-view scroll-y class="msg-list" scroll-top="{{scrollTop}}" scroll-with-animation>
         <block wx:for="{{messages}}" wx:key="index">
-            <!-- AI 消息 -->
-            <view class="msg-item ai" wx:if="{{item.type === 'ai'}}">
-                <view class="avatar">🤖</view>
+            <view class="msg-item {{item.type}}">
+                <view class="avatar" wx:if="{{item.type === 'ai'}}">
+                    <image src="/assets/images/seat-active.png" class="avatar-img"></image>
+                </view>
                 <view class="bubble">{{item.content}}</view>
-            </view>
-            <!-- 用户消息 -->
-            <view class="msg-item user" wx:else>
-                <view class="bubble">{{item.content}}</view>
-                <view class="avatar">👤</view>
+                <view class="avatar" wx:if="{{item.type === 'user'}}">
+                    <image src="/assets/images/user-active.png" class="avatar-img"></image>
+                </view>
             </view>
         </block>
         <view wx:if="{{loading}}" class="loading-tip">AI 正在思考中...</view>
     </scroll-view>
 
-    <view class="input-area">
-        <input class="input" placeholder="输入您的问题..."
-               value="{{inputVal}}" bindinput="handleInput" bindconfirm="handleSend"/>
-        <button class="btn-send" bindtap="handleSend" disabled="{{loading}}">发送</button>
+    <!-- 底部操作区 -->
+    <view class="footer-area">
+        <!-- 快捷回复 -->
+        <scroll-view scroll-x class="quick-replies" enable-flex>
+            <view class="chip" wx:for="{{quickQuestions}}" wx:key="*this" bindtap="handleQuickTap" data-text="{{item}}">
+                {{item}}
+            </view>
+        </scroll-view>
+
+        <!-- 输入栏 -->
+        <view class="input-bar">
+            <view class="voice-btn {{isRecording ? 'recording' : ''}}"
+                  bindtouchstart="handleVoiceStart"
+                  bindtouchend="handleVoiceEnd">
+                <text>{{isRecording ? '松开 发送' : '按住 说话'}}</text>
+            </view>
+            <input class="text-input" placeholder="输入问题..." value="{{inputVal}}"
+                   bindinput="handleInput" bindconfirm="handleSend" confirm-type="send"/>
+            <view class="send-btn" bindtap="handleSend">发送</view>
+        </view>
     </view>
 </view>

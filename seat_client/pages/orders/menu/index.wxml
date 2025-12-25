@@ -1,0 +1,111 @@
+<view class="container">
+  <!-- 头部信息 (保持不变) -->
+  <view class="shop-header">
+    <view class="shop-info">
+      <view class="shop-name">智座实验室 (科技园店)</view>
+      <view class="shop-distance">距离您 150m</view>
+    </view>
+    <view class="delivery-switch">
+      <view class="switch-item active">自提</view>
+      <view class="switch-item">外送</view>
+    </view>
+  </view>
+
+  <!-- 内容区 -->
+  <view class="menu-content">
+    <!-- 左侧分类 -->
+    <scroll-view scroll-y class="left-menu">
+      <block wx:for="{{categories}}" wx:key="id">
+        <view class="menu-item {{currentCategory === item.id ? 'active' : ''}}"
+              bindtap="switchCategory" data-id="{{item.id}}">
+          {{item.name}}
+        </view>
+      </block>
+    </scroll-view>
+
+    <!-- 右侧商品列表 -->
+    <scroll-view scroll-y class="right-list" scroll-with-animation>
+      <view class="category-title">人气热销</view>
+      <view class="product-list">
+        <block wx:for="{{products}}" wx:key="id">
+          <view class="product-item">
+            <image class="prod-img" src="{{item.image || '/assets/images/book-default.png'}}" mode="aspectFill"></image>
+            <view class="prod-info">
+              <view class="prod-name">{{item.name}}</view>
+              <view class="prod-desc">{{item.desc || '口感醇厚，回味无穷'}}</view>
+              <view class="prod-bottom">
+                <view class="price-box">
+                  <text class="currency">¥</text>
+                  <text class="price">{{item.price}}</text>
+                </view>
+                <!-- 选规格按钮 -->
+                <view class="spec-btn" bindtap="openSpecModal" data-item="{{item}}">选规格</view>
+              </view>
+            </view>
+          </view>
+        </block>
+      </view>
+      <!-- 底部垫高，防止被购物车挡住 -->
+      <view style="height: 120rpx;"></view>
+    </scroll-view>
+  </view>
+
+  <!-- 底部购物车条 -->
+  <view class="cart-bar" bindtap="showCartDetail">
+    <view class="cart-icon-wrap">
+      <image class="cart-icon" src="/assets/images/cart.png"></image>
+      <view class="badge" wx:if="{{totalCount > 0}}">{{totalCount}}</view>
+    </view>
+    <view class="price-info">
+      <view class="total-price" wx:if="{{totalPrice > 0}}">¥{{totalPrice}}</view>
+      <view class="tips" wx:else>未选购商品</view>
+    </view>
+    <view class="pay-btn" catchtap="goToCheckout">去结算</view>
+  </view>
+
+  <!-- 规格选择弹窗 (新增核心功能) -->
+  <view class="spec-modal-mask" wx:if="{{showSpecModal}}" bindtap="closeSpecModal"></view>
+  <view class="spec-modal {{showSpecModal ? 'show' : ''}}">
+    <view class="modal-header">
+      <view class="m-prod-name">{{currentProduct.name}}</view>
+      <view class="m-close" bindtap="closeSpecModal">×</view>
+    </view>
+
+    <scroll-view scroll-y class="modal-content">
+      <image class="m-prod-img" src="{{currentProduct.image || '/assets/images/book-default.png'}}" mode="aspectFit"></image>
+
+      <!-- 规格组: 温度 -->
+      <view class="spec-group">
+        <view class="spec-title">温度</view>
+        <view class="spec-tags">
+          <view class="tag {{currentSpecs.temp === '冰' ? 'active' : ''}}"
+                bindtap="selectSpec" data-key="temp" data-val="冰">冰</view>
+          <view class="tag {{currentSpecs.temp === '热' ? 'active' : ''}}"
+                bindtap="selectSpec" data-key="temp" data-val="热">热</view>
+        </view>
+      </view>
+
+      <!-- 规格组: 糖度 -->
+      <view class="spec-group">
+        <view class="spec-title">糖度</view>
+        <view class="spec-tags">
+          <view class="tag {{currentSpecs.sugar === '标准糖' ? 'active' : ''}}"
+                bindtap="selectSpec" data-key="sugar" data-val="标准糖">标准糖</view>
+          <view class="tag {{currentSpecs.sugar === '半糖' ? 'active' : ''}}"
+                bindtap="selectSpec" data-key="sugar" data-val="半糖">半糖</view>
+          <view class="tag {{currentSpecs.sugar === '无糖' ? 'active' : ''}}"
+                bindtap="selectSpec" data-key="sugar" data-val="无糖">无糖</view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="modal-footer">
+      <view class="m-price-box">
+        <text class="currency">¥</text>
+        <text class="price">{{currentProduct.price}}</text>
+        <text class="selected-desc">({{currentSpecs.temp}}, {{currentSpecs.sugar}})</text>
+      </view>
+      <view class="m-add-btn" bindtap="addToCartFromModal">加入购物车</view>
+    </view>
+  </view>
+</view>

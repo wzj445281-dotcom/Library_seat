@@ -4,105 +4,90 @@ import request from '../../utils/request.js';
 Page({
     data: {
         userName: '',
-        creditScore: 100,
-        creditLevel: '', // 信用等级
-        creditClass: '', // CSS 类名
-        list: []
+        creditScore: 0,
+        creditLevel: '普通', // 默认为普通
+        stats: {
+            totalCups: 0,
+            totalSaved: '0.0'
+        }
     },
 
     onShow() {
         this.fetchUserInfo();
-        this.fetchMyReservations();
+        this.fetchUserStats(); // 获取统计数据
     },
 
     async fetchUserInfo() {
         try {
             const user = await getUserInfo();
-            // 计算信用等级
-            let level = '良好';
-            let cls = 'good';
-            const s = user.creditScore;
-
-            if (s >= 105) { level = '极好'; cls = 'excellent'; }
-            else if (s >= 90) { level = '优秀'; cls = 'great'; }
-            else if (s >= 70) { level = '良好'; cls = 'good'; }
-            else if (s >= 60) { level = '中等'; cls = 'fair'; }
-            else { level = '高风险'; cls = 'risk'; }
+            // 根据信用分计算简单的会员等级
+            let level = '普通';
+            if (user.creditScore > 200) level = '钻石';
+            else if (user.creditScore > 100) level = '黄金';
 
             this.setData({
-                userName: user.name,
-                creditScore: s,
-                creditLevel: level,
-                creditClass: cls
+                userName: user.name || '微信用户',
+                creditScore: user.creditScore || 0,
+                creditLevel: level
             });
-            wx.setStorageSync('userId', user.id);
+
+            // 缓存用户ID供其他页面使用
+            if (user.id) {
+                wx.setStorageSync('userId', user.id);
+            }
         } catch (err) {
-            console.error(err);
+            console.error('获取用户信息失败', err);
+            // 失败时引导登录（可选）
         }
     },
 
-    async fetchMyReservations() {
-        try {
-            const list = await request('/app/reservation/list', 'GET');
-            // 处理状态显示
-            const fmtList = list.map(item => {
-                let statusStr = '';
-                switch(item.status) {
-                    case 'RESERVED': statusStr = '已预约'; break;
-                    case 'CHECKED_IN': statusStr = '使用中'; break;
-                    case 'COMPLETED': statusStr = '已结束'; break;
-                    case 'CANCELLED': statusStr = '已取消'; break;
-                    case 'VIOLATION': statusStr = '已违约'; break;
+    // 模拟获取用户消费统计
+    async fetchUserStats() {
+        // 实际开发中，这里应该调用类似 /api/app/user/stats 的接口
+        // 这里我们使用模拟数据，或者基于本地缓存计算
+
+        // 模拟延迟
+        setTimeout(() => {
+            this.setData({
+                stats: {
+                    totalCups: 12, // 累计杯数
+                    totalSaved: '45.0' // 累计节省金额
                 }
-                return {
-                    ...item,
-                    statusStr,
-                    // 简单截取时间字符串
-                    startTime: item.startTime.replace('T', ' ').substring(5, 16),
-                    endTime: item.endTime.replace('T', ' ').substring(11, 16)
-                };
             });
-            this.setData({ list: fmtList });
-        } catch (err) {
-            console.error(err);
-        }
+        }, 500);
     },
 
-    // 结束使用 (释放座位)
-    handleLeave(e) {
-        const id = e.currentTarget.dataset.id;
+    // 页面跳转逻辑
+    navigateToOrders() {
+        wx.switchTab({ url: '/pages/orders/list' }); // 如果是 tabBar 页面用 switchTab
+        // 如果 orders 不是 tabBar 页面，改用:
+        // wx.navigateTo({ url: '/pages/orders/list' });
+    },
+
+    goToCredit() {
+        wx.navigateTo({ url: '/pages/credit/credit' });
+    },
+
+    goToFeedback() {
+        wx.navigateTo({ url: '/pages/feedback/feedback' });
+    },
+
+    goToAiChat() {
+        wx.navigateTo({ url: '/pages/ai_chat/ai_chat' });
+    },
+
+    handleLogout() {
         wx.showModal({
-            title: '结束使用',
-            content: '确定要离开座位并释放资源吗？这将有助于提升您的信用记录。',
-            confirmColor: '#1296db',
-            success: async (res) => {
+            title: '提示',
+            content: '确定要退出登录吗？',
+            confirmColor: '#0022AB',
+            success: (res) => {
                 if (res.confirm) {
-                    try {
-                        wx.showLoading({ title: '处理中' });
-                        await request(`/app/reservation/leave/${id}`, 'POST');
-                        wx.hideLoading();
-                        wx.showToast({ title: '已释放，感谢配合', icon: 'success' });
-                        this.fetchMyReservations(); // 刷新列表
-                    } catch (err) {
-                        wx.hideLoading();
-                    }
+                    wx.removeStorageSync('token');
+                    wx.removeStorageSync('userId');
+                    wx.reLaunch({ url: '/pages/login/login' });
                 }
             }
         });
-    },
-    navigateToOrders() {
-        wx.navigateTo({
-            url: '/pages/orders/list'
-        });
-    },
-
-    // 跳转逻辑
-    goToCredit() { wx.navigateTo({ url: '/pages/credit/credit' }); },
-    goToFeedback() { wx.navigateTo({ url: '/pages/feedback/feedback' }); },
-    goToAiChat() { wx.navigateTo({ url: '/pages/ai_chat/ai_chat' }); }, // 新增入口
-
-    handleLogout() {
-        wx.removeStorageSync('token');
-        wx.reLaunch({ url: '/pages/login/login' });
     }
 });
