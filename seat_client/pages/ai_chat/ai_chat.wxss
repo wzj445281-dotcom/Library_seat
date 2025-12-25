@@ -1,32 +1,29 @@
-.container {
-    height: 100vh;
-    background-color: #f7f7f7;
-    display: flex;
-    flex-direction: column;
-    padding-bottom: env(safe-area-inset-bottom);
+page {
+    background-color: #f5f7fa;
+    height: 100%;
 }
 
-/* 聊天区域 */
-.chat-area {
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.chat-list {
     flex: 1;
-    padding: 30rpx;
+    padding: 20rpx;
     box-sizing: border-box;
-    overflow-anchor: auto;
+    overflow-y: auto;
 }
 
 .message-item {
     display: flex;
-    margin-bottom: 40rpx;
+    margin-bottom: 30rpx;
     align-items: flex-start;
 }
 
-/* 进场动画 */
-.fade-in {
-    animation: fadeIn 0.3s ease-out;
-}
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10rpx); }
-    to { opacity: 1; transform: translateY(0); }
+.message-item.robot {
+    flex-direction: row;
 }
 
 .message-item.user {
@@ -37,190 +34,87 @@
     width: 80rpx;
     height: 80rpx;
     border-radius: 50%;
-    background: #fff;
+    background-color: #ddd;
+    margin: 0 20rpx;
     flex-shrink: 0;
-    border: 1rpx solid #eee;
 }
 
 .content-wrapper {
-    max-width: 72%;
-    margin: 0 20rpx;
-    display: flex;
-    flex-direction: column;
+    max-width: 60%;
 }
 
-.bubble {
-    padding: 24rpx;
-    border-radius: 20rpx;
+.content {
+    padding: 20rpx;
     font-size: 28rpx;
-    line-height: 1.6;
-    position: relative;
+    line-height: 1.5;
+    border-radius: 12rpx;
     word-wrap: break-word;
-    box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.03);
+    word-break: break-all;
 }
 
-/* AI 气泡样式 */
-.message-item.ai .bubble {
-    background: #fff;
+.robot .content {
+    background-color: #ffffff;
     color: #333;
-    border-top-left-radius: 4rpx; /* 尖角 */
+    border-top-left-radius: 0;
+    box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
 }
 
-/* 用户气泡样式 - 瑞幸蓝 */
-.message-item.user .bubble {
-    background: #0022AB;
-    color: #fff;
-    border-top-right-radius: 4rpx;
+.user .content {
+    background-color: #007aff;
+    color: #ffffff;
+    border-top-right-radius: 0;
 }
 
-/* --- 商品推荐卡片 --- */
-.recommendations {
-    margin-top: 20rpx;
-    width: 100%;
+.loading-wrapper {
+    text-align: center;
+    padding: 20rpx;
 }
 
-.rec-title {
+.loading-text {
     font-size: 24rpx;
     color: #999;
-    margin-bottom: 12rpx;
-    padding-left: 4rpx;
 }
 
-.product-card {
-    background: #fff;
-    border-radius: 16rpx;
-    padding: 20rpx;
-    margin-bottom: 20rpx;
-    display: flex;
-    box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
-    transition: transform 0.1s;
-}
-
-.product-card:active {
-    transform: scale(0.98);
-}
-
-.prod-img {
-    width: 120rpx;
-    height: 120rpx;
-    border-radius: 12rpx;
-    background: #f0f0f0;
-    flex-shrink: 0;
-}
-
-.prod-info {
-    margin-left: 20rpx;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.prod-name {
-    font-size: 28rpx;
-    font-weight: bold;
-    color: #333;
-}
-
-.prod-reason {
-    font-size: 22rpx;
-    color: #666;
-    background: #f7f7f7;
-    padding: 4rpx 10rpx;
-    border-radius: 8rpx;
-    margin-top: 8rpx;
-    display: inline-block;
-}
-
-.prod-bottom {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10rpx;
-}
-
-.prod-price {
-    font-size: 30rpx;
-    color: #d93025;
-    font-weight: bold;
-}
-
-.go-btn {
-    font-size: 22rpx;
-    background: #e6f3ff;
-    color: #0022AB;
-    padding: 6rpx 16rpx;
-    border-radius: 20rpx;
-    font-weight: bold;
-}
-
-/* --- 底部输入区域 --- */
 .input-area {
-    background: #fff;
-    padding: 20rpx 30rpx;
+    height: 100rpx;
+    background-color: #ffffff;
+    border-top: 1rpx solid #eaeaea;
     display: flex;
     align-items: center;
-    border-top: 1rpx solid #eee;
-    box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.02);
-}
-
-.input-wrapper {
-    flex: 1;
-    background: #f5f5f5;
-    height: 80rpx;
-    border-radius: 40rpx;
-    padding: 0 30rpx;
-    display: flex;
-    align-items: center;
-}
-
-.chat-input {
+    padding: 0 20rpx;
+    position: fixed;
+    bottom: 0;
     width: 100%;
+    box-sizing: border-box;
+    z-index: 99;
+}
+
+.input-box {
+    flex: 1;
+    height: 70rpx;
+    background-color: #f0f0f0;
+    border-radius: 35rpx;
+    padding: 0 30rpx;
     font-size: 28rpx;
-    color: #333;
+    margin-right: 20rpx;
 }
 
 .send-btn {
-    margin-left: 20rpx;
-    color: #999;
-    font-weight: bold;
-    font-size: 30rpx;
-    padding: 10rpx 20rpx;
-    transition: color 0.2s;
+    width: 140rpx;
+    height: 70rpx;
+    line-height: 70rpx;
+    background-color: #007aff;
+    color: white;
+    font-size: 28rpx;
+    border-radius: 35rpx;
+    padding: 0;
+    margin: 0;
 }
 
-.send-btn.active {
-    color: #0022AB;
+.send-btn:active {
+    opacity: 0.8;
 }
 
-/* --- Loading 动画 --- */
-.loading-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20rpx;
-    color: #ccc;
-    font-size: 24rpx;
-    gap: 10rpx;
-}
-
-.loading-dots {
-    display: flex;
-    gap: 6rpx;
-}
-
-.dot {
-    width: 8rpx;
-    height: 8rpx;
-    background: #ccc;
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out both;
-}
-
-.dot:nth-child(1) { animation-delay: -0.32s; }
-.dot:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
+.send-btn[disabled] {
+    background-color: #a0cfff;
 }

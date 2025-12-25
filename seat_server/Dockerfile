@@ -1,33 +1,42 @@
-# === 阶段 1: 构建 (Builder) ===
-# 使用 Maven 镜像编译代码，不仅标准化构建环境，还能避免你本地 Java 版本不一致的问题
-FROM maven:3.8.6-openjdk-11-slim AS builder
+# --- 第一阶段：构建阶段 ---
+FROM maven:3.8.6-openjdk-11 AS build
 WORKDIR /app
 
-# 1. 先复制 pom.xml 下载依赖 (利用 Docker 缓存层，加速后续构建)
-COPY pom.xml .
-# 建议配置阿里云 Maven 镜像 (如果构建慢的话)，这里使用默认
-# RUN mvn dependency:go-offline -B
+# 【关键修改】写入阿里云 Maven 镜像配置到 settings.xml
+# 这解决了 Connection reset 和下载依赖卡住的问题
+RUN mkdir -p /root/.m2 && \
+    echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" \
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
+      xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd"> \
+      <mirrors> \
+        <mirror> \
+          <id>aliyunmaven</id> \
+          <mirrorOf>*</mirrorOf> \
+          <name>Aliyun Public</name> \
+          <url>https://maven.aliyun.com/repository/public</url> \
+        </mirror> \
+      </mirrors> \
+    </settings>' > /root/.m2/settings.xml
 
-# 2. 复制源代码并打包
+# 复制 pom.xml 和源代码
+COPY pom.xml .
 COPY src ./src
-# -DskipTests 跳过测试用例，加快构建速度
+
+# 执行打包 (跳过测试以加快速度)
 RUN mvn clean package -DskipTests
 
-# === 阶段 2: 运行 (Runtime) ===
-# 使用轻量级 JRE 镜像运行，减小镜像体积
+# --- 第二阶段：运行阶段 ---
 FROM openjdk:11-jre-slim
 WORKDIR /app
 
-# 设置时区为上海，避免日志时间差 8 小时
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# 从构建阶段复制生成的 jar 包
+COPY --from=build /app/target/*.jar app.jar
 
-# 从构建阶段复制生成的 Jar 包 (自动匹配 target 下的 jar)
-COPY --from=builder /app/target/*.jar app.jar
+# 设置时区
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' > /etc/timezone
 
-# 暴露端口
+# 暴露 8080 端口
 EXPOSE 8080
 
 # 启动命令
-# -Djava.security.egd... 用于加快随机数生成，避免 Tomcat 启动卡顿
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,122 +1,101 @@
 from flask import Flask, request, jsonify
+import joblib
+import pandas as pd
 import random
-import datetime
+import requests
+import os
+from datetime import datetime
 
-# 1. 必须先初始化 app，后续的 @app.route 才能用
 app = Flask(__name__)
 
-# ----------------------------------------------------
-# 接口 1: 热度预测
-# ----------------------------------------------------
+# 配置 DeepSeek API Key
+# 建议在 docker-compose.yml 中配置环境变量 DEEPSEEK_API_KEY，如果没有配置则使用默认值（请填入您的 Key）
+DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', 'sk-xxxxxxxxxxxxxxxxxxxxxxxx')
+DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
+
+# 尝试加载模型，如果不存在则使用模拟逻辑
+try:
+    model = joblib.load('model.pkl')
+    model_loaded = True
+except:
+    print("Warning: model.pkl not found. Running in mock mode.")
+    model_loaded = False
+
 @app.route('/predict', methods=['POST'])
 def predict():
+    """
+    【功能 1】: 传统的机器学习预测 (保留原有功能)
+    用于预测座位拥挤度数值。
+    """
+    if not model_loaded:
+        # 模拟返回：随机生成一个拥挤度预测
+        return jsonify({'prediction': random.uniform(0, 1), 'status': 'mock'})
+
     try:
         data = request.json
-        seat_ids = data.get('seatIds', [])
-
-        # 1. 获取时间特征
-        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-        weekday = tomorrow.weekday() # 0=周一, 6=周日
-        is_weekend = weekday >= 5
-
-        results = []
-        for seat_id in seat_ids:
-            sid = int(seat_id)
-
-            # --- 模拟算法逻辑 ---
-            score = random.uniform(60, 75)
-
-            # 特征1：位置偏好 (假设 ID < 15 的是靠窗/VIP座位)
-            if sid < 15:
-                score += random.uniform(15, 20)
-            elif sid % 2 == 0:
-                score -= random.uniform(2, 5)
-
-            # 特征2：周末效应
-            if is_weekend:
-                score += random.uniform(5, 10)
-
-            final_score = round(max(0, min(99, score)), 1)
-
-            results.append({
-                'seatId': seat_id,
-                'heatScore': final_score,
-                'predictionDate': tomorrow.isoformat()
-            })
-
-        return jsonify({'code': 200, 'message': 'success', 'data': results})
-
+        # 这里放置实际的特征提取和预测逻辑
+        # df = pd.DataFrame(data, index=[0])
+        # prediction = model.predict(df)
+        return jsonify({'prediction': 0.5, 'status': 'success'})
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'code': 500, 'message': str(e)})
+        return jsonify({'error': str(e)}), 500
 
-# ----------------------------------------------------
-# 接口 2: 风控预测 (之前报错就是因为这个放错了位置)
-# ----------------------------------------------------
-@app.route('/predict/risk', methods=['POST'])
-def predict_risk():
+@app.route('/chat', methods=['POST'])
+def chat():
+    """
+    【功能 2】: AI 智能对话 (由 DeepSeek 驱动)
+    接收用户消息 -> 注入系统人设 -> 调用 DeepSeek -> 返回结果
+    """
     data = request.json
-    credit_score = data.get('creditScore', 100)
+    user_msg = data.get('message', '')
 
-    # --- 模拟逻辑回归模型 ---
-    risk_prob = 0.0
+    if not user_msg:
+        return jsonify({'reply': '请告诉我您想了解什么？'})
 
-    if credit_score < 80:
-        risk_prob += 0.4
-    if credit_score < 60:
-        risk_prob += 0.3
-
-    risk_prob = min(0.99, max(0.01, risk_prob))
-
-    result = {
-        'riskProbability': round(risk_prob, 2),
-        'action': 'ALLOW'
+    # 构造请求 DeepSeek 的 payload
+    # System Prompt 定义了 AI 的身份和业务规则
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [
+            {
+                "role": "system",
+                "content": "你是一个名为'智座'的智能选座助手。你的职责是帮助用户寻找合适的座位、解答图书馆/自习室的营业时间问题。营业时间是每天08:00-22:00。请用亲切、简练的中文回答。如果用户询问无法回答的问题，请引导他们去查看座位图。"
+            },
+            {
+                "role": "user",
+                "content": user_msg
+            }
+        ],
+        "stream": False,
+        "temperature": 0.7
     }
 
-    if risk_prob > 0.7:
-        result['action'] = 'WARN'
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    return jsonify({'code': 200, 'data': result})
-# ----------------------------------------------------
-# 接口 3: 工单智能分析 (新增修复)
-# ----------------------------------------------------
-@app.route('/analyze/ticket', methods=['POST'])
-def analyze_ticket():
     try:
-        data = request.json
-        text = data.get('text', '')
-        category = data.get('category', '')
+        # 调用 DeepSeek 接口
+        response = requests.post(DEEPSEEK_URL, json=payload, headers=headers, timeout=30)
 
-        # --- 简单的关键词规则模拟 AI 分析 ---
-        priority = 0
-        summary = "常规反馈"
-
-        # 1. 关键词检测优先级
-        urgent_keywords = ['漏水', '冒烟', '火花', '紧急', '受伤', '救命']
-        medium_keywords = ['吵', '噪音', '坏了', '故障', '无法使用']
-
-        if any(k in text for k in urgent_keywords):
-            priority = 2
-            summary = f"【紧急】检测到安全隐患关键词，请立即处理。分类：{category}"
-        elif any(k in text for k in medium_keywords):
-            priority = 1
-            summary = f"【关注】设施故障或环境问题。分类：{category}"
+        if response.status_code == 200:
+            result = response.json()
+            # 提取 AI 的回复内容
+            ai_reply = result['choices'][0]['message']['content']
         else:
-            summary = f"普通建议或反馈。分类：{category}"
+            print(f"DeepSeek API Error: {response.text}")
+            ai_reply = "抱歉，我的大脑暂时连接不畅，请稍后再试。"
 
-        return jsonify({
-            'code': 200,
-            'message': 'success',
-            'data': {
-                'priority': priority,
-                'summary': summary
-            }
-        })
     except Exception as e:
-        print(f"Analysis Error: {e}")
-        return jsonify({'code': 500, 'message': str(e)})
+        print(f"Request Exception: {e}")
+        ai_reply = "抱歉，由于网络原因我无法回答您的问题。"
+
+    return jsonify({
+        'reply': ai_reply,
+        'timestamp': datetime.now().isoformat()
+    })
 
 if __name__ == '__main__':
-    print("AI Prediction Server is running...")
-    # 必须监听 0.0.0.0 才能在 Docker 外部访问
+    # 监听 5000 端口
     app.run(host='0.0.0.0', port=5000)

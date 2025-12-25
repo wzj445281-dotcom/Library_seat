@@ -1,7 +1,7 @@
 package com.example.zhizuo.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.example.zhizuo.entity.UserCoupon;
+import com.example.zhizuo.core.entity.UserCoupon;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper

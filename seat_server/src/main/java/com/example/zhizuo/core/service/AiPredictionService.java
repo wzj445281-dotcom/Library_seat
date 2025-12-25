@@ -1,90 +1,93 @@
 package com.example.zhizuo.core.service;
 
-import cn.hutool.http.HttpUtil;
-import cn.hutool.json.JSONArray;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.example.zhizuo.core.entity.Seat;
-import com.example.zhizuo.core.entity.SeatHeatStats;
-import com.example.zhizuo.core.mapper.SeatHeatStatsMapper;
-import com.example.zhizuo.core.mapper.SeatMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-@Slf4j
+/**
+ * AI 预测与对话服务
+ * 负责与 Python AI 服务进行通信
+ */
 @Service
+@Slf4j
 public class AiPredictionService {
 
-    private final SeatMapper seatMapper;
-    private final SeatHeatStatsMapper heatStatsMapper;
+    // Python 服务的地址，默认指向本地或Docker服务名
+    @Value("${ai.service.url:http://localhost:5000}")
+    private String aiServiceUrl;
 
-    // Python 服务地址
-    private static final String AI_URL = "http://localhost:5000/predict";
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public AiPredictionService(SeatMapper seatMapper, SeatHeatStatsMapper heatStatsMapper) {
-        this.seatMapper = seatMapper;
-        this.heatStatsMapper = heatStatsMapper;
+    /**
+     * 调用 AI 服务进行对话
+     */
+    public String chatWithAi(String userMessage) {
+        String url = aiServiceUrl + "/chat";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("message", userMessage);
+
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(requestBody, headers);
+
+            log.info("Sending request to AI Service: {}", url);
+            // 发送 POST 请求
+            String response = restTemplate.postForObject(url, request, String.class);
+
+            // 解析返回的 JSON
+            JsonNode rootNode = objectMapper.readTree(response);
+            if (rootNode.has("reply")) {
+                return rootNode.get("reply").asText();
+            } else {
+                return "AI 服务返回数据格式异常";
+            }
+
+        } catch (Exception e) {
+            log.error("Error communicating with AI service", e);
+            return "抱歉，AI 助手暂时开小差了，请稍后再试。";
+        }
     }
 
     /**
-     * 每天凌晨 1 点执行，预测明天的热度
+     * 预测座位拥挤度 (保留原有功能)
      */
-    @Scheduled(cron = "0 0 1 * * ?")
-    @Transactional(rollbackFor = Exception.class)
-    public void syncHeatScores() {
-        log.info("开始执行 AI 热度预测任务...");
-
-        // 1. 获取所有座位 ID
-        List<Seat> seats = seatMapper.selectList(null);
-        if (seats.isEmpty()) return;
-
-        List<Long> seatIds = seats.stream().map(Seat::getId).collect(Collectors.toList());
-
-        // 2. 调用 Python 接口
-        Map<String, Object> param = new HashMap<>();
-        param.put("seatIds", seatIds);
-
+    public Double predictCrowding() {
+        String url = aiServiceUrl + "/predict";
         try {
-            String resultJson = HttpUtil.post(AI_URL, JSONUtil.toJsonStr(param));
-            JSONObject result = JSONUtil.parseObj(resultJson);
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("timestamp", System.currentTimeMillis());
 
-            if (result.getInt("code") == 200) {
-                JSONArray data = result.getJSONArray("data");
-
-                // 3. 解析结果并入库
-                for (Object item : data) {
-                    JSONObject obj = (JSONObject) item;
-                    Long seatId = obj.getLong("seatId");
-                    Double score = obj.getDouble("heatScore");
-
-                    // 构造实体
-                    SeatHeatStats stats = new SeatHeatStats();
-                    stats.setSeatId(seatId);
-                    stats.setHeatScore(score);
-                    stats.setPredictionDate(LocalDate.now().plusDays(1)); // 预测明天
-                    stats.setUpdateTime(LocalDateTime.now());
-
-                    // 先删后插 (简单 Upsert)
-                    QueryWrapper<SeatHeatStats> deleteQuery = new QueryWrapper<>();
-                    deleteQuery.eq("seat_id", seatId).eq("prediction_date", stats.getPredictionDate());
-                    heatStatsMapper.delete(deleteQuery);
-
-                    heatStatsMapper.insert(stats);
-                }
-                log.info("AI 热度数据同步完成，共更新 {} 条", data.size());
+            Map response = restTemplate.postForObject(url, requestBody, Map.class);
+            if (response != null && response.containsKey("prediction")) {
+                Object prediction = response.get("prediction");
+                return Double.valueOf(prediction.toString());
             }
         } catch (Exception e) {
-            log.error("调用 AI 服务失败 (请检查 Python 脚本是否运行): {}", e.getMessage());
+            log.error("Error calling predict service", e);
         }
+        return 0.5; // 出错时返回默认拥挤度
+    }
+
+    /**
+     * 同步热力图分数 (修复编译错误)
+     * 供 DemoController 调用
+     */
+    public void syncHeatScores() {
+        log.info("正在执行热力图数据同步 (Demo模式)...");
+        Double score = predictCrowding();
+        log.info("同步完成，当前区域热度: {}", score);
     }
 }

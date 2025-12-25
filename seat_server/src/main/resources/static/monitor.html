@@ -1,98 +1,117 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智座 - 智能调度监控中心</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <title>智座 AI 实时监控中心</title>
+    <!-- 引入 ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 引入 Vue (轻量级数据绑定) -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 引入 Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-        /* 深色科技风样式 */
-        body { margin: 0; padding: 0; background: #0b1120; color: #fff; font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', sans-serif; overflow: hidden; }
-        #app { display: flex; flex-direction: column; height: 100vh; }
-
-        /* 顶部 Header */
-        .header { height: 70px; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; background: rgba(18, 150, 219, 0.1); border-bottom: 1px solid rgba(18, 150, 219, 0.3); box-shadow: 0 0 20px rgba(18, 150, 219, 0.2); }
-        .title { font-size: 26px; font-weight: bold; letter-spacing: 2px; background: linear-gradient(to right, #00c6ff, #0072ff); -webkit-background-clip: text; color: transparent; }
-        .time { font-family: 'Consolas', monospace; color: #00c6ff; font-size: 18px; }
-
-        /* 主体内容 */
-        .main-container { flex: 1; display: flex; padding: 20px; gap: 20px; box-sizing: border-box; }
-
-        /* 通用卡片样式 */
-        .card { background: rgba(255, 255, 255, 0.03); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 20px; display: flex; flex-direction: column; position: relative; }
-        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 10px; height: 10px; border-top: 2px solid #00c6ff; border-left: 2px solid #00c6ff; border-top-left-radius: 4px; }
-        .card::after { content: ''; position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-bottom: 2px solid #00c6ff; border-right: 2px solid #00c6ff; border-bottom-right-radius: 4px; }
-        .card-title { margin: 0 0 15px 0; font-size: 16px; color: #ccc; border-left: 4px solid #00c6ff; padding-left: 10px; }
-
-        /* 左侧布局 */
-        .left-col { flex: 1; display: flex; flex-direction: column; gap: 20px; }
-
-        /* 核心指标数字 */
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .stat-item { background: rgba(0, 0, 0, 0.2); padding: 15px; text-align: center; border-radius: 6px; }
-        .stat-num { font-size: 32px; font-weight: bold; color: #fff; margin-bottom: 5px; font-family: 'Impact', sans-serif; }
-        .stat-label { font-size: 12px; color: #888; }
-
-        /* 图表容器 */
-        .chart-box { flex: 1; width: 100%; min-height: 200px; }
-
-        /* 右侧布局 */
-        .right-col { flex: 2; display: flex; flex-direction: column; }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b1120;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header {
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 2px;
+            color: #38bdf8;
+        }
+        .status-badge {
+            background-color: #22c55e;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .container {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 100px);
+        }
+        .card {
+            background-color: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .card-header {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #94a3b8;
+            border-left: 4px solid #38bdf8;
+            padding-left: 10px;
+        }
+        #chart-prediction, #chart-stats {
+            flex: 1;
+            width: 100%;
+            min-height: 300px;
+        }
+        .ai-log {
+            flex: 1;
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            color: #22c55e;
+            border: 1px solid #334155;
+        }
+        .log-item {
+            margin-bottom: 5px;
+            border-bottom: 1px dashed #334155;
+            padding-bottom: 2px;
+        }
+        .log-time {
+            color: #64748b;
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="header">
-        <div class="title">SMART SEAT 智座 · 监控大脑</div>
-        <div class="time">{{ currentTime }}</div>
+        <h1>ZHIZUO <small style="font-size: 14px; color: #94a3b8;">AI MONITOR SYSTEM</small></h1>
+        <span class="status-badge">System Online</span>
     </div>
 
-    <div class="main-container">
-        <div class="left-col">
-            <div class="card" style="flex: 0 0 auto;">
-                <h3 class="card-title">实时数据概览</h3>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-num" style="color: #4cd964">{{ stats.totalSeats || '-' }}</div>
-                        <div class="stat-label">总座位数 (个)</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-num" style="color: #00c6ff">{{ stats.totalUsers || '-' }}</div>
-                        <div class="stat-label">注册用户 (人)</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-num" style="color: #ffcc00">{{ stats.todayOrders || '-' }}</div>
-                        <div class="stat-label">今日预约 (单)</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-num" style="color: #ff3b30">{{ stats.riskyUsers || '-' }}</div>
-                        <div class="stat-label">信用预警用户</div>
-                    </div>
+    <div class="container">
+        <!-- 左侧：AI 实时拥挤度预测 -->
+        <div class="card">
+            <div class="card-header">AI 实时拥挤度预测 (Python Model)</div>
+            <div id="chart-prediction"></div>
+        </div>
+
+        <!-- 右侧：系统日志与状态 -->
+        <div class="card">
+            <div class="card-header">AI 服务调用日志</div>
+            <div class="ai-log" id="log-container">
+                <div class="log-item" v-for="(log, index) in logs" :key="index">
+                    <span class="log-time">[{{ log.time }}]</span>
+                    <span>{{ log.message }}</span>
                 </div>
             </div>
-
-            <div class="card" style="flex: 1;">
-                <h3 class="card-title">近七日预约趋势</h3>
-                <div id="trendChart" class="chart-box"></div>
-            </div>
-        </div>
-
-        <div class="header">
-            <div class="title">SMART SEAT 智座 · 监控大脑</div>
-            <!-- 新增：导出按钮 -->
-            <div style="margin-left: auto; margin-right: 20px;">
-                <button onclick="window.location.href='/api/admin/stats/export'"
-                        style="background:#00c6ff; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">
-                    📥 导出报表
-                </button>
-            </div>
-            <div class="time">{{ currentTime }}</div>
-        </div>
-        <div class="right-col card">
-            <h3 class="card-title">AI 热度预测分布 (Tomorrow)</h3>
-            <div id="heatMapChart" class="chart-box"></div>
         </div>
     </div>
 </div>
@@ -101,167 +120,97 @@
     new Vue({
         el: '#app',
         data: {
-            currentTime: '',
-            stats: {
-                totalSeats: 0,
-                totalUsers: 0,
-                todayOrders: 0,
-                riskyUsers: 0
-            }
+            logs: [],
+            chartInstance: null,
+            predictionData: [], // 存储预测数据
+            xAxisData: []       // 存储时间轴
         },
         mounted() {
-            // 时钟
-            setInterval(() => {
-                const now = new Date();
-                this.currentTime = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
-            }, 1000);
+            this.initChart();
+            this.addLog("系统初始化完成...");
+            this.addLog("正在连接 AI 服务...");
 
-            // 初始化数据
-            this.fetchDashboardData();
-            this.fetchSeatLayout();
-
-            // 窗口缩放自适应
-            window.addEventListener('resize', () => {
-                this.trendChart && this.trendChart.resize();
-                this.heatChart && this.heatChart.resize();
-            });
+            // 开始轮询预测数据 (每3秒一次)
+            setInterval(this.fetchPrediction, 3000);
         },
         methods: {
-            // 1. 获取左侧统计数据
-            async fetchDashboardData() {
-                try {
-                    // 这里的接口需要对应 AdminStatsController
-                    const res = await axios.get('/api/admin/stats/dashboard');
-                    if (res.data.code === 200) {
-                        this.stats = res.data.data;
-                        this.initTrendChart(res.data.data.weeklyTrend);
-                    }
-                } catch (err) {
-                    console.error("Dashboard API Error:", err);
-                }
+            addLog(msg) {
+                const time = new Date().toLocaleTimeString();
+                this.logs.unshift({ time, message: msg });
+                if (this.logs.length > 50) this.logs.pop();
             },
-
-            // 2. 获取右侧座位布局及热度
-            async fetchSeatLayout() {
-                try {
-                    // 调用刚刚改造过的接口
-                    const res = await axios.get('/api/seat/layout');
-                    if (res.data.code === 200) {
-                        this.initHeatMap(res.data.data);
-                    }
-                } catch (err) {
-                    console.error("Layout API Error:", err);
-                }
-            },
-
-            // 渲染折线图
-            initTrendChart(data) {
-                const dom = document.getElementById('trendChart');
-                this.trendChart = echarts.init(dom);
-
-                // 模拟最近7天日期
-                const dates = [];
-                for(let i=6; i>=0; i--) {
-                    const d = new Date();
-                    d.setDate(d.getDate() - i);
-                    dates.push((d.getMonth()+1) + '-' + d.getDate());
-                }
-
+            initChart() {
+                this.chartInstance = echarts.init(document.getElementById('chart-prediction'));
                 const option = {
+                    backgroundColor: 'transparent',
                     tooltip: { trigger: 'axis' },
                     grid: { top: '15%', left: '3%', right: '4%', bottom: '3%', containLabel: true },
                     xAxis: {
                         type: 'category',
                         boundaryGap: false,
-                        data: dates,
-                        axisLine: { lineStyle: { color: '#666' } },
-                        axisLabel: { color: '#aaa' }
+                        data: this.xAxisData,
+                        axisLine: { lineStyle: { color: '#94a3b8' } }
                     },
                     yAxis: {
                         type: 'value',
-                        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-                        axisLabel: { color: '#aaa' }
+                        min: 0,
+                        max: 1,
+                        name: '拥挤系数',
+                        splitLine: { lineStyle: { color: '#334155', type: 'dashed' } },
+                        axisLine: { lineStyle: { color: '#94a3b8' } }
                     },
                     series: [{
-                        name: '预约量',
+                        name: 'AI 预测值',
                         type: 'line',
                         smooth: true,
-                        itemStyle: { color: '#00c6ff' },
+                        symbol: 'none',
                         areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: 'rgba(0, 198, 255, 0.5)' },
-                                { offset: 1, color: 'rgba(0, 198, 255, 0.0)' }
-                            ])
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                                offset: 0, color: 'rgba(56, 189, 248, 0.5)'
+                            }, {
+                                offset: 1, color: 'rgba(56, 189, 248, 0.0)'
+                            }])
                         },
-                        data: data || [0,0,0,0,0,0,0]
+                        lineStyle: { color: '#38bdf8', width: 3 },
+                        data: this.predictionData
                     }]
                 };
-                this.trendChart.setOption(option);
-            },
+                this.chartInstance.setOption(option);
 
-            // 渲染热力图
-            initHeatMap(seats) {
-                const dom = document.getElementById('heatMapChart');
-                this.heatChart = echarts.init(dom);
-
-                // 转换数据: [x, y, heatScore]
-                // 假设后端返回的数据 gridX, gridY 是从 1 开始的
-                const data = seats.map(seat => {
-                    return [seat.gridX - 1, seat.gridY - 1, seat.heatScore || 0, seat.label];
+                window.addEventListener('resize', () => {
+                    this.chartInstance.resize();
                 });
+            },
+            fetchPrediction() {
+                // 调用我们之前写的 Java 接口
+                axios.get('/api/app/ai/prediction/crowding')
+                    .then(res => {
+                        const result = res.data;
+                        if (result.code === 200 || result.code === 0) { // 兼容不同的 ApiResponse
+                            const value = result.data;
+                            const now = new Date().toLocaleTimeString();
 
-                // 计算最大的行列数
-                const maxX = Math.max(...seats.map(s => s.gridX)) || 10;
-                const maxY = Math.max(...seats.map(s => s.gridY)) || 10;
+                            this.addLog(`获取预测数据成功: 拥挤度 ${value}`);
 
-                const xData = Array.from({length: maxX}, (_, i) => i + 1);
-                const yData = Array.from({length: maxY}, (_, i) => i + 1);
+                            // 更新图表数据
+                            if (this.xAxisData.length > 20) {
+                                this.xAxisData.shift();
+                                this.predictionData.shift();
+                            }
+                            this.xAxisData.push(now);
+                            this.predictionData.push(value);
 
-                const option = {
-                    tooltip: {
-                        position: 'top',
-                        formatter: function (params) {
-                            return '座位: ' + params.data[3] + '<br/>热度: ' + params.data[2];
+                            this.chartInstance.setOption({
+                                xAxis: { data: this.xAxisData },
+                                series: [{ data: this.predictionData }]
+                            });
+                        } else {
+                            this.addLog("数据格式异常");
                         }
-                    },
-                    grid: { top: '10%', bottom: '15%' },
-                    visualMap: {
-                        min: 0,
-                        max: 100,
-                        calculable: true,
-                        orient: 'horizontal',
-                        left: 'center',
-                        bottom: '5%',
-                        inRange: {
-                            color: ['#1a2a3a', '#50a3ba', '#eac736', '#d94e5d'] // 蓝 -> 黄 -> 红
-                        },
-                        textStyle: { color: '#fff' }
-                    },
-                    xAxis: {
-                        type: 'category',
-                        data: xData,
-                        splitArea: { show: true, areaStyle: { color: ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.05)'] } },
-                        axisLabel: { color: '#aaa' }
-                    },
-                    yAxis: {
-                        type: 'category',
-                        data: yData,
-                        splitArea: { show: true },
-                        axisLabel: { color: '#aaa' }
-                    },
-                    series: [{
-                        name: 'Heatmap',
-                        type: 'heatmap',
-                        data: data,
-                        label: { show: true, formatter: (p) => p.data[2].toFixed(0) }, // 显示热度分
-                        itemStyle: {
-                            borderWidth: 1,
-                            borderColor: '#333',
-                            borderRadius: 4
-                        }
-                    }]
-                };
-                this.heatChart.setOption(option);
+                    })
+                    .catch(err => {
+                        this.addLog("AI 服务连接失败: " + err.message);
+                    });
             }
         }
     });

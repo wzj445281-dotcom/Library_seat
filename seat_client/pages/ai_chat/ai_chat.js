@@ -1,86 +1,70 @@
-const app = getApp();
 const request = require('../../utils/request.js');
+const app = getApp();
 
 Page({
     data: {
-        userInfo: {},
-        scrollTop: 0,
-        inputValue: '',
-        isLoading: false,
-        chatList: [
+        messageList: [
             {
-                role: 'ai',
-                content: '👋 你好呀！我是你的瑞幸专属 AI 咖啡师。\n\n我可以帮你：\n1. 推荐当季新品 🥤\n2. 查询咖啡热量 🔥\n3. 解决订单问题 📦\n\n想喝点什么？告诉我你的口味偏好吧~',
-                recommendations: []
+                type: 'robot',
+                content: '你好！我是您的智能选座助手。您可以问我：“哪里比较安静？” 或 “营业时间是几点？”'
             }
-        ]
+        ],
+        inputValue: '',
+        loading: false,
+        scrollTop: 0
     },
 
-    onLoad() {
-        // 获取用户信息用于显示头像
-        const userInfo = wx.getStorageSync('userInfo');
-        this.setData({ userInfo });
+    onLoad: function (options) {
     },
 
     handleInput(e) {
-        this.setData({ inputValue: e.detail.value });
+        this.setData({
+            inputValue: e.detail.value
+        });
     },
 
-    // 发送消息
     sendMessage() {
         const content = this.data.inputValue.trim();
-        if (!content || this.data.isLoading) return;
+        if (!content) return;
 
-        // 1. UI 立即上屏用户消息
-        const newChatList = [...this.data.chatList, { role: 'user', content }];
+        // 1. 立即显示用户消息
+        const userMsg = { type: 'user', content: content };
+        const newList = [...this.data.messageList, userMsg];
+
         this.setData({
-            chatList: newChatList,
+            messageList: newList,
             inputValue: '',
-            isLoading: true,
-            scrollTop: newChatList.length * 1000 // 自动滚动到底部
+            loading: true,
+            scrollTop: newList.length * 1000 // 滚动到底部
         });
 
-        // 2. 调用后端 API
-        request.post('/app/ai/chat', { message: content })
+        // 2. 请求后端接口
+        request.post('/api/app/ai/chat', { message: content })
             .then(res => {
-                if (res.code === 200) {
-                    const aiData = res.data; // { reply: "...", recommendations: [...] }
-
-                    const aiMsg = {
-                        role: 'ai',
-                        content: aiData.reply,
-                        recommendations: aiData.recommendations || []
-                    };
-
-                    this.setData({
-                        chatList: [...this.data.chatList, aiMsg],
-                        scrollTop: (this.data.chatList.length + 1) * 1000
-                    });
+                let replyContent = '系统繁忙，请稍后再试';
+                // 假设您的 request.js 返回结构是 res.code 和 res.data
+                // 如果直接返回数据，请调整为 res.data 或 res
+                if (res.code === 200 || res.code === 0) {
+                    replyContent = res.data;
                 } else {
-                    this.showErrorMsg(res.message);
+                    replyContent = res.msg || '出错了';
                 }
+
+                const robotMsg = { type: 'robot', content: replyContent };
+                const updatedList = [...this.data.messageList, robotMsg];
+
+                this.setData({
+                    messageList: updatedList,
+                    loading: false,
+                    scrollTop: updatedList.length * 1000
+                });
             })
             .catch(err => {
                 console.error(err);
-                this.showErrorMsg('网络连接超时，请检查网络');
-            })
-            .finally(() => {
-                this.setData({ isLoading: false });
+                this.setData({
+                    loading: false,
+                    messageList: [...this.data.messageList, { type: 'robot', content: '网络连接失败，请检查网络。' }]
+                });
             });
-    },
-
-    showErrorMsg(msg) {
-        this.setData({
-            chatList: [...this.data.chatList, { role: 'ai', content: `(T_T) ${msg || 'AI 暂时掉线了'}` }]
-        });
-    },
-
-    // 点击推荐商品卡片，跳转商品详情或去点单
-    goToProduct(e) {
-        const id = e.currentTarget.dataset.id;
-        // 简单起见，跳转到菜单页
-        wx.switchTab({
-            url: '/pages/menu/index'
-        });
     }
 });

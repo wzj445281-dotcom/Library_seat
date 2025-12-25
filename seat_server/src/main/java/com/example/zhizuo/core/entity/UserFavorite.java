@@ -1,4 +1,4 @@
-package com.example.zhizuo.entity;
+package com.example.zhizuo.core.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;

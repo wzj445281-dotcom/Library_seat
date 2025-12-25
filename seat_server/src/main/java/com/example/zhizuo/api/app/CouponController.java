@@ -2,11 +2,11 @@ package com.example.zhizuo.api.app;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.entity.Coupon;
-import com.example.zhizuo.entity.UserCoupon;
+import com.example.zhizuo.core.entity.Coupon;
+import com.example.zhizuo.core.entity.UserCoupon;
 import com.example.zhizuo.mapper.CouponMapper;     // 需自行创建
 import com.example.zhizuo.mapper.UserCouponMapper; // 需自行创建
-import com.example.zhizuo.util.SecurityUtils;
+import com.example.zhizuo.common.util.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;

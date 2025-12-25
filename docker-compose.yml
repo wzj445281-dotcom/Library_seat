@@ -1,84 +1,92 @@
-version: '3.8'
-
 services:
-  # 1. 数据库服务 (MySQL)
-  mysql:
-    image: mysql:8.0
-    container_name: zhizuo-mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: "000000"  # 务必与 application.yml 保持一致
-      MYSQL_DATABASE: zhizuo
-      MYSQL_TZ: Asia/Shanghai
+  # 1. AI 服务 (Python)
+  ai-service:
+    build: ./ai_service
+    container_name: zhizuo-ai
     ports:
-      - "3306:3306"
-    volumes:
-      - ./seat_server/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - mysql_data:/var/lib/mysql
+      - "5001:5000" # 映射到宿主机 5001，防止 5000 冲突
+    environment:
+      - DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx # 【必填】记得填 Key
     networks:
       - zhizuo-net
+    restart: always
 
-  # 2. 缓存服务 (Redis)
+  # 2. 数据库 (MySQL)
+  mysql:
+    image: mysql:8.0
+    container_name: zhizuo-db
+    ports:
+      - "3307:3306" # 映射到宿主机 3307，防止 3306 冲突
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: zhizuo_db
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - zhizuo-net
+    restart: always
+
+  # 3. 缓存 (Redis) - 【新增】
   redis:
     image: redis:6.2
     container_name: zhizuo-redis
-    restart: always
     ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+      - "6380:6379" # 映射到宿主机 6380，防止 6379 冲突
     networks:
       - zhizuo-net
-
-  # 3. 消息队列 (RabbitMQ)
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: zhizuo-rabbitmq
     restart: always
+
+  # 4. 消息队列 (RabbitMQ) - 【新增】
+  rabbitmq:
+    image: rabbitmq:3.8-management
+    container_name: zhizuo-rabbitmq
     ports:
-      - "5672:5672"   # 应用连接端口
-      - "15672:15672" # 管理界面端口
+      - "5673:5672"   # 应用端口映射到 5673
+      - "15673:15672" # 管理界面映射到 15673
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     networks:
       - zhizuo-net
+    restart: always
 
-  # 4. Java 后端服务
-  server:
+  # 5. 后端服务 (Java Spring Boot)
+  seat-server:
     build: ./seat_server
     container_name: zhizuo-server
-    restart: on-failure
+    ports:
+      - "8081:8080" # 映射到宿主机 8081
     depends_on:
+      - ai-service
       - mysql
       - redis
       - rabbitmq
-    ports:
-      - "8080:8080"
     environment:
-      # 覆盖 application.yml 中的配置，使用容器服务名连接
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/zhizuo?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
-      SPRING_REDIS_HOST: redis
-      SPRING_RABBITMQ_HOST: rabbitmq
-      # 如果需要连接 AI 服务
-      AI_SERVICE_URL: http://ai-service:5000
+      # === 数据库连接 ===
+      SPRING_DATASOURCE_URL: jdbc:mysql://zhizuo-db:3306/zhizuo_db?useUnicode=true&characterEncoding=utf-8&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+
+      # === AI 服务连接 ===
+      AI_SERVICE_URL: http://zhizuo-ai:5000
+
+      # === Redis 连接 (使用容器名 zhizuo-redis) ===
+      SPRING_REDIS_HOST: zhizuo-redis
+      SPRING_REDIS_PORT: 6379
+
+      # === RabbitMQ 连接 (使用容器名 zhizuo-rabbitmq) ===
+      SPRING_RABBITMQ_HOST: zhizuo-rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
     networks:
       - zhizuo-net
-
-  # 5. Python AI 服务 (如果有)
-  ai-service:
-    build: ./ai_service
-    container_name: zhizuo-ai
-    restart: on-failure
-    ports:
-      - "5000:5000"
-    networks:
-      - zhizuo-net
-
-volumes:
-  mysql_data:
-  redis_data:
+    restart: always
 
 networks:
   zhizuo-net:
     driver: bridge
+
+volumes:
+  mysql-data:

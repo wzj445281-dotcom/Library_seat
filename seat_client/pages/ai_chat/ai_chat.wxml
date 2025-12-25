@@ -1,55 +1,41 @@
-<view class="container">
-    <!-- 聊天内容区域 -->
-    <scroll-view class="chat-area" scroll-y scroll-top="{{scrollTop}}" scroll-with-animation>
-        <block wx:for="{{chatList}}" wx:key="index">
-            <view class="message-item {{item.role}} fade-in">
-                <!-- 头像 -->
-                <image class="avatar" src="{{item.role === 'ai' ? '/assets/images/cart.png' : (userInfo.avatarUrl || '/assets/images/user.png')}}" mode="aspectFill"></image>
+<view class="chat-container">
+    <scroll-view scroll-y="true" class="chat-list" scroll-top="{{scrollTop}}" scroll-with-animation>
+        <block wx:for="{{messageList}}" wx:key="index">
 
+            <!-- 机器人消息 -->
+            <view class="message-item robot" wx:if="{{item.type === 'robot'}}">
+                <image class="avatar" src="/assets/images/logo.png" mode="aspectFill"></image>
                 <view class="content-wrapper">
-                    <!-- 文本气泡 -->
-                    <view class="bubble">
-                        <text user-select>{{item.content}}</text>
-                    </view>
-
-                    <!-- 商品推荐卡片 (仅 AI 回复且有推荐时显示) -->
-                    <view class="recommendations" wx:if="{{item.recommendations && item.recommendations.length > 0}}">
-                        <view class="rec-title">为您精选：</view>
-                        <block wx:for="{{item.recommendations}}" wx:key="id" wx:for-item="prod">
-                            <view class="product-card" bindtap="goToProduct" data-id="{{prod.id}}">
-                                <!-- 商品图 (如果后端没传图，用占位图) -->
-                                <image class="prod-img" src="{{prod.image || '[https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200](https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200)'}}" mode="aspectFill"></image>
-                                <view class="prod-info">
-                                    <view class="prod-name">{{prod.name}}</view>
-                                    <view class="prod-reason">💡 {{prod.reason}}</view>
-                                    <view class="prod-bottom">
-                                        <text class="prod-price">¥{{prod.price}}</text>
-                                        <view class="go-btn">去购买</view>
-                                    </view>
-                                </view>
-                            </view>
-                        </block>
-                    </view>
+                    <view class="content">{{item.content}}</view>
                 </view>
             </view>
+
+            <!-- 用户消息 -->
+            <view class="message-item user" wx:if="{{item.type === 'user'}}">
+                <view class="content-wrapper">
+                    <view class="content">{{item.content}}</view>
+                </view>
+                <image class="avatar" src="{{userInfo.avatarUrl || '/assets/images/user.png'}}" mode="aspectFill"></image>
+            </view>
+
         </block>
 
-        <!-- Loading 状态 -->
-        <view class="loading-wrap" wx:if="{{isLoading}}">
-            <view class="loading-dots">
-                <view class="dot"></view>
-                <view class="dot"></view>
-                <view class="dot"></view>
-            </view>
-            <text>瑞幸 AI 正在思考...</text>
+        <!-- 加载状态 -->
+        <view class="loading-wrapper" wx:if="{{loading}}">
+            <view class="loading-text">AI 正在思考...</view>
         </view>
+
+        <!-- 底部垫高 -->
+        <view style="height: 120rpx;"></view>
     </scroll-view>
 
-    <!-- 底部输入框 -->
     <view class="input-area">
-        <view class="input-wrapper">
-            <input class="chat-input" value="{{inputValue}}" bindinput="handleInput" bindconfirm="sendMessage" placeholder="想喝点什么？试试问问推荐~" confirm-type="send"/>
-        </view>
-        <view class="send-btn {{inputValue ? 'active' : ''}}" bindtap="sendMessage">发送</view>
+        <input class="input-box"
+               value="{{inputValue}}"
+               bindinput="handleInput"
+               bindconfirm="sendMessage"
+               placeholder="请输入您的问题..."
+               confirm-type="send"/>
+        <button class="send-btn" bindtap="sendMessage" disabled="{{loading}}">发送</button>
     </view>
 </view>

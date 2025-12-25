@@ -1,7 +1,7 @@
 package com.example.zhizuo.core.service;
 
-import com.example.zhizuo.entity.Coupon;
-import com.example.zhizuo.entity.UserCoupon;
+import com.example.zhizuo.core.entity.Coupon;
+import com.example.zhizuo.core.entity.UserCoupon;
 import com.example.zhizuo.mapper.CouponMapper;
 import com.example.zhizuo.mapper.UserCouponMapper;
 import org.springframework.beans.factory.annotation.Autowired;

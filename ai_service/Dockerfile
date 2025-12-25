@@ -1,20 +1,24 @@
+# 使用轻量级 Python 基础镜像
 FROM python:3.9-slim
 
+# 设置工作目录
 WORKDIR /app
 
-# 复制依赖文件 (如果有 requirements.txt)
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
+# 设置时区为上海
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' > /etc/timezone
 
-# 如果没有 requirements.txt，直接安装常用 AI 库 (根据你的 predict_server.py 实际需求调整)
-# 假设用到了 flask/fastapi, numpy, torch 等
-RUN pip install --no-cache-dir flask requests numpy
+# 复制依赖文件
+COPY requirements.txt .
 
-# 复制源码
+# 安装依赖 (使用清华源加速)
+RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 复制当前目录下的所有文件到容器中
 COPY . .
 
-# 暴露端口 (假设你的 python 服务运行在 5000 端口)
+# 暴露 5000 端口
 EXPOSE 5000
 
-# 启动命令 (请根据实际文件名调整)
+# 启动命令 (使用 gunicorn 生产环境启动，或者直接 python 启动)
+# 这里为了简单直接用 python，生产环境建议用 gunicorn
 CMD ["python", "predict_server.py"]

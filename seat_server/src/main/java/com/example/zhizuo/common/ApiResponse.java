@@ -1,46 +1,44 @@
 package com.example.zhizuo.common;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
 
 /**
- * 通用 API 返回结果包装类
+ * 通用接口响应包装类
+ * @param <T> 数据类型
  */
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class ApiResponse<T> implements Serializable {
+    private Integer code;
+    private String msg;
+    private T data;
 
-    private Integer code;    // 状态码：200-成功，其他-失败
-    private String message;  // 提示信息
-    private T data;          // 数据主体
+    // 构造函数
+    public ApiResponse() {}
 
-    /**
-     * 成功返回
-     */
+    public ApiResponse(Integer code, String msg, T data) {
+        this.code = code;
+        this.msg = msg;
+        this.data = data;
+    }
+
+    // 成功响应 (带数据)
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(200, "success", data);
+        return new ApiResponse<>(200, "操作成功", data);
     }
 
-    public static <T> ApiResponse<T> success(String message, T data) {
-        return new ApiResponse<>(200, message, data);
+    // 成功响应 (无数据)
+    public static <T> ApiResponse<T> success() {
+        return new ApiResponse<>(200, "操作成功", null);
     }
 
-    /**
-     * 错误返回 - 全参数版本
-     */
-    public static <T> ApiResponse<T> error(Integer code, String message) {
-        return new ApiResponse<>(code, message, null);
+    // 错误响应
+    public static <T> ApiResponse<T> error(String msg) {
+        return new ApiResponse<>(500, msg, null);
     }
 
-    /**
-     * 错误返回 - 简化版本 (默认 500 错误)
-     * 解决编译报错：无法将 error 应用到 String 类型
-     */
-    public static <T> ApiResponse<T> error(String message) {
-        return new ApiResponse<>(500, message, null);
+    // 错误响应 (自定义状态码)
+    public static <T> ApiResponse<T> error(Integer code, String msg) {
+        return new ApiResponse<>(code, msg, null);
     }
 }

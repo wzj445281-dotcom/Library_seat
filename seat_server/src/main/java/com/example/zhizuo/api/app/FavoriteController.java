@@ -2,9 +2,9 @@ package com.example.zhizuo.api.app;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.entity.UserFavorite;
+import com.example.zhizuo.core.entity.UserFavorite;
 import com.example.zhizuo.mapper.UserFavoriteMapper; // 假设你有Mapper接口，如果没有请新建
-import com.example.zhizuo.util.SecurityUtils; // 假设你有获取当前用户的工具类
+import com.example.zhizuo.common.util.SecurityUtils; // 假设你有获取当前用户的工具类
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

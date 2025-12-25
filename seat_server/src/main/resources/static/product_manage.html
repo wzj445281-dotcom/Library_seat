@@ -1,188 +1,330 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>商家订单中心 - 智座书局</title>
-    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - 智座后台</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Vue 2 & Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
     <style>
-        body { margin: 0; padding: 20px; background: #f0f2f5; font-family: sans-serif; }
-        .stat-card { background: #fff; padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 20px; }
-        .stat-num { font-size: 24px; font-weight: bold; color: #409EFF; }
-        .order-card { margin-bottom: 15px; border-left: 5px solid #eee; }
-        .order-card.PENDING_PAY { border-left-color: #E6A23C; }
-        .order-card.PAID { border-left-color: #409EFF; }
-        .order-card.READY { border-left-color: #67C23A; }
-        .item-list { font-size: 13px; color: #666; margin: 10px 0; background: #f9f9f9; padding: 8px; }
-        .refresh-bar { margin-bottom: 20px; display: flex; justify-content: space-between; }
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        /* 侧边栏样式 (与首页保持一致) */
+        .sidebar {
+            height: 100vh;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding-top: 20px;
+            position: fixed;
+            width: 250px;
+            z-index: 1000;
+        }
+        .sidebar-brand {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #38bdf8;
+            letter-spacing: 2px;
+        }
+        .nav-link {
+            color: #94a3b8;
+            padding: 15px 25px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #38bdf8;
+        }
+        .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        /* 主内容区域 */
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+        }
+        /* 表格样式 */
+        .card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 12px;
+        }
+        .table thead th {
+            border-top: none;
+            background-color: #f8f9fa;
+            color: #6c757d;
+            font-weight: 600;
+        }
+        .product-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+            background-color: #eee;
+        }
+        .action-btn {
+            cursor: pointer;
+            margin-right: 10px;
+            transition: color 0.2s;
+        }
+        .action-btn:hover {
+            color: #0d6efd;
+        }
+        .action-btn.delete:hover {
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>
 <div id="app">
-    <el-row :gutter="20">
-        <el-col :span="6"><div class="stat-card"><div>待处理订单</div><div class="stat-num">{{ pendingCount }}</div></div></el-col>
-        <el-col :span="6"><div class="stat-card"><div>今日营业额</div><div class="stat-num">¥{{ todaySales }}</div></div></el-col>
-    </el-row>
-
-    <div class="refresh-bar">
-        <el-radio-group v-model="activeTab" @change="fetchOrders">
-            <el-radio-button label="ALL">全部</el-radio-button>
-            <el-radio-button label="PAID">制作中 ({{paidCount}})</el-radio-button>
-            <el-radio-button label="READY">待取货 ({{readyCount}})</el-radio-button>
-        </el-radio-group>
-        <el-button type="success" icon="el-icon-refresh" @click="fetchOrders">刷新</el-button>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-couch me-2"></i>ZHIZUO
+        </div>
+        <nav class="nav flex-column">
+            <a class="nav-link" href="/admin.html">
+                <i class="fas fa-home"></i> 首页概览
+            </a>
+            <a class="nav-link" href="/monitor.html" target="_blank">
+                <i class="fas fa-chart-line"></i> AI 监控大屏
+            </a>
+            <!-- 当前页面高亮 -->
+            <a class="nav-link active" href="/product_manage.html">
+                <i class="fas fa-coffee"></i> 商品管理
+            </a>
+            <a class="nav-link" href="/store_order_manage.html">
+                <i class="fas fa-clipboard-list"></i> 订单管理
+            </a>
+            <a class="nav-link" href="/feedback_manage.html">
+                <i class="fas fa-comment-dots"></i> 用户反馈
+            </a>
+        </nav>
     </div>
 
-    <el-table :data="orderList" v-loading="loading" style="width: 100%" :row-key="row => row.id">
-        <el-table-column prop="id" label="订单号" width="180"></el-table-column>
-        <el-table-column label="类型" width="100">
-            <template slot-scope="scope">
-                <el-tag :type="scope.row.type === 1 ? '' : 'warning'">{{ scope.row.type === 1 ? '自取' : '外卖' }}</el-tag>
-            </template>
-        </el-table-column>
-        <el-table-column label="商品明细">
-            <template slot-scope="scope">
-                <div v-for="(item, index) in scope.row.products" :key="index">
-                    {{ item.name }} x {{ item.count }}
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-dark">商品菜单管理</h2>
+            <button class="btn btn-primary" @click="openAddModal">
+                <i class="fas fa-plus me-2"></i>新增商品
+            </button>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" v-model="searchKeyword" placeholder="搜索商品名称...">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" v-model="filterCategory">
+                            <option value="">所有分类</option>
+                            <option value="coffee">咖啡</option>
+                            <option value="tea">茶饮</option>
+                            <option value="snack">甜点</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-secondary w-100" @click="fetchData">搜索</button>
+                    </div>
                 </div>
-            </template>
-        </el-table-column>
-        <el-table-column prop="totalAmount" label="金额" width="100">
-            <template slot-scope="scope">¥{{ scope.row.totalAmount }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="120">
-            <template slot-scope="scope">
-                <el-tag v-if="scope.row.status==='PENDING_PAY'" type="info">待支付</el-tag>
-                <el-tag v-else-if="scope.row.status==='PAID'" type="primary">配货中</el-tag>
-                <el-tag v-else-if="scope.row.status==='READY'" type="success">待取/送</el-tag>
-                <el-tag v-else type="info">已完成</el-tag>
-            </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="下单时间" width="160"></el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-            <template slot-scope="scope">
-                <!-- 流程：已支付 -> 配货完成 -> 待取货 -> 核销完成 -->
-                <el-button v-if="scope.row.status === 'PAID'" type="primary" size="small" @click="changeStatus(scope.row.id, 'READY')">配货完成</el-button>
-                <el-button v-if="scope.row.status === 'READY'" type="success" size="small" @click="changeStatus(scope.row.id, 'COMPLETED')">核销/送达</el-button>
-            </template>
-        </el-table-column>
-    </el-table>
+            </div>
+        </div>
+
+        <!-- 商品表格 -->
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th class="ps-4">缩略图</th>
+                        <th>商品名称</th>
+                        <th>分类</th>
+                        <th>价格</th>
+                        <th>库存</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="item in productList" :key="item.id">
+                        <td class="ps-4">
+                            <img :src="item.image || 'https://via.placeholder.com/50'" class="product-img" alt="商品图片">
+                        </td>
+                        <td>{{ item.name }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ item.category }}</span>
+                        </td>
+                        <td class="fw-bold text-danger">¥ {{ item.price }}</td>
+                        <td>{{ item.stock }}</td>
+                        <td>
+                                    <span class="badge" :class="item.stock > 10 ? 'bg-success' : 'bg-warning'">
+                                        {{ item.stock > 10 ? '充足' : '低库存' }}
+                                    </span>
+                        </td>
+                        <td>
+                            <i class="fas fa-edit action-btn text-primary" title="编辑" @click="editItem(item)"></i>
+                            <i class="fas fa-trash-alt action-btn delete text-danger" title="删除" @click="deleteItem(item.id)"></i>
+                        </td>
+                    </tr>
+                    <tr v-if="productList.length === 0">
+                        <td colspan="7" class="text-center py-5 text-muted">暂无数据</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑/新增 弹窗 Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ isEdit ? '编辑商品' : '新增商品' }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">商品名称</label>
+                            <input type="text" class="form-control" v-model="form.name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">价格 (¥)</label>
+                            <input type="number" class="form-control" v-model="form.price">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">库存</label>
+                            <input type="number" class="form-control" v-model="form.stock">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">分类</label>
+                            <select class="form-select" v-model="form.category">
+                                <option value="coffee">咖啡</option>
+                                <option value="tea">茶饮</option>
+                                <option value="snack">甜点</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">图片链接</label>
+                            <input type="text" class="form-control" v-model="form.image" placeholder="http://...">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" @click="saveProduct">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<script src="https://unpkg.com/vue@2/dist/vue.js"></script>
-<script src="https://unpkg.com/element-ui/lib/index.js"></script>
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<!-- 引入 Bootstrap JS (用于弹窗) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     new Vue({
         el: '#app',
         data: {
-            loading: false,
-            activeTab: 'PAID',
-            pendingCount: 0,
-            paidCount: 0,
-            readyCount: 0,
-            todaySales: '0.00',
-            orderList: [],
-            timer: null
+            searchKeyword: '',
+            filterCategory: '',
+            productList: [],
+            modalInstance: null,
+            isEdit: false,
+            form: {
+                id: null,
+                name: '',
+                price: 0,
+                stock: 0,
+                category: 'coffee',
+                image: ''
+            }
         },
         mounted() {
-            this.fetchOrders();
-            // 每30秒自动刷新
-            this.timer = setInterval(this.fetchOrders, 30000);
-        },
-        beforeDestroy() {
-            if (this.timer) clearInterval(this.timer);
+            // 初始化 Modal 对象
+            this.modalInstance = new bootstrap.Modal(document.getElementById('productModal'));
+            this.fetchData();
         },
         methods: {
-            fetchOrders() {
-                this.loading = true;
-                // 尝试调用真实接口
-                axios.get('/api/admin/order/list', { params: { status: this.activeTab } })
-                    .then(res => {
-                        if (res.data && res.data.code === 200) {
-                            const data = res.data.data;
-                            this.orderList = data.list || [];
-                            // 更新统计数据
-                            this.pendingCount = data.pendingCount || 0;
-                            this.paidCount = data.paidCount || 0;
-                            this.readyCount = data.readyCount || 0;
-                            this.todaySales = data.todaySales || '0.00';
-                        } else {
-                            // 接口返回错误或格式不对，降级使用 Mock
-                            console.warn("API response invalid, switching to Mock");
-                            this.useMockData();
-                        }
-                    })
-                    .catch(err => {
-                        console.warn("API Request Failed, using Mock Data", err);
-                        this.useMockData();
-                    })
-                    .finally(() => {
-                        this.loading = false;
-                    });
-            },
-            useMockData() {
-                console.log("Using Mock Data for tab: " + this.activeTab);
-                setTimeout(() => {
-                    const allMockData = [
-                        {
-                            id: 'ORD_2023102601', type: 1, totalAmount: 59.9, status: 'PAID', createTime: '10:20:01',
-                            products: [{name: 'Java编程思想', count: 1}]
-                        },
-                        {
-                            id: 'ORD_2023102602', type: 2, totalAmount: 128.0, status: 'READY', createTime: '09:15:33',
-                            products: [{name: '算法导论', count: 1}]
-                        },
-                        {
-                            id: 'ORD_2023102603', type: 1, totalAmount: 35.0, status: 'PENDING_PAY', createTime: '10:25:11',
-                            products: [{name: '小王子', count: 1}]
-                        }
-                    ];
+            // 加载数据 (模拟数据，实际项目中请替换为 axios.get('/api/admin/products'))
+            fetchData() {
+                // 模拟从后端获取的数据
+                const mockData = [
+                    { id: 1, name: '拿铁咖啡 (Latte)', category: 'coffee', price: 28, stock: 150, image: 'https://images.unsplash.com/photo-1570968992193-d6ea066f8737?auto=format&fit=crop&w=100&q=80' },
+                    { id: 2, name: '卡布奇诺 (Cappuccino)', category: 'coffee', price: 32, stock: 80, image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=100&q=80' },
+                    { id: 3, name: '茉莉花茶', category: 'tea', price: 18, stock: 5, image: 'https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?auto=format&fit=crop&w=100&q=80' },
+                    { id: 4, name: '草莓芝士蛋糕', category: 'snack', price: 35, stock: 20, image: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=100&q=80' }
+                ];
 
-                    this.orderList = allMockData.filter(o => this.activeTab === 'ALL' || o.status === this.activeTab);
-
-                    // Mock stats update
-                    this.paidCount = allMockData.filter(o => o.status === 'PAID').length;
-                    this.readyCount = allMockData.filter(o => o.status === 'READY').length;
-                    this.pendingCount = allMockData.filter(o => o.status === 'PENDING_PAY').length;
-                    this.todaySales = '1,280.00';
-
-                    this.loading = false;
-                }, 500);
-            },
-            changeStatus(orderId, nextStatus) {
-                this.$confirm(`确认更改订单状态为 ${nextStatus}?`, '操作确认', {
-                    confirmButtonText: '确定',
-                    type: 'warning'
-                }).then(() => {
-                    axios.post('/api/admin/order/status', { id: orderId, status: nextStatus })
-                        .then(res => {
-                            if (res.data && res.data.code === 200) {
-                                this.$message.success('操作成功');
-                                this.fetchOrders(); // 刷新列表
-                            } else {
-                                this.mockChangeStatus(orderId);
-                            }
-                        })
-                        .catch(() => {
-                            this.mockChangeStatus(orderId);
-                        });
+                // 简单的前端筛选模拟
+                this.productList = mockData.filter(item => {
+                    const matchKey = item.name.includes(this.searchKeyword);
+                    const matchCat = this.filterCategory ? item.category === this.filterCategory : true;
+                    return matchKey && matchCat;
                 });
             },
-            mockChangeStatus(orderId) {
-                this.$message.success('操作成功 (Mock)');
-                const idx = this.orderList.findIndex(o => o.id === orderId);
-                if(idx !== -1) {
-                    // 简单模拟移除，因为状态变了，不在当前 Tab 显示了
-                    this.orderList.splice(idx, 1);
 
-                    // 简单更新计数
-                    if (this.activeTab === 'PAID') this.paidCount = Math.max(0, this.paidCount - 1);
-                    if (this.activeTab === 'READY') this.readyCount = Math.max(0, this.readyCount - 1);
+            // 打开新增弹窗
+            openAddModal() {
+                this.isEdit = false;
+                this.form = { id: null, name: '', price: 0, stock: 0, category: 'coffee', image: '' };
+                this.modalInstance.show();
+            },
+
+            // 打开编辑弹窗
+            editItem(item) {
+                this.isEdit = true;
+                this.form = { ...item }; // 浅拷贝
+                this.modalInstance.show();
+            },
+
+            // 保存数据
+            saveProduct() {
+                // TODO: 这里调用后端接口 axios.post('/api/admin/product/save', this.form)
+
+                if (this.isEdit) {
+                    // 模拟前端更新
+                    const index = this.productList.findIndex(p => p.id === this.form.id);
+                    if (index !== -1) {
+                        this.$set(this.productList, index, { ...this.form });
+                    }
+                } else {
+                    // 模拟前端新增
+                    this.form.id = Date.now();
+                    this.productList.unshift({ ...this.form });
+                }
+
+                this.modalInstance.hide();
+                alert('保存成功 (演示模式)');
+            },
+
+            // 删除数据
+            deleteItem(id) {
+                if (confirm('确定要下架该商品吗？')) {
+                    // TODO: 调用后端接口 axios.delete('/api/admin/product/' + id)
+                    this.productList = this.productList.filter(item => item.id !== id);
                 }
             }
         }
-    })
+    });
 </script>
 </body>
 </html>
