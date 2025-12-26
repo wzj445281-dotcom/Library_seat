@@ -60,5 +60,10 @@
       }
     ]
   },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "我们需要您的位置来为您推荐最近的门店"
+    }
+  },
   "sitemapLocation": "sitemap.json"
 }

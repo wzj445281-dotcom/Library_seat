@@ -1,5 +1,4 @@
 <view class="container">
-    <!-- 顶部 Tab -->
     <view class="tabs">
         <view class="tab-item {{currentTab === 0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">
             当前订单
@@ -11,28 +10,23 @@
         </view>
     </view>
 
-    <!-- 列表内容 -->
     <scroll-view scroll-y class="list-scroll" refresher-enabled bindrefresherrefresh="onPullDownRefresh" refresher-triggered="{{false}}">
 
-        <!-- 空状态 -->
         <view class="empty-state" wx:if="{{!loading && list.length === 0}}">
             <image class="empty-img" src="/assets/images/cart.png" mode="aspectFit" style="filter: grayscale(100%); opacity: 0.3;"></image>
             <text class="empty-text">暂无相关订单</text>
             <button class="go-btn" bindtap="reOrder">去喝一杯</button>
         </view>
 
-        <!-- 订单卡片列表 -->
         <view class="order-list" wx:else>
             <block wx:for="{{list}}" wx:key="id">
                 <view class="order-card" bindtap="goToDetail" data-id="{{item.id}}">
 
-                    <!-- 头部：店名 + 状态 -->
                     <view class="card-header">
                         <text class="shop-name">{{item.shopName}}</text>
-                        <text class="status {{item.status}}">{{item.statusText}}</text>
+                        <text class="status {{item.statusClass}}">{{item.statusText}}</text>
                     </view>
 
-                    <!-- 内容：简单描述 + 时间 -->
                     <view class="card-content">
                         <view class="info-row">
                             <text class="order-desc">{{item.desc}}</text>
@@ -41,12 +35,13 @@
                         <text class="order-time">{{item.time}}</text>
                     </view>
 
-                    <!-- 底部：按钮 -->
                     <view class="card-footer">
                         <view class="btn-group">
+                            <view class="action-btn primary" wx:if="{{item.status === 'PENDING'}}" catchtap="goPay" data-id="{{item.id}}">去支付</view>
+
                             <view class="action-btn outline" catchtap="reOrder">再来一单</view>
-                            <!-- 仅当前订单显示查看进度 -->
-                            <view class="action-btn primary" wx:if="{{currentTab === 0}}">查看进度</view>
+
+                            <view class="action-btn primary" wx:if="{{item.status === 'MAKING' || item.status === 'PAID' || item.status === 'READY'}}">查看进度</view>
                         </view>
                     </view>
 
@@ -54,7 +49,6 @@
             </block>
         </view>
 
-        <!-- 底部垫高 -->
         <view style="height: 40rpx;"></view>
     </scroll-view>
 </view>

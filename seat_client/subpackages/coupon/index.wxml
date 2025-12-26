@@ -1,2 +1,73 @@
-<!--subpackages/coupon/index.wxml-->
-<text>subpackages/coupon/index.wxml</text>
+<view class="container">
+    <view class="tabs">
+        <view
+                class="tab-item {{activeTab === index ? 'active' : ''}}"
+                wx:for="{{tabs}}"
+                wx:key="index"
+                bindtap="switchTab"
+                data-index="{{index}}">
+            {{item}}
+        </view>
+    </view>
+
+    <scroll-view scroll-y class="content-scroll" enable-flex>
+
+        <block wx:if="{{activeTab === 0}}">
+            <view class="coupon-list">
+                <view class="empty-tip" wx:if="{{myCoupons.length === 0 && !loading}}">暂无优惠券</view>
+
+                <view class="coupon-card" wx:for="{{myCoupons}}" wx:key="id">
+                    <view class="card-left">
+                        <view class="amount-wrapper">
+                            <text class="symbol">¥</text>
+                            <text class="amount">{{item.amount}}</text>
+                        </view>
+                        <view class="condition">满{{item.minPoint || 0}}元可用</view>
+                    </view>
+                    <view class="card-right">
+                        <view class="info">
+                            <view class="title">{{item.title}}</view>
+                            <view class="date" wx:if="{{item.endTime}}">有效期至: {{item.endTime}}</view>
+                            <view class="date" wx:else>长期有效</view>
+                        </view>
+                        <view class="action">
+                            <button class="btn use-btn" wx:if="{{item.status === 0}}" bindtap="goUse">去使用</button>
+                            <text class="status-text" wx:else>{{item.statusText}}</text>
+                        </view>
+                    </view>
+                </view>
+            </view>
+        </block>
+
+        <block wx:if="{{activeTab === 1}}">
+            <view class="coupon-list">
+                <view class="empty-tip" wx:if="{{availableCoupons.length === 0 && !loading}}">暂无优惠券可领</view>
+
+                <view class="coupon-card available" wx:for="{{availableCoupons}}" wx:key="id">
+                    <view class="card-left">
+                        <view class="amount-wrapper">
+                            <text class="symbol">¥</text>
+                            <text class="amount">{{item.amount}}</text>
+                        </view>
+                        <view class="condition">满{{item.minPoint || 0}}元可用</view>
+                    </view>
+                    <view class="card-right">
+                        <view class="info">
+                            <view class="title">{{item.title}}</view>
+                            <view class="stock">剩余: {{item.stock}}</view>
+                        </view>
+                        <view class="action">
+                            <button
+                                    class="btn receive-btn {{item.stock <= 0 ? 'disabled' : ''}}"
+                                    bindtap="{{item.stock > 0 ? 'handleReceive' : ''}}"
+                                    data-id="{{item.id}}">
+                                {{item.stock > 0 ? '领取' : '已抢光'}}
+                            </button>
+                        </view>
+                    </view>
+                </view>
+            </view>
+        </block>
+
+    </scroll-view>
+</view>
