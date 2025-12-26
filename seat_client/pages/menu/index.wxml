@@ -1,4 +1,3 @@
-<!-- 骨架屏 -->
 <view class="skeleton-wrapper" wx:if="{{loading}}">
   <view class="sk-left">
     <view class="skeleton-item sk-menu-item" wx:for="{{[1,2,3,4,5,6,7,8]}}" wx:key="*this"></view>
@@ -20,53 +19,48 @@
   </view>
 </view>
 
-<!-- 真实内容 -->
 <view class="container" wx:else>
-  <!-- 抛物线动画小球容器 -->
   <block wx:for="{{balls}}" wx:key="id">
-    <view
-            class="parabola-flyer-outer"
-            hidden="{{!item.inUse}}"
-            style="{{item.styleOuter}}"
-    >
+    <view class="parabola-flyer-outer" hidden="{{!item.inUse}}" style="{{item.styleOuter}}">
       <view class="parabola-flyer-inner" style="{{item.styleInner}}"></view>
     </view>
   </block>
 
-  <!-- 顶部搜索栏 -->
   <view class="header">
     <view class="search-bar">
       <view class="search-input-wrapper">
-        <icon class="search-icon" type="search" size="16"></icon>
-        <input 
-          class="search-input" 
-          placeholder="搜索您喜欢的商品" 
-          value="{{searchKeyword}}"
-          bindinput="onSearchInput"
-          bindfocus="onSearchFocus"
-          bindblur="onSearchBlur"
-          confirm-type="search"
-          bindconfirm="onSearchConfirm"
+        <icon class="search-icon" type="search" size="14"></icon>
+        <input
+                class="search-input"
+                placeholder="想喝什么？搜索看看"
+                value="{{searchKeyword}}"
+                bindinput="onSearchInput"
+                bindfocus="onSearchFocus"
+                bindblur="onSearchBlur"
+                confirm-type="search"
+                bindconfirm="onSearchConfirm"
+                placeholder-style="color:#999;"
         />
         <view class="search-clear" wx:if="{{searchKeyword}}" bindtap="clearSearch">
-          <icon type="clear" size="16"></icon>
+          <icon type="clear" size="14"></icon>
         </view>
       </view>
     </view>
-    
-    <!-- 搜索历史 -->
+
     <view class="search-history" wx:if="{{showSearchHistory && searchHistory.length > 0}}">
       <view class="history-header">
-        <text class="history-title">搜索历史</text>
-        <text class="history-clear" bindtap="clearSearchHistory">清除</text>
+        <text class="history-title">历史搜索</text>
+        <view class="history-clear-btn" bindtap="clearSearchHistory">
+          <text>🗑</text>
+        </view>
       </view>
       <view class="history-tags">
-        <view 
-          class="history-tag" 
-          wx:for="{{searchHistory}}" 
-          wx:key="*this"
-          bindtap="selectHistory"
-          data-keyword="{{item}}"
+        <view
+                class="history-tag"
+                wx:for="{{searchHistory}}"
+                wx:key="*this"
+                bindtap="selectHistory"
+                data-keyword="{{item}}"
         >
           {{item}}
         </view>
@@ -74,7 +68,6 @@
     </view>
   </view>
 
-  <!-- 中间内容区域 (增加 padding-bottom 防止被底部购物车遮挡) -->
   <view class="main-content">
     <scroll-view scroll-y class="category-sidebar">
       <view
@@ -84,7 +77,7 @@
               bindtap="switchCategory"
               data-index="{{index}}"
       >
-        {{item}}
+        <text class="cat-name">{{item}}</text>
       </view>
     </scroll-view>
 
@@ -99,52 +92,99 @@
           <view class="category-title">{{category.name}}</view>
           <view class="product-list">
             <view class="product-item" wx:for="{{category.items}}" wx:key="id" wx:for-item="product">
-              <!-- 商品图片区域 -->
-              <view class="product-image-box">
-                <lazy-image class="product-img" src="{{product.image}}" mode="aspectFill"></lazy-image>
-                
-                <!-- 收藏按钮 -->
-                <view 
-                  class="favorite-btn" 
-                  catchtap="onToggleFavorite" 
-                  data-id="{{product.id}}"
-                >
-                  <!-- 使用 CSS 绘制的爱心图标，比 emoji 更精致 -->
-                  <view class="heart-shape {{favoriteMap[product.id] ? 'active' : ''}}"></view>
+
+              <view class="product-image-box" bindtap="openSpecModal" data-item="{{product}}">
+                <image class="product-img" src="{{product.image}}" mode="aspectFill"></image>
+                <view class="favorite-btn" catchtap="onToggleFavorite" data-id="{{product.id}}">
+                  <text class="heart-icon {{favoriteMap[product.id] ? 'active' : ''}}">❤</text>
                 </view>
               </view>
+
               <view class="product-info">
-                <view>
+                <view bindtap="openSpecModal" data-item="{{product}}">
                   <view class="name">{{product.name}}</view>
                   <view class="desc">{{product.desc}}</view>
                 </view>
                 <view class="price-row">
-                  <text class="price">{{product.price}}</text>
-                  <!-- 绑定 addToCart -->
-                  <view class="add-btn" bindtap="addToCart" data-item="{{product}}">+</view>
+                  <view class="price-wrapper">
+                    <text class="currency">¥</text>
+                    <text class="price">{{product.price}}</text>
+                  </view>
+                  <view class="add-btn" bindtap="openSpecModal" data-item="{{product}}">选规格</view>
                 </view>
               </view>
             </view>
           </view>
         </view>
       </block>
-      <!-- 底部垫高，防止最后几个商品被购物车挡住 -->
-      <view style="height: 120rpx;"></view>
+      <view style="height: 180rpx;"></view>
     </scroll-view>
   </view>
 
-  <!-- 底部悬浮购物车栏 -->
-  <view class="cart-bar">
-    <view class="cart-icon-wrapper {{cartScale}}" bindtap="goToCheckout">
-      <image class="cart-icon" src="/assets/images/cart.png" mode="aspectFit"></image> <!-- 请确保图片存在，或使用 iconfont -->
+  <view class="cart-bar" bindtap="goToCheckout">
+    <view class="cart-icon-wrapper {{cartScale}}">
+      <image class="cart-icon" src="/assets/images/cart.png" mode="aspectFit"></image>
       <view class="badge" wx:if="{{cartCount > 0}}">{{cartCount}}</view>
     </view>
     <view class="cart-info">
       <view class="total-price" wx:if="{{cartCount > 0}}">¥{{totalPrice}}</view>
       <view class="empty-tip" wx:else>未选购商品</view>
     </view>
-    <view class="checkout-btn {{cartCount > 0 ? 'active' : ''}}" bindtap="goToCheckout">
+    <view class="checkout-btn {{cartCount > 0 ? 'active' : ''}}">
       去结算
+    </view>
+  </view>
+
+  <view class="spec-modal-container" wx:if="{{showSpecModal}}">
+    <view class="spec-mask" bindtap="closeSpecModal"></view>
+    <view class="spec-content">
+      <view class="spec-header">
+        <image class="spec-img" src="{{specProduct.image}}" mode="aspectFill"></image>
+        <view class="spec-info">
+          <view class="spec-name">{{specProduct.name}}</view>
+          <view class="spec-desc">{{specProduct.desc}}</view>
+          <view class="spec-price">¥{{specProduct.price}}</view>
+        </view>
+        <view class="spec-close" bindtap="closeSpecModal">×</view>
+      </view>
+
+      <scroll-view scroll-y class="spec-options">
+        <view class="option-group">
+          <view class="option-title">温度</view>
+          <view class="option-list">
+            <view
+                    class="option-item {{specSelections.temp === '冰' ? 'active' : ''}}"
+                    bindtap="selectSpec" data-type="temp" data-val="冰">冰</view>
+            <view
+                    class="option-item {{specSelections.temp === '热' ? 'active' : ''}}"
+                    bindtap="selectSpec" data-type="temp" data-val="热">热</view>
+            <view
+                    class="option-item {{specSelections.temp === '常温' ? 'active' : ''}}"
+                    bindtap="selectSpec" data-type="temp" data-val="常温">常温</view>
+          </view>
+        </view>
+        <view class="option-group">
+          <view class="option-title">糖度</view>
+          <view class="option-list">
+            <view
+                    class="option-item {{specSelections.sugar === '标准糖' ? 'active' : ''}}"
+                    bindtap="selectSpec" data-type="sugar" data-val="标准糖">标准糖</view>
+            <view
+                    class="option-item {{specSelections.sugar === '半糖' ? 'active' : ''}}"
+                    bindtap="selectSpec" data-type="sugar" data-val="半糖">半糖</view>
+            <view
+                    class="option-item {{specSelections.sugar === '不另加糖' ? 'active' : ''}}"
+                    bindtap="selectSpec" data-type="sugar" data-val="不另加糖">不另加糖</view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <view class="spec-footer">
+        <view class="selected-desc">
+          已选：{{specSelections.temp}}/{{specSelections.sugar}}
+        </view>
+        <view class="confirm-btn" bindtap="confirmAddToCart">加入购物车</view>
+      </view>
     </view>
   </view>
 </view>

@@ -1,153 +1,127 @@
 page {
     background-color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', sans-serif;
 }
+
 .container {
-    padding: 60rpx 40rpx;
+    padding: 60rpx 60rpx;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    min-height: 100vh;
+    box-sizing: border-box;
 }
+
+/* --- 头部 --- */
 .header {
-    margin-top: 60rpx;
+    margin-top: 40rpx;
+    margin-bottom: 80rpx;
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 80rpx;
+    /* 如果想左对齐，去掉 align-items: center，并加上 align-items: flex-start */
 }
+
 .logo {
-    width: 120rpx;
-    height: 120rpx;
-    margin-bottom: 20rpx;
+    width: 140rpx;
+    height: 140rpx;
+    margin-bottom: 30rpx;
 }
+
 .title {
-    font-size: 40rpx;
-    font-weight: bold;
-    color: #333;
-}
-.subtitle {
-    font-size: 24rpx;
-    color: #999;
-    margin-top: 10rpx;
+    font-size: 44rpx;
+    font-weight: 800; /* 加粗 */
+    color: #0022AB;   /* 瑞幸蓝 */
+    margin-bottom: 10rpx;
     letter-spacing: 2rpx;
 }
 
+.subtitle {
+    font-size: 26rpx;
+    color: #999;
+    letter-spacing: 4rpx;
+}
+
+/* --- 表单 --- */
 .form-area {
     width: 100%;
 }
+
 .input-group {
     margin-bottom: 40rpx;
 }
+
 .label {
     font-size: 28rpx;
-    color: #666;
-    margin-bottom: 15rpx;
+    color: #333;
+    font-weight: bold;
+    margin-bottom: 16rpx;
+    padding-left: 4rpx;
 }
+
 .input {
     background: #f7f8fa;
-    height: 96rpx; /* 加高 */
+    height: 100rpx;
     padding: 0 30rpx;
     border-radius: 16rpx;
     font-size: 30rpx;
-    border: 2rpx solid transparent; /* 预留边框位置 */
-    transition: all 0.3s ease;
     color: #333;
+    transition: all 0.3s;
+    border: 2rpx solid transparent;
 }
 
-/* 输入框聚焦态 */
+/* 输入框聚焦态 - 瑞幸蓝边框 */
 .input:focus {
     background: #fff;
-    border-color: #0022AB; /* 聚焦变蓝 */
-    box-shadow: 0 0 0 6rpx rgba(0, 34, 171, 0.1); /* 聚焦光晕 */
+    border-color: #0022AB;
+    box-shadow: 0 0 10rpx rgba(0, 34, 171, 0.1);
 }
 
-.code-row {
-    display: flex;
-    align-items: center;
-    gap: 20rpx;
-}
-
-.code-input {
-    flex: 1;
-}
-
-.code-btn {
-    width: 200rpx;
-    height: 90rpx;
-    line-height: 90rpx;
-    background: #0022AB;
-    color: #fff;
-    border-radius: 12rpx;
-    font-size: 26rpx;
-    padding: 0;
-    margin: 0;
-    flex-shrink: 0;
-}
-
-.code-btn.disabled {
-    background: #ccc;
-    color: #999;
-}
-
-.btn-login {
-    height: 96rpx;
-    line-height: 96rpx; /* 垂直居中 */
-    background: #0022AB; /* 纯色背景往往比普通渐变更显高级 */
-    /* background: linear-gradient(135deg, #0033cc 0%, #001a80 100%); */
+/* --- 按钮 --- */
+.btn-submit {
+    margin-top: 80rpx;
+    height: 100rpx;
+    line-height: 100rpx;
+    background: #0022AB; /* 纯色瑞幸蓝更显高级 */
     color: #fff;
     border-radius: 50rpx;
-    margin-top: 60rpx;
-    font-size: 32rpx;
+    font-size: 34rpx;
     font-weight: bold;
     box-shadow: 0 10rpx 30rpx rgba(0, 34, 171, 0.25);
     letter-spacing: 4rpx;
-    text-align: center;
 }
 
-.btn-login:active {
+.btn-submit:active {
     transform: scale(0.98);
-    box-shadow: 0 4rpx 12rpx rgba(0, 34, 171, 0.25);
+    opacity: 0.9;
 }
 
+/* --- 底部切换 --- */
 .link-area {
-    margin-top: 30rpx;
+    margin-top: 40rpx;
     text-align: center;
 }
-.register-link {
+
+.mode-switch {
+    font-size: 28rpx;
+    color: #666;
+    padding: 20rpx; /* 增加点击区域 */
+}
+
+.highlight {
     color: #0022AB;
-    font-size: 26rpx;
-}
-
-/* 账号密码登录区域样式 */
-.divider-area {
-    display: flex;
-    align-items: center;
-    margin: 60rpx 0 40rpx;
-    padding: 0 40rpx;
-}
-
-.divider-line {
-    flex: 1;
-    height: 1rpx;
-    background: #e5e5e5;
-}
-
-.divider-text {
-    padding: 0 20rpx;
-    font-size: 24rpx;
-    color: #999;
-}
-
-.account-form-area {
-    width: 100%;
-    padding-top: 20rpx;
-}
-
-.btn-account {
-    background: linear-gradient(135deg, #666 0%, #888 100%);
-    color: #fff;
-    border-radius: 50rpx;
-    margin-top: 60rpx;
-    font-size: 32rpx;
     font-weight: bold;
-    box-shadow: 0 6rpx 20rpx rgba(102, 102, 102, 0.3);
+    margin-left: 10rpx;
+}
+
+/* --- 底部协议 --- */
+.footer {
+    margin-top: auto; /* 推到底部 */
+    text-align: center;
+    font-size: 24rpx;
+    color: #ccc;
+    padding-bottom: 40rpx;
+}
+
+.protocol {
+    color: #0022AB;
 }

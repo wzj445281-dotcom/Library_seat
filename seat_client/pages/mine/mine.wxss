@@ -1,202 +1,162 @@
-page {
-    background-color: #f5f5f5;
-    height: 100%;
+.container {
+    min-height: 100vh;
+    background-color: #f7f7f7;
+    padding-bottom: 40rpx;
 }
 
-.container {
+/* --- 头部用户信息 --- */
+.user-header {
+    background: linear-gradient(180deg, #0022AB 0%, #001C8E 100%);
+    padding: 40rpx 40rpx 140rpx; /* 底部留白给 Stats 卡片 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #fff;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+.avatar {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
+    border: 4rpx solid rgba(255,255,255,0.3);
+    background: #fff;
+    margin-right: 30rpx;
+}
+
+.info-text {
     display: flex;
     flex-direction: column;
-    height: 100%;
 }
 
-/* Tabs 样式 */
-.tabs {
+.nickname {
+    font-size: 36rpx;
+    font-weight: bold;
+    margin-bottom: 10rpx;
     display: flex;
-    background: #fff;
-    height: 88rpx;
     align-items: center;
+}
+
+.level-tag {
+    font-size: 20rpx;
+    background: #d4a017;
+    color: #fff;
+    padding: 2rpx 10rpx;
+    border-radius: 8rpx;
+    margin-left: 10rpx;
+    font-style: italic;
+}
+
+.tips {
+    font-size: 24rpx;
+    opacity: 0.8;
+}
+
+.settings-btn {
+    font-size: 24rpx;
+    border: 1rpx solid rgba(255,255,255,0.5);
+    padding: 6rpx 20rpx;
+    border-radius: 24rpx;
+    opacity: 0.8;
+}
+
+/* --- 资产看板 --- */
+.stats-card {
+    margin: -80rpx 30rpx 30rpx;
+    background: #fff;
+    border-radius: 16rpx;
+    padding: 30rpx 0;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.05);
     position: relative;
-    box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.03);
     z-index: 10;
 }
 
-.tab-item {
-    flex: 1;
-    text-align: center;
-    font-size: 28rpx;
-    color: #666;
-    height: 100%;
-    line-height: 88rpx;
-    position: relative;
-}
-
-.tab-item.active {
-    color: #0022AB;
-    font-weight: bold;
-    font-size: 30rpx;
-}
-
-.tab-item.active::after {
-    content: '';
-    position: absolute;
-    bottom: 10rpx;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 40rpx;
-    height: 6rpx;
-    background: #0022AB;
-    border-radius: 4rpx;
-}
-
-/* 列表区域 */
-.coupon-list {
-    flex: 1;
-    padding: 24rpx;
-    box-sizing: border-box;
-}
-
-/* 票券卡片核心样式 */
-.coupon-card {
-    display: flex;
-    background: #fff;
-    border-radius: 16rpx;
-    height: 200rpx;
-    margin-bottom: 24rpx;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
-}
-
-/* 左侧价格区 */
-.coupon-left {
-    width: 200rpx;
-    background: linear-gradient(135deg, #0022AB 0%, #0044CC 100%);
-    color: #fff;
+.stat-item {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
+    flex: 1;
     position: relative;
 }
 
-.price-wrapper {
-    display: flex;
-    align-items: baseline;
+/* 竖线分隔符 */
+.stat-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 20%;
+    height: 60%;
+    width: 1rpx;
+    background: #eee;
 }
 
-.symbol {
-    font-size: 32rpx;
-    margin-right: 4rpx;
-}
-
-.amount {
-    font-size: 72rpx;
+.stat-value {
+    font-size: 36rpx;
     font-weight: bold;
+    color: #333;
+    margin-bottom: 8rpx;
     font-family: 'DIN Alternate', sans-serif;
 }
 
-.type-tag {
-    font-size: 22rpx;
-    background: rgba(255,255,255,0.2);
-    padding: 4rpx 12rpx;
-    border-radius: 20rpx;
-    margin-top: 10rpx;
-}
-
-/* 右侧详情区 */
-.coupon-right {
-    flex: 1;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 30rpx;
-}
-
-.info {
-    display: flex;
-    flex-direction: column;
-    gap: 10rpx;
-}
-
-.title {
-    font-size: 32rpx;
-    font-weight: bold;
-    color: #333;
-}
-
-.limit {
+.stat-label {
     font-size: 24rpx;
     color: #666;
 }
 
-.time {
-    font-size: 20rpx;
-    color: #999;
-}
-
-/* 按钮与状态图标 */
-.use-btn {
+/* --- 菜单列表 --- */
+.menu-list {
     background: #fff;
-    color: #0022AB;
-    border: 2rpx solid #0022AB;
-    font-size: 26rpx;
-    padding: 10rpx 30rpx;
-    border-radius: 30rpx;
-    font-weight: bold;
+    margin: 0 30rpx;
+    border-radius: 16rpx;
+    padding: 0 20rpx;
 }
 
-.use-btn:active {
-    background: #f0f7ff;
-}
-
-.status-icon {
-    width: 110rpx;
-    height: 110rpx;
-    opacity: 0.6;
-}
-
-/* 失效状态变灰 */
-.coupon-card.disabled .coupon-left {
-    background: #ccc;
-}
-.coupon-card.disabled .title {
-    color: #999;
-}
-
-/* 缺口装饰 - 关键代码 */
-.circle {
-    position: absolute;
-    width: 32rpx;
-    height: 32rpx;
-    background-color: #f5f5f5; /* 与页面背景同色 */
-    border-radius: 50%;
-    left: 184rpx; /* (左侧宽度200 - 圆宽32/2) */
-    z-index: 5;
-}
-.circle.top { top: -16rpx; }
-.circle.bottom { bottom: -16rpx; }
-
-/* 虚线分隔符 (可选) */
-.coupon-left::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 20rpx;
-    bottom: 20rpx;
-    border-right: 2rpx dashed rgba(255,255,255,0.3);
-}
-
-.empty-state {
+.menu-item {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    padding-top: 150rpx;
-    color: #999;
-    font-size: 28rpx;
+    padding: 34rpx 10rpx;
+    border-bottom: 1rpx solid #f9f9f9;
 }
-.empty-img {
-    width: 200rpx;
-    height: 200rpx;
-    margin-bottom: 30rpx;
+
+.menu-item:last-child {
+    border-bottom: none;
+}
+
+.menu-left {
+    display: flex;
+    align-items: center;
+}
+
+.menu-icon {
+    font-size: 32rpx;
+    margin-right: 20rpx;
+    width: 40rpx;
+    text-align: center;
+}
+
+.menu-title {
+    font-size: 30rpx;
+    color: #333;
+}
+
+.arrow {
+    width: 16rpx;
+    height: 16rpx;
+    border-top: 3rpx solid #ccc;
+    border-right: 3rpx solid #ccc;
+    transform: rotate(45deg);
+}
+
+.footer-version {
+    text-align: center;
+    color: #ddd;
+    font-size: 20rpx;
+    margin-top: 40rpx;
 }

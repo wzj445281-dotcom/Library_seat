@@ -1,7 +1,9 @@
 package com.example.zhizuo.core.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
 
+@TableName("user")
 public class User {
     private Long id;
     private String username; // Replaces studentId

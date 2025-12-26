@@ -3,7 +3,7 @@ const app = getApp();
 
 Page({
     data: {
-        isRegister: false, // true: 注册模式, false: 登录模式
+        isRegister: false, // false:登录, true:注册
         phone: '',
         name: '',
         password: '',
@@ -16,7 +16,7 @@ Page({
         }
     },
 
-    // 统一输入处理
+    // 输入处理
     handleInput(e) {
         const field = e.currentTarget.dataset.field;
         this.setData({ [field]: e.detail.value.trim() });
@@ -26,13 +26,13 @@ Page({
     switchMode() {
         this.setData({
             isRegister: !this.data.isRegister,
-            // 切换时清空敏感信息，保留手机号方便用户
+            // 切换时不清空手机号，方便用户
             password: '',
             name: ''
         });
     },
 
-    // 核心验证逻辑
+    // 校验逻辑
     validate() {
         const { phone, password, name, isRegister } = this.data;
 
@@ -49,7 +49,7 @@ Page({
             return false;
         }
         if (isRegister && !name) {
-            wx.showToast({ title: '请输入姓名', icon: 'none' });
+            wx.showToast({ title: '请输入昵称', icon: 'none' });
             return false;
         }
         return true;
@@ -62,51 +62,20 @@ Page({
         this.setData({ loading: true });
 
         try {
-            // 这里的 API 路径需与您的后端对应
             const res = await request.post('/auth/login', {
                 phone: this.data.phone,
                 password: this.data.password
             });
 
             if (res && res.code === 200) {
-                const userData = res.data;
-
-                // 1. 存储 Token
-                wx.setStorageSync('token', userData.token);
-                wx.setStorageSync('userId', userData.userId);
-
-                // 2. 存储用户信息
-                const userInfo = {
-                    nickName: userData.name || this.data.phone,
-                    avatarUrl: userData.avatar || '/assets/images/user-active.png',
-                    phone: userData.phone,
-                    level: 1 // 默认等级
-                };
-                wx.setStorageSync('userInfo', userInfo);
-
-                // 3. 更新全局变量
-                app.globalData.isLogin = true;
-                app.globalData.userInfo = userInfo;
-
-                wx.showToast({ title: '登录成功', icon: 'success' });
-
-                // 4. 智能跳转
-                setTimeout(() => {
-                    const pages = getCurrentPages();
-                    if (pages.length > 1) {
-                        wx.navigateBack(); // 返回上一页
-                    } else {
-                        wx.switchTab({ url: '/pages/mine/mine' }); // 去个人中心
-                    }
-                }, 1000);
-
+                this.loginSuccess(res.data);
             } else {
-                throw new Error(res.message || '登录失败');
+                throw new Error(res.message || res.msg || '登录失败');
             }
         } catch (err) {
-            console.error('Login Error:', err);
+            console.error('登录异常', err);
             wx.showToast({
-                title: err.message || '网络异常，请重试',
+                title: err.message || '账号或密码错误',
                 icon: 'none'
             });
         } finally {
@@ -130,22 +99,57 @@ Page({
             if (res && res.code === 200) {
                 wx.showToast({ title: '注册成功', icon: 'success' });
 
-                // 注册成功后，延迟自动登录或切换到登录视图
+                // 注册成功后，自动切回登录模式，保留手机号
                 setTimeout(() => {
-                    this.setData({ isRegister: false });
-                    // 可选：直接调用登录
-                    this.handleLogin();
-                }, 1000);
+                    this.setData({
+                        isRegister: false,
+                        password: '' // 清空密码让用户重新输入以确认
+                    });
+                }, 1500);
             } else {
-                throw new Error(res.message || '注册失败');
+                throw new Error(res.message || res.msg || '注册失败');
             }
         } catch (err) {
-            console.error('Register Error:', err);
             wx.showToast({
-                title: err.message || '注册失败，该手机号可能已存在',
+                title: err.message || '该手机号可能已注册',
                 icon: 'none'
             });
+        } finally {
             this.setData({ loading: false });
         }
+    },
+
+    // 登录成功后的处理
+    loginSuccess(data) {
+        // 1. 存储关键信息
+        wx.setStorageSync('token', data.token);
+        wx.setStorageSync('userId', data.userId);
+
+        // 2. 构造并存储用户信息
+        const userInfo = {
+            nickName: data.name || this.data.phone,
+            phone: data.phone,
+            avatarUrl: data.avatar || '/assets/images/user-active.png',
+            level: 1
+        };
+        wx.setStorageSync('userInfo', userInfo);
+
+        // 3. 更新全局 App 数据
+        if (app.globalData) {
+            app.globalData.isLogin = true;
+            app.globalData.userInfo = userInfo;
+        }
+
+        wx.showToast({ title: '登录成功', icon: 'success' });
+
+        // 4. 智能跳转：如果有上一页则返回，否则去首页
+        setTimeout(() => {
+            const pages = getCurrentPages();
+            if (pages.length > 1) {
+                wx.navigateBack();
+            } else {
+                wx.switchTab({ url: '/pages/menu/index' });
+            }
+        }, 1000);
     }
 });

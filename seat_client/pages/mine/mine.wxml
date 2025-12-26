@@ -1,46 +1,48 @@
 <view class="container">
-    <view class="tabs">
-        <view class="tab-item {{status === 0 ? 'active' : ''}}" bindtap="switchTab" data-status="0">未使用</view>
-        <view class="tab-item {{status === 1 ? 'active' : ''}}" bindtap="switchTab" data-status="1">已使用</view>
-        <view class="tab-item {{status === 2 ? 'active' : ''}}" bindtap="switchTab" data-status="2">已过期</view>
-    </view>
-
-    <scroll-view scroll-y class="coupon-list" refresher-enabled bindrefresherrefresh="onRefresh" refresher-triggered="{{isRefreshing}}">
-
-        <block wx:for="{{couponList}}" wx:key="id">
-            <view class="coupon-card {{status !== 0 ? 'disabled' : ''}}">
-                <view class="coupon-left">
-                    <view class="price-wrapper">
-                        <text class="symbol">¥</text>
-                        <text class="amount">{{item.amount}}</text>
-                    </view>
-                    <view class="type-tag">满减券</view>
+    <view class="user-header">
+        <view class="user-info" bindtap="handleLogin">
+            <image class="avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+            <view class="info-text">
+                <view class="nickname">
+                    {{userInfo.nickName}}
+                    <text class="level-tag" wx:if="{{isLogin}}">Lv.{{userInfo.level}}</text>
                 </view>
-
-                <view class="coupon-right">
-                    <view class="info">
-                        <view class="title">{{item.title}}</view>
-                        <view class="limit">满 {{item.minPoint}} 元可用</view>
-                        <view class="time">{{item.startTime}} 至 {{item.endTime}}</view>
-                    </view>
-
-                    <view class="action">
-                        <view class="use-btn" wx:if="{{status === 0}}" bindtap="goUse">去使用</view>
-                        <image wx:if="{{status === 1}}" class="status-icon" src="/assets/images/used.png" mode="aspectFit"></image>
-                        <image wx:if="{{status === 2}}" class="status-icon" src="/assets/images/expired.png" mode="aspectFit"></image>
-                    </view>
-                </view>
-
-                <view class="circle top"></view>
-                <view class="circle bottom"></view>
+                <view class="tips" wx:if="{{!isLogin}}">登录享受更多会员权益</view>
+                <view class="tips" wx:else>再升一级可享免运费</view>
             </view>
-        </block>
-
-        <view class="empty-state" wx:if="{{!loading && couponList.length === 0}}">
-            <image class="empty-img" src="/assets/images/cart.png" style="filter: grayscale(100%); opacity: 0.2;"></image>
-            <text>暂无相关优惠券</text>
         </view>
 
-        <view style="height: 40rpx;"></view>
-    </scroll-view>
+        <view class="settings-btn" wx:if="{{isLogin}}" catchtap="handleLogout">退出</view>
+    </view>
+
+    <view class="stats-card">
+        <view class="stat-item">
+            <text class="stat-value">{{assets.points}}</text>
+            <text class="stat-label">积分</text>
+        </view>
+        <view class="stat-item" bindtap="navigateToCoupon">
+            <text class="stat-value">{{assets.couponCount}}</text>
+            <text class="stat-label">优惠券</text>
+        </view>
+        <view class="stat-item">
+            <text class="stat-value">{{assets.balance}}</text>
+            <text class="stat-label">钱包</text>
+        </view>
+    </view>
+
+    <view class="menu-list">
+        <block wx:for="{{menuList}}" wx:key="id">
+            <view class="menu-item" bindtap="onMenuClick" data-item="{{item}}">
+                <view class="menu-left">
+                    <text class="menu-icon">{{item.icon}}</text>
+                    <text class="menu-title">{{item.title}}</text>
+                </view>
+                <view class="menu-right">
+                    <view class="arrow"></view>
+                </view>
+            </view>
+        </block>
+    </view>
+
+    <view class="footer-version">v1.0.0</view>
 </view>

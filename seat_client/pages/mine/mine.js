@@ -5,23 +5,41 @@ Page({
         isLogin: false,
         userInfo: {
             nickName: '点击登录',
-            avatarUrl: '/assets/images/user.png',
+            avatarUrl: '/assets/images/user.png', // 默认头像
             level: 0
         },
-        // 资产数据
+        // 资产数据 (登录后显示)
         assets: {
-            points: 0,
-            couponCount: 0,
-            balance: 0.00
+            points: '-',
+            couponCount: '-',
+            balance: '-'
         },
-        // 功能菜单配置
+        // 功能菜单列表
         menuList: [
-            { id: 'order', icon: '🧾', title: '我的订单', url: '/pages/orders/list' }, // 修正路径
-            { id: 'coupon', icon: '🎫', title: '优惠券', url: '/pages/coupon/index' }, // 新增优惠券入口
-            { id: 'wallet', icon: '💰', title: '咖啡钱包', url: '' },
-            { id: 'address', icon: '📍', title: '地址管理', url: '/pages/address/list' },
-            { id: 'help', icon: '❓', title: '帮助反馈', url: '/pages/feedback/feedback' },
-            { id: 'ai', icon: '🤖', title: 'AI助手', url: '/pages/ai_chat/ai_chat' }
+            {
+                id: 'orders',
+                icon: '🧾',
+                title: '我的订单',
+                url: '/pages/orders/list' // 对应 app.json 中的 TabBar 路径
+            },
+            {
+                id: 'address',
+                icon: '📍',
+                title: '地址管理',
+                url: '/pages/address/list'
+            },
+            {
+                id: 'ai',
+                icon: '🤖',
+                title: 'AI 助手',
+                url: '/pages/ai_chat/ai_chat'
+            },
+            {
+                id: 'feedback',
+                icon: '❓',
+                title: '帮助反馈',
+                url: '/pages/feedback/feedback'
+            }
         ]
     },
 
@@ -29,11 +47,15 @@ Page({
         this.checkLoginStatus();
     },
 
+    /**
+     * 检查登录状态并更新页面数据
+     */
     checkLoginStatus() {
         const token = wx.getStorageSync('token');
         const userInfo = wx.getStorageSync('userInfo');
 
         if (token && userInfo) {
+            // 已登录
             this.setData({
                 isLogin: true,
                 userInfo: {
@@ -41,7 +63,7 @@ Page({
                     avatarUrl: userInfo.avatarUrl || '/assets/images/user-active.png',
                     level: userInfo.level || 1
                 },
-                // 实际项目中这里应该调用后端 API 获取最新资产数据
+                // 模拟资产数据 (实际项目应从后端获取)
                 assets: {
                     points: 128,
                     couponCount: 3,
@@ -49,6 +71,7 @@ Page({
                 }
             });
         } else {
+            // 未登录
             this.setData({
                 isLogin: false,
                 userInfo: {
@@ -61,19 +84,32 @@ Page({
         }
     },
 
+    /**
+     * 点击头部登录
+     */
     handleLogin() {
         if (!this.data.isLogin) {
             wx.navigateTo({ url: '/pages/login/login' });
         }
     },
 
+    /**
+     * 退出登录
+     */
     handleLogout() {
         wx.showModal({
             title: '提示',
             content: '确定要退出登录吗？',
             success: (res) => {
                 if (res.confirm) {
-                    wx.clearStorageSync();
+                    wx.removeStorageSync('token');
+                    wx.removeStorageSync('userInfo');
+
+                    if (app.globalData) {
+                        app.globalData.isLogin = false;
+                        app.globalData.userInfo = null;
+                    }
+
                     this.checkLoginStatus();
                     wx.showToast({ title: '已退出', icon: 'none' });
                 }
@@ -81,12 +117,16 @@ Page({
         });
     },
 
+    /**
+     * 菜单点击处理
+     */
     onMenuClick(e) {
         const item = e.currentTarget.dataset.item;
 
-        // 需要登录权限的功能列表
-        const authRequired = ['wallet', 'coupon', 'order', 'address'];
+        // 需要登录权限的功能ID
+        const authRequired = ['orders', 'address', 'wallet'];
 
+        // 检查登录权限
         if (authRequired.includes(item.id) && !this.data.isLogin) {
             wx.showToast({ title: '请先登录', icon: 'none' });
             setTimeout(() => {
@@ -95,16 +135,36 @@ Page({
             return;
         }
 
+        // 页面跳转
         if (item.url) {
-            wx.navigateTo({
-                url: item.url,
-                fail: () => {
-                    // 如果是 TabBar 页面，必须用 switchTab
-                    wx.switchTab({ url: item.url });
-                }
-            });
+            // 特殊处理 TabBar 页面跳转
+            if (item.url === '/pages/orders/list' || item.url === '/pages/menu/index') {
+                wx.switchTab({ url: item.url });
+            } else {
+                wx.navigateTo({
+                    url: item.url,
+                    fail: (err) => {
+                        console.error('跳转失败:', err);
+                        wx.showToast({ title: '功能开发中', icon: 'none' });
+                    }
+                });
+            }
         } else {
-            wx.showToast({ title: '功能开发中...', icon: 'none' });
+            wx.showToast({ title: '功能即将上线', icon: 'none' });
         }
+    },
+
+    /**
+     * 点击资产栏的优惠券
+     */
+    navigateToCoupon() {
+        if (!this.data.isLogin) {
+            wx.navigateTo({ url: '/pages/login/login' });
+            return;
+        }
+        // 根据 app.json，优惠券在分包中
+        wx.navigateTo({
+            url: '/subpackages/coupon/index'
+        });
     }
 });

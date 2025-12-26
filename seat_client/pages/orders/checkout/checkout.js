@@ -1,4 +1,5 @@
 const app = getApp();
+// 顶部引用路径是正确的
 const orderApi = require('../../../api/order.js');
 
 Page({
@@ -13,12 +14,12 @@ Page({
     diningType: 'self', // self: 自取, delivery: 外卖
     remark: '',
     isSubmitting: false, // 防止重复提交
-    
+
     // 优惠券相关
     availableCoupons: [], // 可用优惠券列表
     selectedCoupon: null, // 选中的优惠券 { userCouponId, title, amount, minPoint }
     showCouponPicker: false, // 是否显示优惠券选择器
-    
+
     // 地址相关
     selectedAddress: null // 选中的收货地址
   },
@@ -54,15 +55,15 @@ Page({
     // 如果没有购物车详情数据的 Mock (因为之前Menu页只存了count/total)
     // 这里为了演示，生成一些 Mock 商品数据，除非我们回去改 Menu 页
     const mockCartItems = cartTemp.length > 0 ? cartTemp : [
-      { productId: 1, name: '生椰拿铁', spec: '标准糖/冰/大杯', price: 21, count: 1, image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200&fit=crop' },
-      { productId: 2, name: '美式咖啡', spec: '无糖/热/中杯', price: 18, count: 1, image: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=200&h=200&fit=crop' }
+      { productId: 1, name: '生椰拿铁', spec: '标准糖/冰/大杯', price: 21, count: 1, image: '/assets/images/coconut_latte.jpg' },
+      { productId: 2, name: '美式咖啡', spec: '无糖/热/中杯', price: 18, count: 1, image: '/assets/images/american.jpg' }
     ];
 
     this.setData({
       storeInfo: store || { name: '瑞幸咖啡 (科技园店)', address: '高新南九道10号' }, // 默认兜底
       diningType,
       cartItems: mockCartItems,
-      addressInfo: null // 地址信息
+      selectedAddress: null // 重置地址信息
     });
 
     this.calcTotal();
@@ -78,18 +79,19 @@ Page({
       }, 100);
       return;
     }
-    
-    const couponApi = require('../../api/coupon');
+
+    // ✅ 修复：路径修改为 ../../../api/coupon
+    const couponApi = require('../../../api/coupon.js');
     couponApi.getAvailableCoupons(this.data.originalPrice)
-      .then(res => {
-        if (res.code === 200) {
-          this.setData({ availableCoupons: res.data || [] });
-        }
-      })
-      .catch(err => {
-        console.error('加载优惠券失败', err);
-        // 静默失败，不影响下单流程
-      });
+        .then(res => {
+          if (res.code === 200) {
+            this.setData({ availableCoupons: res.data || [] });
+          }
+        })
+        .catch(err => {
+          console.error('加载优惠券失败', err);
+          // 静默失败，不影响下单流程
+        });
   },
 
   calcTotal() {
@@ -99,7 +101,7 @@ Page({
       total += item.price * item.count;
       count += item.count;
     });
-    
+
     // 计算优惠后价格
     let discountAmount = 0;
     let finalPrice = total;
@@ -107,7 +109,7 @@ Page({
       discountAmount = parseFloat(this.data.selectedCoupon.amount) || 0;
       finalPrice = Math.max(0, total - discountAmount);
     }
-    
+
     this.setData({
       totalPrice: total,
       originalPrice: total,
@@ -115,16 +117,17 @@ Page({
       finalPrice: finalPrice,
       totalCount: count
     });
-    
+
     // 价格变化后，重新加载可用优惠券
-    this.loadAvailableCoupons();
+    // 注意：这里可能会导致循环调用，建议加个判断或者由用户手动触发刷新
+    // 简单起见，这里不再自动重新加载，以免死循环，仅在初始化或改变优惠券时计算价格
   },
 
   // 切换用餐方式
   switchDiningType(e) {
     const type = e.currentTarget.dataset.type;
     this.setData({ diningType: type });
-    
+
     // 如果切换到外卖模式，加载默认地址
     if (type === 'delivery') {
       this.loadDefaultAddress();
@@ -137,6 +140,10 @@ Page({
 
   // 显示/隐藏优惠券选择器
   toggleCouponPicker() {
+    if (this.data.availableCoupons.length === 0) {
+      wx.showToast({ title: '暂无可用优惠券', icon: 'none' });
+      return;
+    }
     this.setData({ showCouponPicker: !this.data.showCouponPicker });
   },
 
@@ -144,12 +151,12 @@ Page({
   selectCoupon(e) {
     const index = e.currentTarget.dataset.index;
     const coupon = this.data.availableCoupons[index];
-    
+
     this.setData({
       selectedCoupon: coupon,
       showCouponPicker: false
     });
-    
+
     // 重新计算价格
     this.calcTotal();
   },
@@ -163,17 +170,18 @@ Page({
   // 加载默认地址
   loadDefaultAddress() {
     if (this.data.diningType === 'delivery') {
-      const addressApi = require('../../api/address');
+      // ✅ 修复：路径修改为 ../../../api/address
+      const addressApi = require('../../../api/address.js');
       addressApi.getDefaultAddress()
-        .then(res => {
-          if (res.code === 200 && res.data) {
-            this.setData({ selectedAddress: res.data });
-          }
-        })
-        .catch(err => {
-          console.error('加载默认地址失败', err);
-          // 静默失败，用户可以手动选择地址
-        });
+          .then(res => {
+            if (res.code === 200 && res.data) {
+              this.setData({ selectedAddress: res.data });
+            }
+          })
+          .catch(err => {
+            console.error('加载默认地址失败', err);
+            // 静默失败，用户可以手动选择地址
+          });
     }
   },
 
@@ -182,7 +190,7 @@ Page({
     if (this.data.diningType !== 'delivery') {
       return;
     }
-    
+
     // 跳转到地址列表页（选择模式）
     wx.navigateTo({
       url: '/pages/address/list?select=true',
@@ -249,7 +257,7 @@ Page({
     // 3. 构造后端需要的参数结构
     // 注意：后端期望 deliveryType 为数字：0=自取，1=外卖
     const deliveryType = this.data.diningType === 'delivery' ? 1 : 0;
-    
+
     // 构造地址信息字符串（外卖模式）
     let addressInfo = null;
     if (this.data.diningType === 'delivery' && this.data.selectedAddress) {
@@ -258,8 +266,8 @@ Page({
     }
 
     // 获取优惠券ID（如果有选中的优惠券）
-    const userCouponId = this.data.selectedCoupon ? 
-      (this.data.selectedCoupon.userCouponId || this.data.selectedCoupon.id) : null;
+    const userCouponId = this.data.selectedCoupon ?
+        (this.data.selectedCoupon.userCouponId || this.data.selectedCoupon.id) : null;
 
     const orderData = {
       items: this.data.cartItems.map(item => ({
@@ -305,7 +313,7 @@ Page({
     // 1. 清空购物车缓存
     wx.removeStorageSync('cart_data_detail');
     wx.removeStorageSync('cart_temp');
-    
+
     // 2. 清空选中的地址和优惠券
     wx.removeStorageSync('selectedAddress');
     this.setData({
@@ -314,8 +322,8 @@ Page({
     });
 
     // 3. 提示并跳转
-    wx.showToast({ 
-      title: '下单成功', 
+    wx.showToast({
+      title: '下单成功',
       icon: 'success',
       duration: 1500
     });

@@ -46,7 +46,7 @@ spring:
 # --- AI 配置 (DeepSeek) ---
 ai:
   deepseek:
-    key: ${AI_DEEPSEEK_KEY:}
+    key: ${AI_DEEPSEEK_KEY:https://api-docs.deepseek.com/zh-cn/api/create-chat-completion}
     url: ${AI_DEEPSEEK_URL:https://api.deepseek.com/chat/completions}
     model: ${AI_DEEPSEEK_MODEL:deepseek-chat}
   service:
