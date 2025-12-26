@@ -140,8 +140,8 @@
 
 .category-item.active {
     background: #fff;
-    color: #333;
-    font-weight: bold;
+    color: #0022AB; /* 选中文字变蓝 */
+    font-weight: 600;
 }
 
 .category-item.active::before {
@@ -150,9 +150,9 @@
     left: 0;
     top: 30rpx;
     bottom: 30rpx;
-    width: 8rpx;
-    background: #0022AB; /* 瑞幸蓝 */
-    border-radius: 0 4rpx 4rpx 0;
+    width: 6rpx;
+    background: #0022AB;
+    border-radius: 0 6rpx 6rpx 0;
 }
 
 /* 右侧商品 */
@@ -179,7 +179,8 @@
 
 .product-item {
     display: flex;
-    padding: 20rpx 0;
+    padding: 24rpx 0;
+    margin-bottom: 10rpx;
     border-bottom: 1rpx solid #f9f9f9;
     align-items: flex-start;
     min-height: 220rpx;
@@ -195,9 +196,10 @@
 .product-img {
     width: 180rpx;
     height: 180rpx;
-    border-radius: 8rpx;
+    border-radius: 12rpx; /* 圆角加大 */
     background: #eee;
     display: block;
+    box-shadow: 0 4rpx 8rpx rgba(0,0,0,0.05); /* 图片增加轻微投影 */
 }
 
 /* 收藏按钮样式 */
@@ -207,15 +209,52 @@
     right: 10rpx;
     width: 48rpx;
     height: 48rpx;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.08);
     z-index: 10;
 }
 
+/* --- 重绘爱心图标 (纯 CSS 方案，比 emoji 精致) --- */
+.heart-shape {
+    width: 24rpx;
+    height: 24rpx;
+    background-color: #ccc; /* 默认灰色 */
+    position: relative;
+    transform: rotate(45deg);
+    transition: background-color 0.3s;
+}
+
+.heart-shape::before,
+.heart-shape::after {
+    content: "";
+    width: 24rpx;
+    height: 24rpx;
+    background-color: #ccc;
+    border-radius: 50%;
+    position: absolute;
+    transition: background-color 0.3s;
+}
+
+.heart-shape::before { 
+    left: -12rpx; 
+}
+
+.heart-shape::after { 
+    top: -12rpx; 
+}
+
+/* 激活状态（红色爱心） */
+.heart-shape.active,
+.heart-shape.active::before,
+.heart-shape.active::after {
+    background-color: #ff4d4f;
+}
+
+/* 兼容旧版 emoji 图标（保留以防万一） */
 .icon-heart {
     font-size: 40rpx;
     line-height: 1;
@@ -280,16 +319,23 @@
 }
 
 .add-btn {
-    width: 50rpx;
-    height: 50rpx;
+    width: 52rpx;
+    height: 52rpx;
     background: #0022AB;
-    border-radius: 50%;
+    border-radius: 16rpx; /* 方圆形更现代 */
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36rpx;
+    font-size: 40rpx;
+    font-weight: 300; /* 符号变细 */
     line-height: 1;
+    box-shadow: 0 4rpx 10rpx rgba(0, 34, 171, 0.3); /* 蓝色投影 */
+    transition: transform 0.1s;
+}
+
+.add-btn:active {
+    transform: scale(0.9);
 }
 
 /* --- 底部购物车栏 --- */

@@ -109,11 +109,8 @@
                   catchtap="onToggleFavorite" 
                   data-id="{{product.id}}"
                 >
-                  <!-- 根据 favoriteMap 判断显示实心还是空心图标 -->
-                  <!-- 使用文字符号代替图片，避免图片资源问题 -->
-                  <text class="icon-heart {{favoriteMap[product.id] ? 'animate-bounce' : ''}}">
-                    {{favoriteMap[product.id] ? '❤️' : '🤍'}}
-                  </text>
+                  <!-- 使用 CSS 绘制的爱心图标，比 emoji 更精致 -->
+                  <view class="heart-shape {{favoriteMap[product.id] ? 'active' : ''}}"></view>
                 </view>
               </view>
               <view class="product-info">

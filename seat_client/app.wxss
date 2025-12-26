@@ -1,0 +1,45 @@
+/* 全局样式优化 - 现代字体栈和CSS变量 */
+page {
+    /* 现代字体栈：优先系统默认黑体，兼容各平台 */
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
+    
+    /* 优化字体渲染 */
+    -webkit-font-smoothing: antialiased; 
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* 定义主色变量，方便统一修改 */
+    --primary-color: #0022AB; /* 瑞幸蓝 */
+    --primary-light: #e6f3ff;
+    --text-main: #333333;
+    --text-sub: #666666;
+    --bg-color: #f7f7f7;
+}
+
+/* 全局空状态样式 */
+.empty-state-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 15vh;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.empty-img {
+    width: 240rpx;
+    height: 240rpx;
+    margin-bottom: 30rpx;
+    opacity: 0.8;
+}
+
+.empty-text {
+    font-size: 28rpx;
+    color: #999;
+    letter-spacing: 1rpx;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+

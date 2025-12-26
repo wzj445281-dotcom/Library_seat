@@ -1,74 +1,89 @@
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 强制修改数据库字符集为 utf8mb4
+ALTER DATABASE zhizuo CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 USE zhizuo;
 
 -- ==========================================
--- 瑞幸咖啡商品数据初始化 SQL
--- 用于替换原有的书籍数据
+-- 1. 商品分类表 (Categories)
 -- ==========================================
-
--- 清空现有商品数据（可选，谨慎使用）
--- DELETE FROM `products`;
--- DELETE FROM `categories`;
-
--- ==========================================
--- 1. 更新商品分类表（咖啡相关分类）
--- ==========================================
-TRUNCATE TABLE `categories`;
+DROP TABLE IF EXISTS `categories`;
+CREATE TABLE `categories` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL COMMENT '分类名称',
+  `sort` int(11) DEFAULT '0' COMMENT '排序优先级',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品分类表';
 
 INSERT INTO `categories` (name, sort) VALUES
 ('☕️ 畅销榜单', 100),
-('☕️ 经典咖啡', 90),
-('🥤 瑞纳冰系列', 80),
-('🍵 茶饮系列', 70),
-('🍰 轻食小食', 60);
+('💻 编程技术', 90),
+('📚 文学小说', 80),
+('🎓 考研教材', 70),
+('🥤 搭配饮品', 60);
 
 -- ==========================================
--- 2. 插入咖啡商品数据
+-- 2. 商品表 (Products) - 原 Resources 表重构
 -- ==========================================
--- 注意：请根据实际需求修改以下数据
--- 字段说明：
---   category_id: 分类ID（对应上面的分类）
---   name: 商品名称
---   description: 商品描述
---   price: 售价
---   original_price: 原价（可选）
---   stock: 库存
---   img_url: 商品图片URL（可选）
+DROP TABLE IF EXISTS `products`;
+CREATE TABLE `products` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `category_id` bigint(20) NOT NULL COMMENT '关联分类ID',
+  `name` varchar(100) NOT NULL COMMENT '商品名称',
+  `description` varchar(255) DEFAULT NULL COMMENT '简短描述',
+  `price` decimal(10,2) NOT NULL COMMENT '售价',
+  `original_price` decimal(10,2) DEFAULT NULL COMMENT '原价/划线价',
+  `stock` int(11) NOT NULL DEFAULT 0 COMMENT '库存',
+  `sales` int(11) DEFAULT 0 COMMENT '销量',
+  `img_url` varchar(255) DEFAULT NULL COMMENT '封面图',
+  `status` int(2) DEFAULT 1 COMMENT '1上架 0下架',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_category` (`category_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品/书籍表';
 
-TRUNCATE TABLE `products`;
-
-INSERT INTO `products` (category_id, name, description, price, original_price, stock, sales, img_url, status) VALUES
--- 畅销榜单
-(1, '生椰拿铁', '经典椰香，丝滑拿铁', 18.00, 29.00, 999, 0, '', 1),
-(1, '陨石拿铁', '黑糖风味，Q弹寒天', 20.00, 32.00, 999, 0, '', 1),
-(1, '厚乳拿铁', '浓郁奶香，醇厚口感', 19.00, 30.00, 999, 0, '', 1),
-
--- 经典咖啡
-(2, '美式咖啡', '经典美式，提神醒脑', 15.00, 25.00, 999, 0, '', 1),
-(2, '拿铁', '意式经典，奶香浓郁', 18.00, 28.00, 999, 0, '', 1),
-(2, '卡布奇诺', '绵密奶泡，香醇咖啡', 18.00, 28.00, 999, 0, '', 1),
-(2, '焦糖玛奇朵', '焦糖风味，甜蜜享受', 20.00, 32.00, 999, 0, '', 1),
-(2, '摩卡', '巧克力与咖啡的完美融合', 22.00, 35.00, 999, 0, '', 1),
-
--- 瑞纳冰系列
-(3, '生椰拿铁瑞纳冰', '冰爽椰香，夏日首选', 22.00, 35.00, 999, 0, '', 1),
-(3, '抹茶瑞纳冰', '清新抹茶，冰爽一夏', 20.00, 32.00, 999, 0, '', 1),
-(3, '草莓瑞纳冰', '新鲜草莓，酸甜可口', 21.00, 33.00, 999, 0, '', 1),
-
--- 茶饮系列
-(4, '茉莉花茶', '清香淡雅，回味甘甜', 12.00, 20.00, 999, 0, '', 1),
-(4, '乌龙茶', '醇厚茶香，提神解腻', 12.00, 20.00, 999, 0, '', 1),
-(4, '柠檬茶', '清新柠檬，酸甜解渴', 15.00, 25.00, 999, 0, '', 1),
-
--- 轻食小食
-(5, '芝士蛋糕', '浓郁芝士，丝滑口感', 25.00, 38.00, 50, 0, '', 1),
-(5, '提拉米苏', '意式经典，层次丰富', 28.00, 42.00, 50, 0, '', 1),
-(5, '牛角包', '酥脆外皮，香软内里', 12.00, 18.00, 100, 0, '', 1);
+INSERT INTO `products` (category_id, name, description, price, original_price, stock, img_url) VALUES
+(1, '深入理解Java虚拟机', 'Java开发者必读经典', 89.00, 109.00, 50, 'https://img.alicdn.com/bao/uploaded/i1/198280045/O1CN016d9E5Y2E7s5Z1q2_!!0-item_pic.jpg'),
+(1, '三体全集', '刘慈欣科幻巨作', 56.00, 98.00, 100, 'https://img.alicdn.com/bao/uploaded/i2/2406931838/O1CN010101012406931838_!!0-item_pic.jpg'),
+(2, 'Spring Boot实战', '快速上手微服务开发', 69.90, 89.00, 30, ''),
+(5, '生椰拿铁', '读书伴侣，提神醒脑', 18.00, 29.00, 999, '');
 
 -- ==========================================
--- 使用说明：
--- 1. 执行此 SQL 前，请确保 categories 和 products 表已存在
--- 2. 可以根据实际需求修改商品名称、价格、描述等信息
--- 3. img_url 字段可以填入实际的图片URL，或留空使用默认图片
--- 4. 执行后，原有的书籍数据将被替换为咖啡商品数据
+-- 3. 销售订单表 (Orders) - O2O 核心交易
 -- ==========================================
+DROP TABLE IF EXISTS `orders`;
+CREATE TABLE `orders` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `order_no` varchar(32) NOT NULL COMMENT '订单号',
+  `user_id` bigint(20) NOT NULL,
+  `total_amount` decimal(10,2) NOT NULL COMMENT '订单总额',
+  `pay_status` int(2) DEFAULT 0 COMMENT '0未支付 1已支付 2已退款',
+  `status` varchar(20) NOT NULL DEFAULT 'PENDING',
+  `delivery_type` int(2) NOT NULL COMMENT '0=门店自取, 1=外卖配送',
+  `pickup_code` varchar(10) DEFAULT NULL COMMENT '取单码 (如 C-102)',
+  `address_info` varchar(255) DEFAULT NULL COMMENT '座位号或配送地址',
+  `pay_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_no` (`order_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='销售订单主表';
 
+-- ==========================================
+-- 4. 订单明细表 (Order Items)
+-- ==========================================
+DROP TABLE IF EXISTS `order_items`;
+CREATE TABLE `order_items` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `order_id` bigint(20) NOT NULL,
+  `product_id` bigint(20) NOT NULL,
+  `product_name` varchar(100) NOT NULL,
+  `price` decimal(10,2) NOT NULL COMMENT '购买时单价',
+  `quantity` int(11) NOT NULL COMMENT '数量',
+  PRIMARY KEY (`id`),
+  KEY `idx_order_id` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单明细表';
+
+SET FOREIGN_KEY_CHECKS = 1;
