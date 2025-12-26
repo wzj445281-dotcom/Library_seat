@@ -58,24 +58,7 @@
     font-family: monospace; /* 等宽字体显得更像码 */
 }
 
-.qrcode-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 20rpx;
-}
 
-.qr-img {
-    width: 160rpx;
-    height: 160rpx;
-    margin-bottom: 10rpx;
-    filter: grayscale(100%); /* 灰色占位 */
-}
-
-.qr-tip {
-    font-size: 22rpx;
-    color: #ccc;
-}
 
 /* --- 进度条 (Steps) --- */
 .progress-steps {

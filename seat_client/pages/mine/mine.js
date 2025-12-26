@@ -17,14 +17,20 @@ Page({
         },
         // 功能菜单配置
         menuList: [
-            { id: 'orders', icon: '🧾', title: '我的订单', url: '/pages/orders/list/list', type: 'page' },
+            { id: 'orders', icon: '🧾', title: '我的订单', url: '/pages/orders/list', type: 'page' },
             { id: 'address', icon: '📍', title: '地址管理', url: '/pages/address/list', type: 'page' },
             { id: 'service', icon: '🤖', title: 'AI 客服', url: '/pages/ai_chat/ai_chat', type: 'page' },
             { id: 'about', icon: 'ℹ️', title: '关于我们', url: '', type: 'toast', tip: '版本 v1.0.0' }
         ]
     },
 
+    onLoad() {
+        // 页面加载时初始化
+        this.checkLogin();
+    },
+
     onShow() {
+        // 页面显示时刷新登录状态
         this.checkLogin();
     },
 

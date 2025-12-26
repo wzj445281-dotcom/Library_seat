@@ -133,12 +133,23 @@ Page({
       }
       
       // 格式化商品数据
+      // 处理图片路径：如果是 /static/ 开头，转换为完整 URL
+      let imageUrl = product.imgUrl || product.image || '';
+      if (imageUrl && imageUrl.startsWith('/static/')) {
+        // 将 /static/ 路径转换为完整 URL
+        const BASE_URL = 'http://localhost:8080';
+        imageUrl = BASE_URL + imageUrl;
+      } else if (!imageUrl) {
+        // 如果没有图片，使用默认占位图
+        imageUrl = 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200&fit=crop';
+      }
+      
       categoryMap[categoryId].items.push({
         id: product.id,
         name: product.name || '未知商品',
         desc: product.description || '',
         price: product.price || 0,
-        image: product.imgUrl || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=200&h=200&fit=crop'
+        image: imageUrl
       });
     });
 

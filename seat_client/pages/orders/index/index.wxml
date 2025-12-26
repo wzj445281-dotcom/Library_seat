@@ -10,12 +10,6 @@
     <view class="pickup-code-area" wx:if="{{order.status === 'MAKING' || order.status === 'WAIT_PICKUP'}}">
       <text class="label">取餐码</text>
       <text class="code">{{order.pickupCode}}</text>
-      <view class="qrcode-placeholder">
-        <!-- 实际项目中这里可以使用 canvas 绘制二维码，暂时用图片占位 -->
-        <!-- 使用本地图片或网络图片占位，这里使用一个通用的二维码图标 -->
-        <image src="/assets/images/user.png" mode="aspectFit" class="qr-img" style="opacity: 0.2;"></image>
-        <text class="qr-tip">请凭码取餐</text>
-      </view>
     </view>
 
     <!-- 制作进度条 (Steps) -->

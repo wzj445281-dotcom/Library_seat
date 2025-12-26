@@ -56,17 +56,6 @@ page {
     margin-bottom: 20rpx;
 }
 
-.qr-btn {
-    display: flex;
-    align-items: center;
-    color: #0022AB;
-}
-
-.mini-icon {
-    width: 32rpx;
-    height: 32rpx;
-    margin-right: 8rpx;
-}
 
 /* 新增：取餐码内容布局 */
 .pickup-content {
@@ -82,22 +71,8 @@ page {
     font-weight: bold;
     font-family: 'DIN Alternate', sans-serif;
     line-height: 1;
-    margin-right: 40rpx; /* 与二维码的间距 */
 }
 
-.qr-code-box {
-    width: 120rpx;
-    height: 120rpx;
-    background: #f5f5f5;
-    padding: 10rpx;
-    border-radius: 8rpx;
-}
-
-.qr-image-mock {
-    width: 100%;
-    height: 100%;
-    opacity: 0.8;
-}
 
 .pickup-tip {
     font-size: 24rpx;

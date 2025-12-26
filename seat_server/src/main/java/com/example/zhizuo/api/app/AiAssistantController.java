@@ -112,9 +112,13 @@ public class AiAssistantController {
             );
 
             // 3. 调用 DeepSeek API
-            // 检查 API Key
-            if (deepSeekApiKey == null || deepSeekApiKey.isEmpty() || deepSeekApiKey.startsWith("sk-your")) {
-                // 演示模式：如果没配置 Key，返回 Mock 数据
+            // 检查 API Key - 如果未配置，提示用户配置
+            if (deepSeekApiKey == null || deepSeekApiKey.isEmpty() || deepSeekApiKey.startsWith("sk-your") || deepSeekApiKey.equals("${AI_DEEPSEEK_KEY}")) {
+                // 如果没配置 Key，返回提示信息
+                Map<String, Object> errorRes = new HashMap<>();
+                errorRes.put("reply", "AI 助手功能需要配置 DeepSeek API Key。请在 application.yml 中设置 ai.deepseek.key，或通过环境变量 AI_DEEPSEEK_KEY 设置。");
+                errorRes.put("recommendations", new ArrayList<>());
+                // 同时返回 Mock 数据作为降级方案
                 return ApiResponse.success(mockAiResponse(userMessage));
             }
 

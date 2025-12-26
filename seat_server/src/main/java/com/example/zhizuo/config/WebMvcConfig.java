@@ -24,6 +24,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 映射 URL: /uploads/** -> 本地文件系统: project/uploads/
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + uploadPath);
+        
+        // 配置静态资源处理器：/static/** -> classpath:/static/
+        // 注意：Spring Boot 默认支持 classpath:/static/，但需要显式配置以确保正确工作
+        // 添加多个可能的路径，以确保资源能被找到
+        registry.addResourceHandler("/static/**")
+                .addResourceLocations("classpath:/static/", "classpath:/static/images/")
+                .setCachePeriod(3600); // 缓存1小时
     }
 
     /**

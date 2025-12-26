@@ -96,3 +96,38 @@ page {
     color: #0022AB;
     font-size: 26rpx;
 }
+
+/* 账号密码登录区域样式 */
+.divider-area {
+    display: flex;
+    align-items: center;
+    margin: 60rpx 0 40rpx;
+    padding: 0 40rpx;
+}
+
+.divider-line {
+    flex: 1;
+    height: 1rpx;
+    background: #e5e5e5;
+}
+
+.divider-text {
+    padding: 0 20rpx;
+    font-size: 24rpx;
+    color: #999;
+}
+
+.account-form-area {
+    width: 100%;
+    padding-top: 20rpx;
+}
+
+.btn-account {
+    background: linear-gradient(135deg, #666 0%, #888 100%);
+    color: #fff;
+    border-radius: 50rpx;
+    margin-top: 60rpx;
+    font-size: 32rpx;
+    font-weight: bold;
+    box-shadow: 0 6rpx 20rpx rgba(102, 102, 102, 0.3);
+}

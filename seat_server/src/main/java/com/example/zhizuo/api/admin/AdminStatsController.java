@@ -4,10 +4,8 @@ import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.zhizuo.common.ApiResponse;
 import com.example.zhizuo.core.entity.ServiceBooking;
-import com.example.zhizuo.core.entity.Seat;
 import com.example.zhizuo.core.entity.User;
 import com.example.zhizuo.core.mapper.ReservationMapper;
-import com.example.zhizuo.core.mapper.SeatMapper;
 import com.example.zhizuo.core.mapper.UserMapper;
 import com.example.zhizuo.core.vo.ReservationExportVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,12 +34,10 @@ public class AdminStatsController {
 
     private final UserMapper userMapper;
     private final ReservationMapper reservationMapper;
-    private final SeatMapper seatMapper;
 
-    public AdminStatsController(UserMapper userMapper, ReservationMapper reservationMapper, SeatMapper seatMapper) {
+    public AdminStatsController(UserMapper userMapper, ReservationMapper reservationMapper) {
         this.userMapper = userMapper;
         this.reservationMapper = reservationMapper;
-        this.seatMapper = seatMapper;
     }
 
     @Operation(summary = "获取基础仪表盘数据")
@@ -51,7 +47,6 @@ public class AdminStatsController {
 
         // 1. 基础计数
         data.put("totalUsers", userMapper.selectCount(null));
-        data.put("totalSeats", seatMapper.selectCount(null));
 
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
@@ -127,7 +122,6 @@ public class AdminStatsController {
         List<ServiceBooking> list = reservationMapper.selectList(query);
 
         List<ReservationExportVO> exportData = new ArrayList<>();
-        Map<Long, Seat> seatMap = seatMapper.selectList(null).stream().collect(Collectors.toMap(Seat::getId, s -> s));
         Map<Long, User> userMap = userMapper.selectList(null).stream().collect(Collectors.toMap(User::getId, u -> u));
 
         for (ServiceBooking r : list) {
@@ -143,10 +137,7 @@ public class AdminStatsController {
                 vo.setStudentId(u.getStudentId());
                 vo.setUserName(u.getName());
             }
-            Seat s = seatMap.get(r.getSeatId());
-            if (s != null) {
-                vo.setSeatLabel(s.getLabel());
-            }
+            // Seat 相关代码已删除
             exportData.add(vo);
         }
 

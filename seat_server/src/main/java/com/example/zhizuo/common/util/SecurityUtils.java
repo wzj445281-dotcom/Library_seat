@@ -28,7 +28,27 @@ public class SecurityUtils {
                 return ((User) principal).getId();
             }
 
-            // 情况2: 尝试通过反射获取 getId 方法 (兼容其他 UserDetails 实现)
+            // 情况2: 如果是 UserDetailsWrapper (我们自定义的包装类)
+            if (principal instanceof com.example.zhizuo.core.impl.UserDetailsServiceImpl.UserDetailsWrapper) {
+                com.example.zhizuo.core.impl.UserDetailsServiceImpl.UserDetailsWrapper wrapper = 
+                    (com.example.zhizuo.core.impl.UserDetailsServiceImpl.UserDetailsWrapper) principal;
+                return wrapper.getUser().getId();
+            }
+
+            // 情况3: 如果是 Spring Security 的 UserDetails (org.springframework.security.core.userdetails.User)
+            // 这种情况不应该出现，因为我们已经修改为返回 UserDetailsWrapper
+            if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                String username = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+                throw new RuntimeException("当前用户信息类型不支持直接获取ID，请通过 username 查询: " + username);
+            }
+
+            // 情况4: 如果是 String (可能是 username)
+            if (principal instanceof String) {
+                String username = (String) principal;
+                throw new RuntimeException("当前用户信息为 String 类型(username)，无法直接获取ID。请修改 UserDetailsServiceImpl 返回 User 实体");
+            }
+
+            // 情况4: 尝试通过反射获取 getId 方法 (兼容其他 UserDetails 实现)
             try {
                 java.lang.reflect.Method getId = principal.getClass().getMethod("getId");
                 return (Long) getId.invoke(principal);
@@ -36,7 +56,7 @@ public class SecurityUtils {
                 // ignore
             }
 
-            // 情况3: 如果是 Map (某些 JWT 解析库会将 Payload 转为 Map)
+            // 情况5: 如果是 Map (某些 JWT 解析库会将 Payload 转为 Map)
             if (principal instanceof java.util.Map) {
                 Object id = ((java.util.Map<?, ?>) principal).get("id");
                 if (id == null) {

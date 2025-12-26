@@ -1,8 +1,6 @@
 const OrderAPI = require('../../../api/order.js');
-// 引入二维码生成库 (适配小程序的封装版本)
-const QRCode = require('../../../utils/qrcode.js');
 const app = getApp();
-const { request } = require('../../utils/request');
+const { request } = require('../../../utils/request');
 const wsManager = require('../../../utils/websocket.js');
 
 Page({
@@ -56,6 +54,20 @@ Page({
                 // 1. 数据映射 (适配后端 Entity 字段)
                 // 后端状态: PENDING, PAID, READY, COMPLETED, CANCELLED
                 const status = backendData.status || '';
+                
+                // 处理订单商品列表的图片路径
+                const items = (backendData.products || backendData.items || []).map(item => {
+                    // 处理图片路径：如果是 /static/ 开头，转换为完整 URL
+                    let imageUrl = item.productImage || item.image || item.imgUrl || '';
+                    if (imageUrl && imageUrl.startsWith('/static/')) {
+                        imageUrl = 'http://localhost:8080' + imageUrl;
+                    }
+                    return {
+                        ...item,
+                        productImage: imageUrl || item.productImage || item.image || item.imgUrl || ''
+                    };
+                });
+                
                 const order = {
                     id: backendData.id,
                     status: status, // 字符串状态: PENDING, PAID, READY, COMPLETED, CANCELLED
@@ -68,7 +80,7 @@ Page({
                     createTime: backendData.createTime,
                     orderNo: backendData.orderNo,
                     remark: backendData.remark || '无',
-                    items: backendData.products || backendData.items || [] // 后端返回的是 products 字段
+                    items: items // 使用处理后的商品列表
                 };
 
                 // 2. 更新时间轴状态
@@ -79,11 +91,6 @@ Page({
                     order: order,
                     steps: steps,
                     loading: false
-                }, () => {
-                    // 如果状态是"待取餐"(READY)且有取餐码，绘制二维码
-                    if ((order.status === 'READY' || order.status === 'WAIT_PICKUP') && order.pickupCode) {
-                        this.drawQrCode(order.pickupCode);
-                    }
                 });
             } else {
                 this.handleLoadError(res.message);
@@ -161,49 +168,6 @@ Page({
         return statusMap[status] || '处理中';
     },
 
-    /**
-     * 绘制取餐二维码
-     */
-    drawQrCode: function (code) {
-        if (!code || code === '---') return;
-        console.log('开始绘制二维码:', code);
-        try {
-            // 注意：需确保 wxml 中有 <canvas canvas-id="myQrcode"></canvas>
-            // 使用适配小程序的二维码生成器
-            new QRCode('myQrcode', {
-                text: String(code),
-                width: 160,
-                height: 160,
-                colorDark: "#0022AB", // 瑞幸蓝二维码
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-        } catch (e) {
-            console.error('二维码绘制异常:', e);
-            wx.showToast({
-                title: '二维码生成失败',
-                icon: 'none'
-            });
-        }
-    },
-
-    /**
-     * 二维码点击放大预览
-     */
-    onShowQrCode: function () {
-        wx.canvasToTempFilePath({
-            canvasId: 'myQrcode',
-            success: (res) => {
-                wx.previewImage({
-                    urls: [res.tempFilePath],
-                    current: res.tempFilePath
-                });
-            },
-            fail: () => {
-                wx.showToast({ title: '预览失败', icon: 'none' });
-            }
-        }, this);
-    },
 
     /**
      * 拨打门店电话
@@ -338,11 +302,6 @@ Page({
                         order: order,
                         steps: steps
                     });
-
-                    // 如果状态变为待取餐，绘制二维码
-                    if ((data.status === 'READY' || data.status === 'WAIT_PICKUP') && order.pickupCode) {
-                        this.drawQrCode(order.pickupCode);
-                    }
 
                     // 显示提示
                     wx.showToast({
