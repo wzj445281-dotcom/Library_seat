@@ -36,16 +36,14 @@ page {
     width: 80rpx;
     height: 80rpx;
     border-radius: 50%;
-    background-color: #e5e5e5;
+    background-color: #fff;
     margin: 0 20rpx;
     flex-shrink: 0;
-    border: 2rpx solid #fff;
     box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
 
 .content-wrapper {
     max-width: 70%;
-    flex: 1;
 }
 
 .content {
@@ -61,7 +59,7 @@ page {
     background-color: #ffffff;
     color: #333;
     border-top-left-radius: 8rpx;
-    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
 }
 
 .user .content {
@@ -93,26 +91,22 @@ page {
 .recommend-list {
     display: inline-flex;
     gap: 20rpx;
+    padding-bottom: 10rpx;
 }
 
 .recommend-item {
     display: inline-flex;
     flex-direction: column;
-    width: 200rpx;
+    width: 220rpx;
     background: #fff;
-    border-radius: 16rpx;
+    border-radius: 12rpx;
     overflow: hidden;
-    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s;
-}
-
-.recommend-item:active {
-    transform: scale(0.98);
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
 .rec-image {
-    width: 200rpx;
-    height: 200rpx;
+    width: 220rpx;
+    height: 220rpx;
     background-color: #f5f5f5;
 }
 
@@ -120,7 +114,6 @@ page {
     padding: 16rpx;
     display: flex;
     flex-direction: column;
-    gap: 8rpx;
 }
 
 .rec-name {
@@ -136,23 +129,24 @@ page {
     font-size: 28rpx;
     color: #0022AB;
     font-weight: bold;
+    margin: 4rpx 0;
 }
 
 .rec-reason {
-    font-size: 22rpx;
+    font-size: 20rpx;
     color: #999;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* 加载状态 */
+/* 加载动画 */
 .loading-wrapper {
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 30rpx;
-    gap: 16rpx;
+    gap: 12rpx;
 }
 
 .loading-dot {
@@ -160,34 +154,24 @@ page {
     height: 12rpx;
     border-radius: 50%;
     background-color: #0022AB;
-    animation: loading-bounce 1.4s infinite ease-in-out both;
+    animation: loading 1.4s infinite ease-in-out both;
 }
 
-.loading-dot:nth-child(1) {
-    animation-delay: -0.32s;
-}
+.loading-dot:nth-child(1) { animation-delay: -0.32s; }
+.loading-dot:nth-child(2) { animation-delay: -0.16s; }
 
-.loading-dot:nth-child(2) {
-    animation-delay: -0.16s;
-}
-
-@keyframes loading-bounce {
-    0%, 80%, 100% {
-        transform: scale(0);
-        opacity: 0.5;
-    }
-    40% {
-        transform: scale(1);
-        opacity: 1;
-    }
+@keyframes loading {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
 }
 
 .loading-text {
     font-size: 24rpx;
     color: #999;
+    margin-left: 10rpx;
 }
 
-/* 输入区域 */
+/* 底部输入框 */
 .input-area {
     min-height: 100rpx;
     background-color: #ffffff;
@@ -200,14 +184,12 @@ page {
     bottom: 0;
     left: 0;
     right: 0;
-    box-sizing: border-box;
     z-index: 99;
-    box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
 .input-box {
     flex: 1;
-    min-height: 72rpx;
+    height: 72rpx;
     background-color: #f5f5f5;
     border-radius: 36rpx;
     padding: 0 32rpx;
@@ -216,31 +198,19 @@ page {
     color: #333;
 }
 
-.input-box[disabled] {
-    background-color: #f0f0f0;
-    color: #999;
-}
-
 .send-btn {
-    min-width: 120rpx;
+    width: 120rpx;
     height: 72rpx;
     line-height: 72rpx;
     background: linear-gradient(135deg, #0022AB 0%, #0044CC 100%);
     color: white;
     font-size: 28rpx;
     border-radius: 36rpx;
-    padding: 0 32rpx;
+    padding: 0;
     margin: 0;
-    box-shadow: 0 4rpx 12rpx rgba(0, 34, 171, 0.3);
-    transition: opacity 0.2s;
-}
-
-.send-btn:active {
-    opacity: 0.8;
 }
 
 .send-btn[disabled] {
-    background: #d0d0d0;
-    color: #999;
-    box-shadow: none;
+    background: #ccc;
+    color: #fff;
 }

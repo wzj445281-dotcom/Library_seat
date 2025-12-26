@@ -1,158 +1,178 @@
-// pages/orders/list.js
-const app = getApp();
-// 注意路径：根据文件位置 ../../api/order.js
-const orderApi = require('../../api/order.js');
+const request = require('../../utils/request.js');
 
 Page({
   data: {
-    currentTab: 0, // 0: 当前订单, 1: 历史订单
-    loading: true,
-    list: []
+    currentTab: 0, // 0:全部, 1:待支付, 2:制作中, 3:待取货
+    orderList: [],
+    page: 1,
+    hasMore: true,
+    loading: false
   },
 
   onShow() {
-    // 检查登录状态
+    this.checkLoginAndLoad();
+  },
+
+  checkLoginAndLoad() {
     const token = wx.getStorageSync('token');
     if (!token) {
+      this.setData({ orderList: [] });
       wx.showModal({
         title: '提示',
-        content: '请先登录后查看订单',
-        showCancel: true,
-        confirmText: '去登录',
+        content: '查看订单需要登录，是否去登录？',
         success: (res) => {
-          if (res.confirm) {
-            wx.navigateTo({ url: '/pages/login/login' });
-          } else {
-            wx.switchTab({ url: '/pages/index/index' });
-          }
+          if (res.confirm) wx.navigateTo({ url: '/pages/login/login' });
+          else wx.switchTab({ url: '/pages/menu/index' });
         }
       });
       return;
     }
-
-    // 每次进入页面刷新数据
-    this.loadData();
+    // 刷新数据
+    this.refreshData();
   },
 
-  // 下拉刷新
-  onPullDownRefresh() {
-    this.loadData(() => {
-      wx.stopPullDownRefresh();
-    });
+  refreshData() {
+    this.setData({ page: 1, orderList: [], hasMore: true });
+    this.fetchOrders();
   },
 
   switchTab(e) {
-    const index = Number(e.currentTarget.dataset.index);
-    if (index === this.data.currentTab) return;
-
-    this.setData({
-      currentTab: index,
-      list: [], // 切换时先清空，防止视觉残留
-      loading: true
-    });
-
-    this.loadData();
+    const index = parseInt(e.currentTarget.dataset.index);
+    this.setData({ currentTab: index });
+    this.refreshData();
   },
 
-  loadData(cb) {
-    // Tab 0 (当前): 筛选 MAKING, WAIT_PICKUP, PENDING
-    // Tab 1 (历史): 筛选 FINISHED, CANCELLED
-    const statusType = this.data.currentTab === 0 ? 'current' : 'history';
+  fetchOrders() {
+    if (this.data.loading) return;
+    this.setData({ loading: true });
+    wx.showLoading({ title: '加载中' });
 
-    orderApi.getOrderList(statusType)
-        .then(res => {
-          // 兼容处理：如果 res.data 是数组则直接用，如果是 Page 对象则取 records
-          const rawList = Array.isArray(res.data) ? res.data : (res.data?.records || []);
+    // 策略：统一请求 "current" (进行中) 或 "" (全部)，然后在前端过滤
+    // 这样可以解决后端不支持多状态查询的问题
+    let apiStatus = '';
+    // 如果是 TAB 0(全部)，传空获取所有
+    // 如果是 TAB 1/2/3，都属于 "current" 范畴，我们先拉下来再筛，或者分别请求
+    // 为了简单且兼容你之前的后端逻辑，我们按如下映射：
 
-          // 数据清洗与映射
-          const list = rawList.map(item => this.mapOrderItem(item));
+    // 但是后端 getUserOrderList 对 "current" 会返回 PENDING, PAID, MAKING, READY
+    // 对其他字符串是精确匹配。
 
-          this.setData({ list: list });
-        })
-        .catch(err => {
-          console.error('获取订单列表失败', err);
-          wx.showToast({ title: '加载失败', icon: 'none' });
-        })
-        .finally(() => {
-          this.setData({ loading: false });
-          if (cb) cb();
+    // 方案：
+    // Tab 1 (待支付) -> 请求 'PENDING'
+    // Tab 2 (制作中) -> 请求 'current' 然后前端过滤出 PAID/MAKING
+    // Tab 3 (待取餐) -> 请求 'current' 然后前端过滤出 READY
+    // Tab 0 (全部)   -> 请求 '' (后端可能不支持空，或者返回所有)
+
+    // 简化方案：直接用 'current' (进行中) 和 'history' (已完成)，但你的UI是4个Tab。
+    // 我们采用：请求所有相关数据，前端过滤。
+
+    let requestStatus = '';
+    if (this.data.currentTab === 0) requestStatus = ''; // 全部
+    else requestStatus = 'current'; // 1,2,3 都算进行中
+
+    request.get('/app/store/order/list', { status: requestStatus }).then(res => {
+      wx.hideLoading();
+      this.setData({ loading: false });
+
+      if (res.code === 200) {
+        let list = res.data || [];
+
+        // --- 前端过滤逻辑 ---
+        if (this.data.currentTab === 1) {
+          // 待支付
+          list = list.filter(item => item.status === 'PENDING');
+        } else if (this.data.currentTab === 2) {
+          // 制作中 (已支付 + 制作中)
+          list = list.filter(item => item.status === 'PAID' || item.status === 'MAKING');
+        } else if (this.data.currentTab === 3) {
+          // 待取货 (待取餐 + 待自取)
+          list = list.filter(item => item.status === 'READY' || item.status === 'WAIT_PICKUP');
+        }
+        // Tab 0 不过滤，显示所有
+
+        // 格式化数据
+        const displayList = list.map(item => this.processItem(item));
+
+        this.setData({
+          orderList: displayList,
+          hasMore: false // 这种全量拉取方式，暂不支持分页
         });
+      }
+    }).catch(err => {
+      wx.hideLoading();
+      this.setData({ loading: false });
+      console.error(err);
+    });
   },
 
-  /**
-   * 将后端数据映射为前端 ViewModel
-   */
-  mapOrderItem(item) {
-    // 1. 状态转换
-    let statusText = '';
-    let statusClass = item.status; // 用于 CSS 类名
+  processItem(item) {
+    let statusText = item.status;
+    let statusStyle = 'completed';
 
-    switch (item.status) {
-      case 'PENDING': statusText = '待支付'; break;
-      case 'PAID': statusText = '已支付'; break;
-      case 'MAKING': statusText = '制作中'; break;
-      case 'READY': statusText = '待取餐'; break;
-      case 'COMPLETED': statusText = '已完成'; break;
-      case 'CANCELLED': statusText = '已取消'; break;
-      case 'REFUNDED': statusText = '已退款'; break;
-      default: statusText = item.status;
-    }
+    // 状态文案映射
+    const statusMap = {
+      'PENDING': '待支付',
+      'PAID': '制作中',     // 已支付等待制作
+      'MAKING': '制作中',
+      'READY': '待取餐',
+      'WAIT_PICKUP': '待取餐',
+      'COMPLETED': '已完成',
+      'CANCELLED': '已取消'
+    };
+    statusText = statusMap[item.status] || item.status;
 
-    // 2. 商品描述 (例如：拿铁 等2件)
-    let desc = '';
-    let totalCount = 0;
-    if (item.items && item.items.length > 0) {
-      desc = item.items[0].productName;
-      totalCount = item.items.reduce((sum, it) => sum + it.quantity, 0);
-      if (totalCount > 1) {
-        desc += ` 等${totalCount}件`;
+    // 样式映射
+    if (item.status === 'PENDING') statusStyle = 'pending'; // 橙色/红色
+    else if (['PAID', 'MAKING'].includes(item.status)) statusStyle = 'processing'; // 蓝色
+    else if (['READY', 'WAIT_PICKUP'].includes(item.status)) statusStyle = 'ready'; // 绿色
+
+    // 图片处理 (取第一张图)
+    let productImg = '/assets/images/logo.png';
+    const productList = item.products || item.items || [];
+    if (productList.length > 0) {
+      const p = productList[0];
+      if (p.productImage) {
+        productImg = p.productImage;
+        if (!productImg.startsWith('http') && !productImg.startsWith('/assets')) {
+          productImg = 'http://localhost:8080' + productImg;
+        }
       }
-    } else {
-      desc = '瑞幸咖啡'; // 兜底
     }
-
-    // 3. 时间格式化 (简单处理 T)
-    let time = item.createTime ? item.createTime.replace('T', ' ') : '';
 
     return {
-      id: item.id,
-      orderNo: item.orderNo,
-      shopName: '瑞幸咖啡 (默认门店)',
-      status: item.status,
-      statusClass: statusClass,
-      statusText: statusText,
-      time: time,
-      totalPrice: item.totalAmount,
-      totalCount: totalCount,
-      desc: desc
+      ...item,
+      statusText,
+      statusStyle,
+      productImage: productImg,
+      desc: productList.map(p => p.productName).join('、')
     };
   },
 
+  // 支付、取消等功能保持不变，复用你原有的或之前的逻辑...
+  payOrder(e) {
+    const orderNo = e.currentTarget.dataset.id; // 注意 wxml 传的是 orderNo 还是 id
+    // ... (支付逻辑)
+    request.post('/app/store/order/pay', { orderNo }).then(res => {
+      if(res.code === 200) {
+        wx.showToast({ title: '支付成功' });
+        this.refreshData();
+      }
+    });
+  },
+
+  cancelOrder(e) {
+    const orderNo = e.currentTarget.dataset.id;
+    // ... (取消逻辑)
+    request.post('/app/store/order/cancel', { orderNo }).then(res => {
+      if(res.code === 200) {
+        wx.showToast({ title: '已取消' });
+        this.refreshData();
+      }
+    });
+  },
+
   goToDetail(e) {
-    const id = e.currentTarget.dataset.id;
-    // 这里的 id 应该是 orderNo 或者数据库 ID，取决于详情页需要什么
-    // 假设详情页接收 orderNo
-    const orderNo = this.data.list.find(i => i.id === id)?.orderNo;
-
-    wx.navigateTo({
-      url: `/pages/orders/detail/detail?orderNo=${orderNo || id}`
-    });
-  },
-
-  reOrder(e) {
-    // "再来一单" -> 跳转菜单
-    wx.switchTab({
-      url: '/pages/menu/index'
-    });
-  },
-
-  // 去支付
-  goPay(e) {
-    const id = e.currentTarget.dataset.id;
-    // 实际开发中跳转收银台或调起支付，这里模拟跳转详情
-    const orderNo = this.data.list.find(i => i.id === id)?.orderNo;
-    wx.navigateTo({
-      url: `/pages/orders/detail/detail?orderNo=${orderNo || id}`
-    });
+    const orderNo = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: `/pages/orders/detail/detail?orderNo=${orderNo}` });
   }
 });

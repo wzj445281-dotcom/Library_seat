@@ -1,208 +1,170 @@
-const request = require('../../utils/request.js');
+const app = getApp();
+const orderApi = require('../../api/order.js');
 
 Page({
   data: {
-    currentTab: 0, // 0:全部, 1:待支付, 2:制作中, 3:待取货
-    orderList: [],
-    page: 1,
-    hasMore: true
+    currentTab: 0, // 0: 当前订单, 1: 历史订单
+    loading: true,
+    list: []
   },
 
   onShow() {
     // 检查登录状态
     const token = wx.getStorageSync('token');
     if (!token) {
-      // 未登录，显示提示
-      this.setData({ 
-        page: 1, 
-        orderList: [],
-        currentTab: 0
-      });
       wx.showModal({
         title: '提示',
-        content: '查看订单需要登录，是否去登录？',
+        content: '请先登录后查看订单',
+        showCancel: true,
         confirmText: '去登录',
-        cancelText: '取消',
         success: (res) => {
           if (res.confirm) {
-            wx.navigateTo({
-              url: '/pages/login/login'
-            });
+            wx.navigateTo({ url: '/pages/login/login' });
           } else {
-            // 取消后返回上一页
-            wx.navigateBack();
+            wx.switchTab({ url: '/pages/menu/index' });
           }
         }
       });
       return;
     }
-    
-    // 每次显示页面刷新数据
-    this.setData({ page: 1, orderList: [] });
-    this.fetchOrders();
+
+    // 每次进入页面刷新数据
+    this.loadData();
   },
 
+  // 下拉刷新
+  onPullDownRefresh() {
+    this.loadData(() => {
+      wx.stopPullDownRefresh();
+    });
+  },
+
+  // 切换 Tab
   switchTab(e) {
-    const index = parseInt(e.currentTarget.dataset.index);
+    const index = Number(e.currentTarget.dataset.index);
+    if (index === this.data.currentTab) return;
+
     this.setData({
       currentTab: index,
-      page: 1,
-      orderList: [],
-      hasMore: true
+      list: [], // 切换时先清空，防止视觉残留
+      loading: true
     });
-    this.fetchOrders();
+
+    this.loadData();
   },
 
-  fetchOrders() {
-    if (!this.data.hasMore) return;
+  // 加载数据
+  loadData(cb) {
+    // Tab 0 (当前): 筛选 MAKING, WAIT_PICKUP, PENDING
+    // Tab 1 (历史): 筛选 COMPLETED, CANCELLED
+    const statusType = this.data.currentTab === 0 ? 'current' : 'history';
 
-    // 映射 Tab 到后端状态字段
-    let status = '';
-    switch(this.data.currentTab) {
-      case 1: status = 'PENDING_PAY'; break;
-      case 2: status = 'PAID'; break;
-      case 3: status = 'READY'; break;
-      default: status = ''; // 全部
-    }
+    this.setData({ loading: true });
 
-    wx.showLoading({ title: '加载中' });
-    
-    // 调用后端接口
-    request.get('/app/store/order/list', { status }).then(res => {
-      wx.hideLoading();
-      if (res.code === 200) {
-        const list = res.data.map(item => this.processItem(item));
-        
-        this.setData({
-          orderList: this.data.page === 1 ? list : this.data.orderList.concat(list),
-          hasMore: list.length >= 10, // 假设每页10条
-          page: this.data.page + 1
+    orderApi.getOrderList(statusType)
+        .then(res => {
+          // 兼容处理：如果 res.data 是数组则直接用
+          const rawList = Array.isArray(res.data) ? res.data : (res.data?.records || []);
+
+          // 数据清洗与映射
+          const list = rawList.map(item => this.mapOrderItem(item));
+
+          this.setData({ list: list, loading: false });
+        })
+        .catch(err => {
+          console.error('获取订单列表失败', err);
+          wx.showToast({ title: '加载失败', icon: 'none' });
+          this.setData({ loading: false });
+        })
+        .finally(() => {
+          if (cb) cb();
         });
-      } else {
-        wx.showToast({ title: res.message || '加载失败', icon: 'none' });
-      }
-    }).catch(err => {
-      wx.hideLoading();
-      wx.showToast({ title: '网络异常', icon: 'none' });
-      console.error('获取订单列表失败:', err);
-    });
   },
 
-  // 处理订单显示状态
-  processItem(item) {
+  /**
+   * 将后端数据映射为前端 ViewModel
+   */
+  mapOrderItem(item) {
+    // 1. 状态转换
     let statusText = '';
-    let statusStyle = '';
-    
-    switch(item.status) {
-      case 'PENDING_PAY': 
-        statusText = '待支付'; statusStyle = 'pending'; break;
-      case 'PAID': 
-        statusText = '制作中'; statusStyle = 'processing'; break;
-      case 'READY': 
-        statusText = item.type === 1 ? '待自取' : '配送中'; statusStyle = 'ready'; break;
-      case 'COMPLETED': 
-        statusText = '已完成'; statusStyle = 'completed'; break;
-      case 'CANCELLED': 
-        statusText = '已取消'; statusStyle = 'completed'; break;
+    let statusClass = item.status; // 用于 CSS 类名
+
+    switch (item.status) {
+      case 'PENDING': statusText = '待支付'; break;
+      case 'PAID': statusText = '制作中'; break; // 支付后即制作中
+      case 'MAKING': statusText = '制作中'; break;
+      case 'READY': statusText = '待取餐'; break;
+      case 'WAIT_PICKUP': statusText = '待取餐'; break;
+      case 'COMPLETED': statusText = '已完成'; break;
+      case 'CANCELLED': statusText = '已取消'; break;
+      case 'REFUNDED': statusText = '已退款'; break;
+      default: statusText = item.status;
     }
-    return { ...item, statusText, statusStyle };
-  },
 
-  // 模拟支付
-  payOrder(e) {
-    const orderNo = e.currentTarget.dataset.id;
-    wx.showModal({
-      title: '支付确认',
-      content: '模拟支付该订单？',
-      success: (res) => {
-        if (res.confirm) {
-          wx.showLoading({ title: '支付中...' });
-          // 调用后端支付接口
-          request.post('/app/store/order/pay', { orderNo }).then(res => {
-            wx.hideLoading();
-            if (res.code === 200) {
-              wx.showToast({ title: '支付成功' });
-              this.onShow(); // 刷新列表
-            } else {
-              wx.showToast({ title: res.message || '支付失败', icon: 'none' });
-            }
-          }).catch(err => {
-            wx.hideLoading();
-            wx.showToast({ title: '支付异常', icon: 'none' });
-            console.error('支付错误:', err);
-          });
-        }
+    // 2. 商品描述 (例如：拿铁 等2件)
+    let desc = '';
+    let totalCount = 0;
+    let firstImg = '/assets/images/logo.png'; // 默认图
+
+    // 优先使用 products 字段
+    const productList = item.products || item.items || [];
+
+    if (productList && productList.length > 0) {
+      const firstItem = productList[0];
+      desc = firstItem.productName || firstItem.name;
+
+      // 尝试获取图片，后端可能没返回全路径，这里简单处理
+      // 实际上后端 OrderServiceImpl 已经填充了 products，包含 imgUrl
+      // 但 OrderItem 实体里可能没有 imgUrl，需要看后端怎么填的
+      // 这里如果前端没有图片，就用默认的
+
+      totalCount = productList.reduce((sum, it) => sum + (it.quantity || it.count || 0), 0);
+      if (totalCount > 1) {
+        desc += ` 等${totalCount}件`;
       }
-    });
+    } else {
+      desc = '瑞幸咖啡';
+    }
+
+    return {
+      id: item.id,
+      orderNo: item.orderNo,
+      shopName: '瑞幸咖啡 (默认门店)',
+      status: item.status,
+      statusClass: statusClass,
+      statusText: statusText,
+      time: item.createTime || '', // 后端已格式化
+      totalPrice: item.totalAmount,
+      totalCount: totalCount,
+      desc: desc,
+      // 如果需要显示商品图片，可以在这里处理
+      productList: productList
+    };
   },
 
-  // 取消订单
-  cancelOrder(e) {
-    const orderNo = e.currentTarget.dataset.id;
-    wx.showModal({
-      title: '取消确认',
-      content: '确定要取消该订单吗？',
-      success: (res) => {
-        if (res.confirm) {
-          wx.showLoading({ title: '取消中...' });
-          // 调用后端取消订单接口
-          request.post('/app/store/order/cancel', { orderNo }).then(res => {
-            wx.hideLoading();
-            if (res.code === 200) {
-              wx.showToast({ title: '订单已取消' });
-              this.onShow(); // 刷新列表
-            } else {
-              wx.showToast({ title: res.message || '取消失败', icon: 'none' });
-            }
-          }).catch(err => {
-            wx.hideLoading();
-            wx.showToast({ title: '取消异常', icon: 'none' });
-            console.error('取消订单错误:', err);
-          });
-        }
-      }
-    });
-  },
-
+  // 跳转详情
   goToDetail(e) {
-    const orderNo = e.currentTarget.dataset.id;
-    if (orderNo) {
-      wx.navigateTo({ 
-        url: `/pages/orders/detail/detail?orderNo=${orderNo}` 
-      });
-    }
+    const id = e.currentTarget.dataset.id;
+    const orderNo = this.data.list.find(i => i.id === id)?.orderNo;
+    // 使用 orderNo 跳转
+    wx.navigateTo({
+      url: `/pages/orders/detail/detail?orderNo=${orderNo}`
+    });
   },
 
-  // Mock 数据生成 (如果后端接口未就绪可用此测试)
-  mockFetch(status) {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        const mockList = [
-          {
-            id: 'ORD_1001',
-            status: 'PENDING_PAY',
-            totalAmount: '59.90',
-            totalCount: 1,
-            type: 1,
-            createTime: '2023-10-25 10:00',
-            products: [{ imgUrl: '', name: 'Java书' }]
-          },
-          {
-            id: 'ORD_1002',
-            status: 'READY',
-            totalAmount: '32.00',
-            totalCount: 2,
-            type: 1,
-            pickupCode: 'A808',
-            createTime: '2023-10-24 14:30',
-            products: [{ imgUrl: '' }, { imgUrl: '' }]
-          }
-        ];
-        
-        // 简单过滤
-        const filtered = status ? mockList.filter(i => i.status === status) : mockList;
-        resolve({ list: filtered });
-      }, 500);
+  // 再来一单
+  reOrder(e) {
+    wx.switchTab({
+      url: '/pages/menu/index'
+    });
+  },
+
+  // 去支付
+  goPay(e) {
+    const id = e.currentTarget.dataset.id;
+    const orderNo = this.data.list.find(i => i.id === id)?.orderNo;
+    wx.navigateTo({
+      url: `/pages/orders/detail/detail?orderNo=${orderNo}`
     });
   }
 });

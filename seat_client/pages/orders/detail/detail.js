@@ -6,28 +6,20 @@ const wsManager = require('../../../utils/websocket.js');
 Page({
     data: {
         orderId: '',
-        order: {}, // 默认初始化为空对象，防止 wxml 访问 items 时崩溃
+        order: {},
         loading: true,
-        steps: [
-            { text: '已下单', time: '', active: false },
-            { text: '制作中', time: '', active: false },
-            { text: '请取餐', time: '', active: false },
-        ],
-        // 收藏相关数据
-        favoriteMap: {}, // 用对象存储收藏状态，key为productId，value为true，O(1)查找
+        steps: [],
+        favoriteMap: {},
     },
 
     onLoad: function (options) {
-        // 支持 orderNo 和 id 两种参数
         const orderNo = options.orderNo || options.id;
         if (orderNo) {
             this.setData({ orderId: orderNo });
             this.loadOrderDetail(orderNo);
-            // 获取收藏状态
             if (app.globalData.token) {
                 this.fetchFavoriteIds();
             }
-            // 连接 WebSocket 接收订单状态更新
             this.connectWebSocket(orderNo);
         } else {
             wx.showToast({ title: '订单参数错误', icon: 'none' });
@@ -35,58 +27,53 @@ Page({
     },
 
     onUnload: function() {
-        // 页面卸载时关闭 WebSocket 连接
         wsManager.close();
     },
 
-    /**
-     * 加载订单详情
-     */
+    // --- 加载数据 ---
     loadOrderDetail: function (orderNo) {
         this.setData({ loading: true });
         wx.showLoading({ title: '加载中' });
 
         OrderAPI.getOrderDetail(orderNo).then(res => {
-            // 处理后端返回结构：假设 res.code 为 200 且数据在 res.data 中
             if (res.code === 200 && res.data) {
                 const backendData = res.data;
-
-                // 1. 数据映射 (适配后端 Entity 字段)
-                // 后端状态: PENDING, PAID, READY, COMPLETED, CANCELLED
                 const status = backendData.status || '';
-                
-                // 处理订单商品列表的图片路径
+
+                // 处理商品列表和图片
                 const items = (backendData.products || backendData.items || []).map(item => {
-                    // 处理图片路径：如果是 /static/ 开头，转换为完整 URL
                     let imageUrl = item.productImage || item.image || item.imgUrl || '';
                     if (imageUrl && imageUrl.startsWith('/static/')) {
                         imageUrl = 'http://localhost:8080' + imageUrl;
                     }
                     return {
                         ...item,
-                        productImage: imageUrl || item.productImage || item.image || item.imgUrl || ''
+                        productName: item.productName || item.name,
+                        productImage: imageUrl,
+                        // 处理价格和数量，防止 null
+                        price: item.price || 0,
+                        quantity: item.quantity || item.count || 0
                     };
                 });
-                
+
                 const order = {
                     id: backendData.id,
-                    status: status, // 字符串状态: PENDING, PAID, READY, COMPLETED, CANCELLED
+                    status: status,
                     statusText: this.getStatusText(status),
                     pickupCode: backendData.pickupCode || '---',
                     storeName: backendData.storeName || '瑞幸咖啡 (科技园店)',
                     storeAddress: backendData.storeAddress || '高新南九道10号',
                     totalAmount: backendData.totalAmount,
-                    payAmount: backendData.payAmount || backendData.totalAmount,
+                    discountAmount: backendData.discountAmount || 0,
+                    realAmount: backendData.totalAmount, // 实付金额通常等于总金额减去优惠，或直接用后端给的字段
                     createTime: backendData.createTime,
                     orderNo: backendData.orderNo,
                     remark: backendData.remark || '无',
-                    items: items // 使用处理后的商品列表
+                    items: items
                 };
 
-                // 2. 更新时间轴状态
-                let steps = this.updateSteps(order);
+                const steps = this.updateSteps(order);
 
-                // 3. 渲染页面
                 this.setData({
                     order: order,
                     steps: steps,
@@ -96,17 +83,70 @@ Page({
                 this.handleLoadError(res.message);
             }
         }).catch(err => {
-            console.error('获取订单详情失败', err);
-            this.handleLoadError('权限不足或网络异常(403)');
+            console.error('详情加载失败', err);
+            this.handleLoadError('加载失败，请检查网络');
         }).finally(() => {
             wx.hideLoading();
         });
     },
 
+    // --- 支付与取消逻辑 (新增) ---
+
     /**
-     * 更新进度条状态逻辑
-     * 后端状态: PENDING(待支付) -> PAID(制作中) -> READY(待取餐) -> COMPLETED(已完成) -> CANCELLED(已取消)
+     * 立即支付
      */
+    onPay() {
+        const orderNo = this.data.order.orderNo;
+        if (!orderNo) return;
+
+        wx.showLoading({ title: '支付中...' });
+
+        // 模拟支付过程
+        OrderAPI.payOrder({ orderNo: orderNo }).then(res => {
+            wx.hideLoading();
+            if (res.code === 200) {
+                wx.showToast({ title: '支付成功', icon: 'success' });
+                // 刷新页面状态
+                this.loadOrderDetail(orderNo);
+            } else {
+                wx.showToast({ title: res.message || '支付失败', icon: 'none' });
+            }
+        }).catch(err => {
+            wx.hideLoading();
+            wx.showToast({ title: '支付异常', icon: 'none' });
+        });
+    },
+
+    /**
+     * 取消订单
+     */
+    onCancelOrder() {
+        const orderNo = this.data.order.orderNo;
+        if (!orderNo) return;
+
+        wx.showModal({
+            title: '提示',
+            content: '确定要取消当前订单吗？',
+            confirmColor: '#0022AB',
+            success: (res) => {
+                if (res.confirm) {
+                    wx.showLoading({ title: '取消中' });
+                    OrderAPI.cancelOrder({ orderNo: orderNo }).then(res => {
+                        wx.hideLoading();
+                        if (res.code === 200) {
+                            wx.showToast({ title: '订单已取消', icon: 'none' });
+                            this.loadOrderDetail(orderNo);
+                        } else {
+                            wx.showToast({ title: res.message || '取消失败', icon: 'none' });
+                        }
+                    });
+                }
+            }
+        });
+    },
+
+    // --- 原有辅助方法 ---
+
     updateSteps: function(order) {
         let steps = [
             { text: '已下单', time: '', active: false },
@@ -115,25 +155,20 @@ Page({
         ];
 
         const timeStr = order.createTime ? order.createTime.substring(11, 16) : '';
-
-        // 步骤1: 已下单（所有状态都显示）
         steps[0].active = true;
         steps[0].time = timeStr;
 
-        // 步骤2: 制作中（PAID 状态）
-        if (order.status === 'PAID' || order.status === 'MAKING') {
+        if (['PAID', 'MAKING'].includes(order.status)) {
             steps[1].active = true;
-            steps[1].time = timeStr;
+            steps[1].time = timeStr; // 实际应为支付时间
         }
 
-        // 步骤3: 待取餐（READY 或 WAIT_PICKUP 状态）
-        if (order.status === 'READY' || order.status === 'WAIT_PICKUP') {
-            steps[1].active = true; // 制作中已完成
-            steps[2].active = true; // 待取餐
+        if (['READY', 'WAIT_PICKUP'].includes(order.status)) {
+            steps[1].active = true;
+            steps[2].active = true;
             steps[2].time = '现在';
         }
 
-        // 已完成状态
         if (order.status === 'COMPLETED') {
             steps[1].active = true;
             steps[2].active = true;
@@ -142,19 +177,15 @@ Page({
         return steps;
     },
 
-    /**
-     * 错误处理，防止页面崩溃
-     */
     handleLoadError: function(msg) {
         wx.showToast({ title: msg || '加载失败', icon: 'none' });
         this.setData({
             loading: false,
-            order: { items: [] } // 设置空对象防止 items.length 报错
+            order: { items: [] }
         });
     },
 
     getStatusText: function(status) {
-        // 后端状态映射: PENDING, PAID, READY, COMPLETED, CANCELLED
         const statusMap = {
             'PENDING': '待支付',
             'PENDING_PAY': '待支付',
@@ -163,159 +194,76 @@ Page({
             'READY': '待取餐',
             'WAIT_PICKUP': '待取餐',
             'COMPLETED': '已完成',
-            'CANCELLED': '已取消'
+            'CANCELLED': '已取消',
+            'REFUNDED': '已退款'
         };
-        return statusMap[status] || '处理中';
+        return statusMap[status] || status;
     },
 
-
-    /**
-     * 拨打门店电话
-     */
     onCallStore: function () {
-        wx.makePhoneCall({
-            phoneNumber: '13800000000', // 实际应从 order 数据中获取
-        });
+        wx.makePhoneCall({ phoneNumber: '13800000000' });
     },
 
-    /**
-     * “再来一单”：将商品重新存入购物车并跳转
-     */
     onOrderAgain: function () {
         const order = this.data.order;
         if (!order || !order.items || order.items.length === 0) {
-            wx.showToast({ title: '订单数据未加载', icon: 'none' });
+            wx.showToast({ title: '订单数据缺失', icon: 'none' });
             return;
         };
 
-        wx.showLoading({ title: '正在加入购物车' });
-
+        wx.showLoading({ title: '加入购物车...' });
         try {
-            // 获取当前购物车缓存
             let cart = wx.getStorageSync('cart') || [];
-
             order.items.forEach(orderItem => {
-                // 查找购物车是否已有同款（同ID且同规格）
-                const existingIndex = cart.findIndex(c => c.id === orderItem.productId && c.spec === orderItem.spec);
+                // 这里的 productId 需对应 orderItem 里的 productId
+                const existingIndex = cart.findIndex(c => c.id === orderItem.productId);
 
+                // 简单处理：不判断规格直接加数量，或者视为新条目
+                // 如果需要严格规格匹配，需要后端返回 spec
                 if (existingIndex > -1) {
-                    cart[existingIndex].quantity += orderItem.quantity;
+                    cart[existingIndex].quantity += (orderItem.quantity || 1);
                 } else {
                     cart.push({
                         id: orderItem.productId,
                         name: orderItem.productName,
                         pic: orderItem.productImage,
-                        spec: orderItem.spec,
                         price: orderItem.price,
-                        quantity: orderItem.quantity,
+                        quantity: (orderItem.quantity || 1),
                         checked: true
                     });
                 }
             });
-
             wx.setStorageSync('cart', cart);
-
             setTimeout(() => {
                 wx.hideLoading();
                 wx.switchTab({ url: '/pages/menu/index' });
-            }, 600);
+            }, 500);
         } catch (err) {
-            console.error('加入购物车失败:', err);
+            console.error(err);
             wx.hideLoading();
         }
     },
 
-    /**
-     * 1. 获取用户所有收藏的商品ID
-     * 接口: GET /api/app/favorite/ids
-     */
     fetchFavoriteIds() {
         request.get('/app/favorite/ids').then(res => {
             if (res.code === 200) {
-                // 将数组转换为 Map 结构 {101: true, 102: true}，方便 WXML 判断
                 const map = {};
-                res.data.forEach(id => {
-                    map[id] = true;
-                });
-                
-                this.setData({
-                    favoriteMap: map
-                });
+                res.data.forEach(id => map[id] = true);
+                this.setData({ favoriteMap: map });
             }
-        }).catch(err => {
-            console.error('获取收藏列表失败', err);
         });
     },
 
-    /**
-     * 2. 核心交互：点击爱心收藏/取消
-     * 接口: POST /api/app/favorite/toggle
-     */
-    onToggleFavorite(e) {
-        // 震动反馈，提升手感 (瑞幸风格)
-        wx.vibrateShort({ type: 'light' });
-
-        const { id, index, categoryIndex } = e.currentTarget.dataset;
-        
-        // === 乐观更新 (Optimistic UI) ===
-        // 不等接口返回，直接修改前端状态，让用户感觉"零延迟"
-        const isFavorite = !!this.data.favoriteMap[id];
-        const newStatus = !isFavorite;
-        
-        const key = `favoriteMap.${id}`;
-        this.setData({
-            [key]: newStatus
-        });
-
-        // 发送请求
-        request.post('/app/favorite/toggle', { productId: id }).then(res => {
-            if (res.code !== 200) {
-                // 如果失败，回滚状态
-                this.setData({ [key]: isFavorite });
-                wx.showToast({ title: '操作失败', icon: 'none' });
-            }
-        }).catch(() => {
-            // 网络错误回滚
-            this.setData({ [key]: isFavorite });
-        });
-    },
-
-    /**
-     * 连接 WebSocket 接收订单状态更新
-     */
     connectWebSocket(orderNo) {
-        wsManager.connect(
-            orderNo,
-            (data) => {
-                // 收到订单状态更新消息
-                if (data.type === 'ORDER_STATUS_UPDATE' && data.orderNo === orderNo) {
-                    console.log('收到订单状态更新:', data);
-                    // 更新订单状态
-                    const order = this.data.order;
-                    order.status = data.status;
-                    order.statusText = this.getStatusText(data.status);
-                    
-                    // 更新时间轴
-                    const steps = this.updateSteps(order);
-                    
-                    this.setData({
-                        order: order,
-                        steps: steps
-                    });
-
-                    // 显示提示
-                    wx.showToast({
-                        title: '订单状态已更新',
-                        icon: 'success',
-                        duration: 2000
-                    });
-                }
-            },
-            (err) => {
-                console.error('WebSocket 连接错误:', err);
-                // 连接失败不显示错误，避免打扰用户
-                // 可以在这里实现重连逻辑
+        wsManager.connect(orderNo, (data) => {
+            if (data.type === 'ORDER_STATUS_UPDATE' && data.orderNo === orderNo) {
+                const order = this.data.order;
+                order.status = data.status;
+                order.statusText = this.getStatusText(data.status);
+                const steps = this.updateSteps(order);
+                this.setData({ order, steps });
+                wx.showToast({ title: '订单状态更新', icon: 'success' });
             }
-        );
+        });
     }
 });

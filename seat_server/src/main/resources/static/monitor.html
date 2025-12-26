@@ -4,112 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>瑞幸咖啡 AI 实时监控中心</title>
-    <!-- 引入 ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <!-- 引入 Vue (轻量级数据绑定) -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    <!-- 引入 Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #0b1120;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .header {
-            padding: 20px;
-            text-align: center;
-            background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
-            border-bottom: 1px solid #334155;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-            letter-spacing: 2px;
-            color: #38bdf8;
-        }
-        .status-badge {
-            background-color: #22c55e;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .container {
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            height: calc(100vh - 100px);
-        }
-        .card {
-            background-color: #1e293b;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-        }
-        .card-header {
-            font-size: 18px;
-            margin-bottom: 15px;
-            color: #94a3b8;
-            border-left: 4px solid #38bdf8;
-            padding-left: 10px;
-        }
-        #chart-prediction, #chart-stats {
-            flex: 1;
-            width: 100%;
-            min-height: 300px;
-        }
-        .ai-log {
-            flex: 1;
-            background: #0f172a;
-            border-radius: 8px;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 12px;
-            overflow-y: auto;
-            color: #22c55e;
-            border: 1px solid #334155;
-        }
-        .log-item {
-            margin-bottom: 5px;
-            border-bottom: 1px dashed #334155;
-            padding-bottom: 2px;
-        }
-        .log-time {
-            color: #64748b;
-            margin-right: 8px;
-        }
+        body { margin: 0; padding: 0; background-color: #0b1120; color: #fff; font-family: 'Segoe UI', sans-serif; }
+        .header { padding: 20px; text-align: center; background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 24px; color: #38bdf8; }
+        .container { padding: 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; height: calc(100vh - 100px); }
+        .card { background-color: #1e293b; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; }
+        .card-header { font-size: 18px; margin-bottom: 15px; color: #94a3b8; border-left: 4px solid #38bdf8; padding-left: 10px; display: flex; justify-content: space-between; }
+        #chart-prediction { flex: 1; width: 100%; min-height: 300px; }
+        .ai-log { flex: 1; background: #0f172a; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; overflow-y: auto; color: #22c55e; border: 1px solid #334155; }
+        .log-item { margin-bottom: 5px; border-bottom: 1px dashed #334155; }
+        .predict-value { font-size: 32px; color: #38bdf8; font-weight: bold; }
+        .predict-label { font-size: 12px; color: #94a3b8; }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="header">
-        <h1>ZHIZUO <small style="font-size: 14px; color: #94a3b8;">AI MONITOR SYSTEM</small></h1>
-        <span class="status-badge">System Online</span>
+        <h1>RUIXING AI MONITOR <small style="font-size: 14px;">Intelligent System</small></h1>
+        <div style="text-align: right;">
+            <div class="predict-value">{{ (currentPrediction * 100).toFixed(1) }}%</div>
+            <div class="predict-label">未来1小时拥挤度预测</div>
+        </div>
     </div>
 
     <div class="container">
-        <!-- 左侧：AI 实时拥挤度预测 -->
         <div class="card">
-            <div class="card-header">AI 实时拥挤度预测 (Python Model)</div>
+            <div class="card-header">
+                <span>门店客流趋势预测 (Next 1 Hour)</span>
+                <span style="font-size: 12px; color: #64748b;">Model: LSTM-v2</span>
+            </div>
             <div id="chart-prediction"></div>
         </div>
 
-        <!-- 右侧：系统日志与状态 -->
         <div class="card">
-            <div class="card-header">AI 服务调用日志</div>
+            <div class="card-header">AI 决策日志</div>
             <div class="ai-log" id="log-container">
                 <div class="log-item" v-for="(log, index) in logs" :key="index">
-                    <span class="log-time">[{{ log.time }}]</span>
-                    <span>{{ log.message }}</span>
+                    <span style="color: #64748b;">[{{ log.time }}]</span> {{ log.message }}
                 </div>
             </div>
         </div>
@@ -122,15 +57,14 @@
         data: {
             logs: [],
             chartInstance: null,
-            predictionData: [], // 存储预测数据
-            xAxisData: []       // 存储时间轴
+            predictionData: [],
+            xAxisData: [],
+            currentPrediction: 0
         },
         mounted() {
             this.initChart();
-            this.addLog("系统初始化完成...");
-            this.addLog("正在连接 AI 服务...");
-
-            // 开始轮询预测数据 (每3秒一次)
+            this.addLog("系统启动...");
+            // 每 3 秒获取一次最新预测
             setInterval(this.fetchPrediction, 3000);
         },
         methods: {
@@ -141,76 +75,45 @@
             },
             initChart() {
                 this.chartInstance = echarts.init(document.getElementById('chart-prediction'));
-                const option = {
+                // 初始化空图表配置
+                this.chartInstance.setOption({
                     backgroundColor: 'transparent',
                     tooltip: { trigger: 'axis' },
                     grid: { top: '15%', left: '3%', right: '4%', bottom: '3%', containLabel: true },
-                    xAxis: {
-                        type: 'category',
-                        boundaryGap: false,
-                        data: this.xAxisData,
-                        axisLine: { lineStyle: { color: '#94a3b8' } }
-                    },
-                    yAxis: {
-                        type: 'value',
-                        min: 0,
-                        max: 1,
-                        name: '拥挤系数',
-                        splitLine: { lineStyle: { color: '#334155', type: 'dashed' } },
-                        axisLine: { lineStyle: { color: '#94a3b8' } }
-                    },
+                    xAxis: { type: 'category', boundaryGap: false, data: [], axisLine: { lineStyle: { color: '#94a3b8' } } },
+                    yAxis: { type: 'value', min: 0, max: 1, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } }, axisLine: { lineStyle: { color: '#94a3b8' } } },
                     series: [{
-                        name: 'AI 预测值',
-                        type: 'line',
-                        smooth: true,
-                        symbol: 'none',
-                        areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
-                                offset: 0, color: 'rgba(56, 189, 248, 0.5)'
-                            }, {
-                                offset: 1, color: 'rgba(56, 189, 248, 0.0)'
-                            }])
-                        },
+                        name: '预测拥挤度', type: 'line', smooth: true, symbol: 'none',
+                        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(56, 189, 248, 0.5)' }, { offset: 1, color: 'rgba(56, 189, 248, 0.0)' }]) },
                         lineStyle: { color: '#38bdf8', width: 3 },
-                        data: this.predictionData
+                        data: []
                     }]
-                };
-                this.chartInstance.setOption(option);
-
-                window.addEventListener('resize', () => {
-                    this.chartInstance.resize();
                 });
+                window.addEventListener('resize', () => this.chartInstance.resize());
             },
             fetchPrediction() {
-                // 调用我们之前写的 Java 接口
-                axios.get('/api/app/ai/prediction/crowding')
-                    .then(res => {
-                        const result = res.data;
-                        if (result.code === 200 || result.code === 0) { // 兼容不同的 ApiResponse
-                            const value = result.data;
-                            const now = new Date().toLocaleTimeString();
+                // 调用后端接口获取预测值
+                axios.get('/api/app/ai/prediction/crowding').then(res => {
+                    if (res.data.code === 200) {
+                        const value = res.data.data;
+                        this.currentPrediction = value;
+                        const now = new Date().toLocaleTimeString();
 
-                            this.addLog(`获取预测数据成功: 拥挤度 ${value}`);
+                        this.addLog(`AI Model Output: Crowding Index ${value}`);
 
-                            // 更新图表数据
-                            if (this.xAxisData.length > 20) {
-                                this.xAxisData.shift();
-                                this.predictionData.shift();
-                            }
-                            this.xAxisData.push(now);
-                            this.predictionData.push(value);
-
-                            this.chartInstance.setOption({
-                                xAxis: { data: this.xAxisData },
-                                series: [{ data: this.predictionData }]
-                            });
-                        } else {
-                            this.addLog("数据格式异常");
+                        if (this.xAxisData.length > 20) {
+                            this.xAxisData.shift();
+                            this.predictionData.shift();
                         }
-                    })
-                    .catch(err => {
-                        this.addLog("AI 服务连接失败: " + err.message);
-                    });
+                        this.xAxisData.push(now);
+                        this.predictionData.push(value);
+
+                        this.chartInstance.setOption({
+                            xAxis: { data: this.xAxisData },
+                            series: [{ data: this.predictionData }]
+                        });
+                    }
+                }).catch(err => this.addLog("连接 AI 服务失败: " + err.message));
             }
         }
     });

@@ -1,113 +1,62 @@
 <view class="container">
-    <!-- 用餐方式选择 -->
-    <view class="dining-type-card">
-        <view class="type-switch">
-            <view class="switch-item {{diningType === 'self' ? 'active' : ''}}" bindtap="switchDiningType" data-type="self">
-                到店自取
-            </view>
-            <view class="switch-item {{diningType === 'delivery' ? 'active' : ''}}" bindtap="switchDiningType" data-type="delivery">
-                外卖配送
-            </view>
+    <view class="section delivery-type">
+        <view class="type-item {{deliveryType===1 ? 'active' : ''}}" bindtap="selectDelivery" data-type="1">
+            <text>配送到座</text>
         </view>
+        <view class="type-item {{deliveryType===2 ? 'active' : ''}}" bindtap="selectDelivery" data-type="2">
+            <text>门店自取</text>
+        </view>
+    </view>
 
-        <!-- 门店信息/地址信息 -->
-        <view class="address-info" wx:if="{{diningType === 'self'}}">
-            <view class="store-name">{{storeInfo.name}}</view>
-            <view class="store-address">{{storeInfo.address}}</view>
-        </view>
-        <view class="address-info" wx:else bindtap="selectAddress">
-            <view class="address-content">
-                <view class="store-name">
-                    {{selectedAddress ? selectedAddress.name + ' ' + selectedAddress.phone : '请选择收货地址'}}
-                    <text class="default-tag" wx:if="{{selectedAddress && selectedAddress.isDefault}}">默认</text>
-                </view>
-                <view class="store-address {{selectedAddress ? '' : 'text-gray'}}">
-                    {{selectedAddress ? (selectedAddress.province || '') + (selectedAddress.city || '') + (selectedAddress.district || '') + (selectedAddress.detail || '') : '点击选择收货地址'}}
-                </view>
+    <view class="section address-card" wx:if="{{deliveryType === 1}}" bindtap="chooseAddress">
+        <view class="addr-info" wx:if="{{address}}">
+            <view class="addr-top">
+                <text class="addr-detail">{{address.seatInfo || address.detail}}</text>
             </view>
+            <view class="addr-user">
+                <text>{{address.contact}}</text>
+                <text class="phone">{{address.phone}}</text>
+            </view>
+        </view>
+        <view class="addr-empty" wx:else>
+            <text>请选择收货地址/座位号</text>
             <text class="arrow">></text>
         </view>
     </view>
 
-    <!-- 订单明细 -->
-    <view class="order-detail-card">
-        <view class="card-title">订单详情</view>
-        <block wx:for="{{cartItems}}" wx:key="productId">
-            <view class="cart-item">
-                <image class="item-img" src="{{item.image}}" mode="aspectFill"></image>
-                <view class="item-info">
-                    <view class="item-name">{{item.name}}</view>
-                    <view class="item-spec">{{item.spec}}</view>
-                </view>
-                <view class="item-right">
-                    <view class="item-count">x{{item.count}}</view>
-                    <view class="item-price">¥{{item.price}}</view>
-                </view>
-            </view>
-        </block>
+    <view class="section product-list">
+        <view class="section-title">订单详情</view>
+        <view class="product-item" wx:for="{{cartList}}" wx:key="id">
+            <image class="thumb" src="{{item.image || item.pic}}" mode="aspectFill"></image>
+            <view class="info">
+                <view class="name">{{item.name}}</view>
+                <view class="spec">{{item.spec || '标准'}}</view>
+                <view class="price-row">
+                    <text class="price">¥{{item.price}}</text>
 
-        <!-- 备注输入 -->
-        <view class="remark-row">
-            <text>备注</text>
-            <input class="remark-input" placeholder="口味、包装等要求" value="{{remark}}" bindinput="onRemarkInput" />
-        </view>
-
-        <!-- 优惠券选择 -->
-        <view class="coupon-row" bindtap="toggleCouponPicker">
-            <text>优惠券</text>
-            <view class="coupon-select">
-                <text wx:if="{{selectedCoupon}}" class="coupon-selected">{{selectedCoupon.title}}</text>
-                <text wx:else class="coupon-placeholder">选择优惠券</text>
-                <text class="arrow">></text>
-            </view>
-        </view>
-
-        <!-- 价格明细 -->
-        <view class="price-detail">
-            <view class="price-row">
-                <text>商品小计</text>
-                <text>¥{{originalPrice}}</text>
-            </view>
-            <view class="price-row" wx:if="{{discountAmount > 0}}">
-                <text>优惠金额</text>
-                <text class="discount">-¥{{discountAmount}}</text>
-            </view>
-            <view class="price-row total">
-                <text>实付金额</text>
-                <text class="final-price">¥{{finalPrice}}</text>
-            </view>
-        </view>
-    </view>
-
-    <!-- 优惠券选择弹窗 -->
-    <view class="coupon-picker-mask" wx:if="{{showCouponPicker}}" bindtap="toggleCouponPicker">
-        <view class="coupon-picker" catchtap="">
-            <view class="picker-header">
-                <text>选择优惠券</text>
-                <text class="close" bindtap="toggleCouponPicker">×</text>
-            </view>
-            <scroll-view class="picker-content" scroll-y>
-                <view class="coupon-option" wx:for="{{availableCoupons}}" wx:key="userCouponId" 
-                      bindtap="selectCoupon" data-index="{{index}}">
-                    <view class="coupon-info">
-                        <text class="coupon-title">{{item.title}}</text>
-                        <text class="coupon-desc">满{{item.minPoint}}元可用</text>
+                    <view class="stepper">
+                        <view class="step-btn minus" catchtap="reduceItem" data-index="{{index}}">-</view>
+                        <view class="step-num">{{item.quantity}}</view>
+                        <view class="step-btn plus" catchtap="addItem" data-index="{{index}}">+</view>
                     </view>
-                    <view class="coupon-amount">¥{{item.amount}}</view>
+
                 </view>
-                <view wx:if="{{availableCoupons.length === 0}}" class="empty-coupon">
-                    暂无可用优惠券
-                </view>
-            </scroll-view>
+            </view>
         </view>
     </view>
 
-    <!-- 底部支付栏 -->
+    <view class="section remark-section">
+        <text>备注</text>
+        <input class="remark-input" placeholder="口味、包装等要求" bindinput="onRemarkInput" />
+    </view>
+
     <view class="footer-bar">
-        <view class="price-section">
-            <text class="label">合计</text>
+        <view class="total-box">
+            <text>合计</text>
             <text class="price">¥{{finalPrice}}</text>
         </view>
-        <view class="pay-btn" bindtap="submitOrder">去支付</view>
+        <button class="pay-btn" bindtap="submitOrder" disabled="{{submitting}}">
+            {{submitting ? '提交中...' : '去支付'}}
+        </button>
     </view>
 </view>

@@ -1,6 +1,7 @@
 package com.example.zhizuo.core.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -27,4 +28,8 @@ public class OrderItem implements Serializable {
     private BigDecimal price;
 
     private Integer quantity;
+
+    // ✅ 新增：商品图片 (非数据库字段，查询时填充)
+    @TableField(exist = false)
+    private String productImage;
 }

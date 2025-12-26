@@ -2,72 +2,100 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>瑞幸咖啡 - 订单履约</title>
+    <title>瑞幸咖啡 - 门店订单管理</title>
     <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <script src="https://unpkg.com/element-ui/lib/index.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <style>
-        body { margin: 0; background-color: #f0f2f5; font-family: sans-serif; }
-        .header { background: #fff; padding: 0 20px; height: 60px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-        .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 4px; }
-        .status-tag { font-weight: bold; }
+        body { margin: 0; background-color: #f0f2f5; font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; }
+        .header { background: #fff; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.08); z-index: 10; position: relative; }
+        .logo { font-size: 20px; font-weight: bold; color: #0022AB; display: flex; align-items: center; gap: 10px; }
+        .container { max-width: 1200px; margin: 24px auto; padding: 24px; background: #fff; border-radius: 8px; min-height: 80vh; }
+        .order-info { display: flex; flex-direction: column; gap: 4px; }
+        .product-list { font-size: 13px; color: #606266; }
+        .product-item { display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .amount { font-weight: bold; color: #f56c6c; }
+        .time { font-size: 12px; color: #909399; }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="header">
-        <h2 style="color: #1890ff; margin: 0;">🚚 订单履约工作台</h2>
-        <el-button type="text" @click="goHome">返回首页</el-button>
+        <div class="logo">☕️ 瑞幸咖啡 · 门店工作台</div>
+        <el-button type="text" @click="refresh">刷新数据</el-button>
     </div>
 
     <div class="container">
         <el-tabs v-model="activeStatus" @tab-click="fetchOrders">
-            <el-tab-pane label="待处理 (Pending)" name="PENDING"></el-tab-pane>
+            <el-tab-pane label="待制作 (Paid)" name="PAID"></el-tab-pane>
             <el-tab-pane label="制作中 (Making)" name="MAKING"></el-tab-pane>
-            <el-tab-pane label="已完成 (Completed)" name="COMPLETED"></el-tab-pane>
-            <el-tab-pane label="全部订单" name=""></el-tab-pane>
+            <el-tab-pane label="待取餐 (Ready)" name="READY"></el-tab-pane>
+            <el-tab-pane label="已完成 (History)" name="COMPLETED"></el-tab-pane>
+            <el-tab-pane label="全部订单" name="ALL"></el-tab-pane>
         </el-tabs>
 
-        <el-table :data="tableData" v-loading="loading" style="width: 100%; margin-top: 20px;">
-            <el-table-column prop="orderNo" label="订单号" width="180"></el-table-column>
-            <el-table-column prop="resourceId" label="资源ID" width="100"></el-table-column>
-            <el-table-column label="履约方式" width="120">
+        <el-table :data="tableData" v-loading="loading" style="width: 100%; margin-top: 20px;" stripe>
+            <el-table-column prop="orderNo" label="订单编号" width="180">
                 <template slot-scope="scope">
-                    <el-tag :type="scope.row.deliveryType===1?'warning':'info'">
-                        {{ scope.row.deliveryType===1 ? '配送到座' : '自取' }}
-                    </el-tag>
+                    <span style="font-family: monospace;">{{ scope.row.orderNo }}</span>
                 </template>
             </el-table-column>
-            <el-table-column prop="seatId" label="配送地址" width="100">
-                <template slot-scope="scope">
-                    {{ scope.row.seatId ? scope.row.seatId : '-' }}
-                </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-                <template slot-scope="scope">
-                    <el-tag class="status-tag" :type="getStatusType(scope.row.status)">
-                        {{ scope.row.status }}
-                    </el-tag>
-                </template>
-            </el-table-column>
-            <el-table-column prop="createTime" label="申请时间" width="180"></el-table-column>
 
-            <el-table-column label="操作" fixed="right" width="200">
+            <el-table-column label="商品内容" min-width="250">
                 <template slot-scope="scope">
-                    <!-- 待处理 -> 发货 -->
-                    <el-button v-if="scope.row.status === 'PENDING'"
+                    <div class="product-list">
+                        <div v-for="(item, index) in scope.row.products" :key="index" class="product-item">
+                            <span>{{ item.productName }} <span v-if="item.spec">({{item.spec}})</span></span>
+                            <span>x{{ item.quantity }}</span>
+                        </div>
+                    </div>
+                </template>
+            </el-table-column>
+
+            <el-table-column label="支付金额" width="120">
+                <template slot-scope="scope">
+                    <span class="amount">¥{{ scope.row.totalAmount }}</span>
+                </template>
+            </el-table-column>
+
+            <el-table-column label="下单时间" width="160">
+                <template slot-scope="scope">
+                    <div class="time">{{ formatTime(scope.row.createTime) }}</div>
+                </template>
+            </el-table-column>
+
+            <el-table-column label="当前状态" width="100">
+                <template slot-scope="scope">
+                    <el-tag :type="getStatusTag(scope.row.status)" size="small">
+                        {{ getStatusText(scope.row.status) }}
+                    </el-tag>
+                </template>
+            </el-table-column>
+
+            <el-table-column label="操作" fixed="right" width="150">
+                <template slot-scope="scope">
+                    <el-button v-if="scope.row.status === 'PAID'"
                                type="primary" size="mini"
-                               @click="processOrder(scope.row.id, 'DELIVER')">
-                        {{ scope.row.deliveryType===1 ? '开始配送' : '确认取货' }}
+                               @click="updateStatus(scope.row.id, 'MAKING')">
+                        开始制作
                     </el-button>
 
-                    <!-- 使用中 -> 归还 -->
-                    <el-button v-if="scope.row.status === 'USING'"
+                    <el-button v-if="scope.row.status === 'MAKING'"
                                type="success" size="mini"
-                               @click="processOrder(scope.row.id, 'RETURN')">
-                        确认归还
+                               @click="updateStatus(scope.row.id, 'READY')">
+                        制作完成
                     </el-button>
+
+                    <el-button v-if="scope.row.status === 'READY' || scope.row.status === 'WAIT_PICKUP'"
+                               type="warning" size="mini"
+                               @click="updateStatus(scope.row.id, 'COMPLETED')">
+                        取餐完成
+                    </el-button>
+
+                    <span v-if="scope.row.status === 'COMPLETED' || scope.row.status === 'CANCELLED'" style="color: #ccc; font-size: 12px;">
+                        无操作
+                    </span>
                 </template>
             </el-table-column>
         </el-table>
@@ -78,7 +106,7 @@
     new Vue({
         el: '#app',
         data: {
-            activeStatus: 'PENDING',
+            activeStatus: 'PAID', // 默认显示待制作
             tableData: [],
             loading: false
         },
@@ -86,37 +114,64 @@
             this.fetchOrders();
         },
         methods: {
-            goHome() { window.location.href = '/admin.html'; },
+            refresh() {
+                this.fetchOrders();
+                this.$message.success('数据已刷新');
+            },
             fetchOrders() {
                 this.loading = true;
-                axios.get('/api/admin/resources/orders', { params: { status: this.activeStatus } })
+                // 调用正确的 API 路径
+                axios.get('/api/admin/order/list', { params: { status: this.activeStatus } })
                     .then(res => {
                         if (res.data.code === 200) {
                             this.tableData = res.data.data;
+                        } else {
+                            this.tableData = [];
                         }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.$message.error('获取订单失败');
                     })
                     .finally(() => this.loading = false);
             },
-            processOrder(id, action) {
-                const tip = action === 'DELIVER' ? '确认该物品已交付给学生？' : '确认物品已归还并检查无误？';
-                this.$confirm(tip, '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
-                    .then(() => {
-                        axios.post(`/api/admin/resources/orders/${id}/process?action=${action}`)
-                            .then(res => {
-                                if (res.data.code === 200) {
-                                    this.$message.success('操作成功');
-                                    this.fetchOrders();
-                                } else {
-                                    this.$message.error(res.data.message);
-                                }
-                            });
-                    });
+            updateStatus(id, newStatus) {
+                const actionName = this.getActionName(newStatus);
+                this.$confirm(`确定要将此订单状态更新为“${actionName}”吗？`, '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    axios.post('/api/admin/order/status', { id: id, status: newStatus })
+                        .then(res => {
+                            if (res.data.code === 200) {
+                                this.$message.success('操作成功');
+                                this.fetchOrders(); // 刷新列表
+                            } else {
+                                this.$message.error(res.data.message || '操作失败');
+                            }
+                        });
+                });
             },
-            getStatusType(status) {
-                if (status === 'PENDING') return 'warning';
-                if (status === 'USING') return 'primary';
-                if (status === 'RETURNED') return 'success';
-                return 'info';
+            getStatusTag(status) {
+                const map = { 'PAID': 'danger', 'MAKING': 'warning', 'READY': 'success', 'COMPLETED': 'info', 'CANCELLED': 'info' };
+                return map[status] || '';
+            },
+            getStatusText(status) {
+                const map = {
+                    'PENDING': '待支付', 'PAID': '待制作', 'MAKING': '制作中',
+                    'READY': '待取餐', 'WAIT_PICKUP': '待取餐',
+                    'COMPLETED': '已完成', 'CANCELLED': '已取消'
+                };
+                return map[status] || status;
+            },
+            getActionName(status) {
+                const map = { 'MAKING': '制作中', 'READY': '待取餐', 'COMPLETED': '已完成' };
+                return map[status] || status;
+            },
+            formatTime(timeStr) {
+                if (!timeStr) return '';
+                return timeStr.replace('T', ' ');
             }
         }
     });

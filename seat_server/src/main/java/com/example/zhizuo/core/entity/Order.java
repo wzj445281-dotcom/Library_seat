@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -61,8 +62,12 @@ public class Order implements Serializable {
      */
     private BigDecimal originalAmount;
 
+    // ✅ 【关键修复】格式化时间，防止前端 JS 解析报错
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime payTime;
 
+    // ✅ 【关键修复】格式化时间，防止前端 JS 解析报错
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime createTime;
 
     // --- 非数据库字段，用于前端展示 ---

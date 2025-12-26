@@ -1,13 +1,12 @@
 <view class="container" wx:if="{{!loading}}">
-    <!-- 顶部状态栏背景 -->
     <view class="header-bg">
         <view class="status-title">{{order.statusText}}</view>
-        <view class="status-desc">感谢您对瑞幸的支持，期待再次光临</view>
+        <view class="status-desc" wx:if="{{order.status === 'PENDING'}}">请在15分钟内完成支付</view>
+        <view class="status-desc" wx:elif="{{order.status === 'CANCELLED'}}">订单已取消，欢迎再次选购</view>
+        <view class="status-desc" wx:else>感谢您对瑞幸的支持，期待再次光临</view>
     </view>
 
     <view class="content-wrapper">
-
-        <!-- 取餐码卡片 (核心区域) -->
         <view class="card pickup-card" wx:if="{{order.status === 'READY' || order.status === 'WAIT_PICKUP'}}">
             <view class="pickup-header">
                 <text>取餐码</text>
@@ -18,7 +17,6 @@
             <view class="pickup-tip">请向店员出示取餐码取餐</view>
         </view>
 
-        <!-- 进度条 -->
         <view class="card step-card">
             <view class="steps-box">
                 <view class="step-item {{item.active ? 'active' : ''}}" wx:for="{{steps}}" wx:key="index">
@@ -34,7 +32,6 @@
             </view>
         </view>
 
-        <!-- 门店信息 -->
         <view class="card store-card">
             <view class="store-info">
                 <view class="name">{{order.storeName}}</view>
@@ -45,13 +42,12 @@
             </view>
         </view>
 
-        <!-- 商品列表 -->
         <view class="card product-card">
-            <view class="product-item" wx:for="{{order.items}}" wx:key="id">
+            <view class="product-item" wx:for="{{order.items}}" wx:key="index">
                 <image class="thumb" src="{{item.productImage}}" mode="aspectFill"></image>
                 <view class="info">
                     <view class="name">{{item.productName}}</view>
-                    <view class="spec">{{item.spec}}</view>
+                    <view class="spec">{{item.spec || '标准'}}</view>
                 </view>
                 <view class="price-box">
                     <view class="quantity">x{{item.quantity}}</view>
@@ -59,7 +55,6 @@
                 </view>
             </view>
 
-            <!-- 金额汇总 -->
             <view class="bill-row">
                 <text>商品总价</text>
                 <text>¥{{order.totalAmount}}</text>
@@ -74,7 +69,6 @@
             </view>
         </view>
 
-        <!-- 订单信息 -->
         <view class="card info-card">
             <view class="info-row">
                 <text class="label">下单时间</text>
@@ -86,15 +80,22 @@
                 <text class="copy-btn">复制</text>
             </view>
             <view class="info-row">
-                <text class="label">支付方式</text>
-                <text class="val">微信支付</text>
+                <text class="label">备注信息</text>
+                <text class="val">{{order.remark}}</text>
             </view>
         </view>
 
+        <view style="height: 120rpx;"></view>
     </view>
 
-    <!-- 底部操作栏 -->
     <view class="footer-bar">
-        <button class="reorder-btn" bindtap="onOrderAgain">再来一单</button>
+        <block wx:if="{{order.status === 'PENDING' || order.status === 'PENDING_PAY'}}">
+            <button class="footer-btn secondary" bindtap="onCancelOrder">取消订单</button>
+            <button class="footer-btn primary" bindtap="onPay">立即支付</button>
+        </block>
+
+        <block wx:else>
+            <button class="footer-btn outline" bindtap="onOrderAgain">再来一单</button>
+        </block>
     </view>
 </view>

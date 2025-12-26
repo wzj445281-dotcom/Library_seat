@@ -5,12 +5,13 @@ import com.example.zhizuo.common.ApiResponse;
 import com.example.zhizuo.core.entity.Order;
 import com.example.zhizuo.core.entity.OrderItem;
 import com.example.zhizuo.core.entity.Product;
+import com.example.zhizuo.core.entity.UserFavorite;
 import com.example.zhizuo.core.mapper.OrderItemMapper;
 import com.example.zhizuo.core.mapper.ProductMapper;
+import com.example.zhizuo.core.service.AiPredictionService;
 import com.example.zhizuo.core.service.OrderService;
 import com.example.zhizuo.core.service.ProductService;
 import com.example.zhizuo.mapper.UserFavoriteMapper;
-import com.example.zhizuo.core.entity.UserFavorite;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 /**
  * AI 助手控制器 (增强版)
  * 集成商品库、用户收藏、历史订单数据，打造个性化导购
+ * 同时提供客流拥挤度预测接口
  */
 @RestController
 @RequestMapping("/api/app/ai")
@@ -53,7 +55,11 @@ public class AiAssistantController {
     @Autowired
     private UserFavoriteMapper userFavoriteMapper;
 
-    // 从 application.yml 读取配置，避免硬编码
+    // ✅ 新增：注入 AI 预测服务
+    @Autowired
+    private AiPredictionService aiPredictionService;
+
+    // 从 application.yml 读取配置
     @Value("${ai.deepseek.key:}")
     private String deepSeekApiKey;
 
@@ -63,6 +69,9 @@ public class AiAssistantController {
     @Value("${ai.deepseek.model:deepseek-chat}")
     private String deepSeekModel;
 
+    /**
+     * AI 智能导购对话接口
+     */
     @PostMapping("/chat")
     public ApiResponse<Map<String, Object>> chat(@RequestBody Map<String, String> body, @RequestAttribute(required = false) Long userId) {
         String userMessage = body.get("message");
@@ -79,7 +88,7 @@ public class AiAssistantController {
                             .eq(Product::getStatus, 1) // 只获取上架商品
                             .orderByDesc(Product::getSales) // 按销量排序
             );
-            
+
             // 构建商品知识库 JSON 格式
             String productContext = products.stream()
                     .map(p -> String.format(
@@ -97,7 +106,6 @@ public class AiAssistantController {
             String userProfile = buildUserProfile(userId);
 
             // 2. 【Prompt 工程 + 结构化输出】
-            // 核心：明确角色、输入数据、输出格式
             String systemPrompt = String.format(
                     "你是一个瑞幸咖啡的资深AI导购助手。请根据用户的【历史偏好】和【当前问题】，从【商品库】中推荐最合适的饮品。\n\n" +
                             "=== 数据输入 ===\n" +
@@ -114,11 +122,7 @@ public class AiAssistantController {
             // 3. 调用 DeepSeek API
             // 检查 API Key - 如果未配置，提示用户配置
             if (deepSeekApiKey == null || deepSeekApiKey.isEmpty() || deepSeekApiKey.startsWith("sk-your") || deepSeekApiKey.equals("${AI_DEEPSEEK_KEY}")) {
-                // 如果没配置 Key，返回提示信息
-                Map<String, Object> errorRes = new HashMap<>();
-                errorRes.put("reply", "AI 助手功能需要配置 DeepSeek API Key。请在 application.yml 中设置 ai.deepseek.key，或通过环境变量 AI_DEEPSEEK_KEY 设置。");
-                errorRes.put("recommendations", new ArrayList<>());
-                // 同时返回 Mock 数据作为降级方案
+                // 如果没配置 Key，返回提示信息，同时返回 Mock 数据作为降级方案
                 return ApiResponse.success(mockAiResponse(userMessage));
             }
 
@@ -138,7 +142,7 @@ public class AiAssistantController {
             requestBody.set("response_format", responseFormat);
 
             ArrayNode messages = requestBody.putArray("messages");
-            messages.addObject().put("role", "system").put("content", systemPrompt + 
+            messages.addObject().put("role", "system").put("content", systemPrompt +
                     "\n\n请严格按照以下 JSON 格式返回，不要包含任何 Markdown 标记或额外文本：\n" +
                     "{\n" +
                     "  \"reply\": \"回复文本，结合用户偏好进行个性化推荐\",\n" +
@@ -176,6 +180,18 @@ public class AiAssistantController {
     }
 
     /**
+     * ✅ 新增接口：获取人流量/拥挤度预测
+     * 供 monitor.html 大屏使用
+     * @return 预测的拥挤度系数 (0.0 - 1.0)
+     */
+    @GetMapping("/prediction/crowding")
+    public ApiResponse<Double> getCrowdingPrediction() {
+        // 调用 Python 预测服务 (通过 AiPredictionService)
+        Double prediction = aiPredictionService.predictCrowding();
+        return ApiResponse.success(prediction);
+    }
+
+    /**
      * 构建用户画像 - 从数据库获取真实数据
      */
     private String buildUserProfile(Long userId) {
@@ -198,12 +214,12 @@ public class AiAssistantController {
             List<Long> favoriteProductIds = favorites.stream()
                     .map(UserFavorite::getProductId)
                     .collect(Collectors.toList());
-            
+
             List<Product> favoriteProducts = productMapper.selectBatchIds(favoriteProductIds);
             String favoriteNames = favoriteProducts.stream()
                     .map(Product::getName)
                     .collect(Collectors.joining("、"));
-            
+
             profile.append("，【收藏商品】：[").append(favoriteNames).append("]");
         }
 
@@ -233,7 +249,7 @@ public class AiAssistantController {
                         .max(Map.Entry.comparingByValue())
                         .map(Map.Entry::getKey)
                         .orElse(null);
-                
+
                 if (topProductId != null) {
                     Product topProduct = productMapper.selectById(topProductId);
                     if (topProduct != null) {
@@ -251,7 +267,6 @@ public class AiAssistantController {
 
     /**
      * 解析 AI 返回的 JSON 字符串 (包含容错处理)
-     * 确保返回格式包含 pid、name、price、image 等字段
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseAiJson(String jsonContent) {
@@ -264,12 +279,12 @@ public class AiAssistantController {
             cleanJson = cleanJson.trim();
 
             Map<String, Object> result = new ObjectMapper().readValue(cleanJson, Map.class);
-            
+
             // 验证并补充推荐商品信息（从数据库获取完整信息）
             if (result.containsKey("recommendations")) {
                 List<Map<String, Object>> recommendations = (List<Map<String, Object>>) result.get("recommendations");
                 List<Map<String, Object>> enrichedRecommendations = new ArrayList<>();
-                
+
                 for (Map<String, Object> rec : recommendations) {
                     Object pidObj = rec.get("pid");
                     if (pidObj != null) {
@@ -283,7 +298,7 @@ public class AiAssistantController {
                                 continue;
                             }
                         }
-                        
+
                         if (pid != null) {
                             Product product = productMapper.selectById(pid);
                             if (product != null) {
@@ -298,10 +313,10 @@ public class AiAssistantController {
                         }
                     }
                 }
-                
+
                 result.put("recommendations", enrichedRecommendations);
             }
-            
+
             return result;
         } catch (Exception e) {
             e.printStackTrace();
@@ -314,11 +329,10 @@ public class AiAssistantController {
 
     /**
      * Mock 数据 (用于演示或 API Key 无效时)
-     * 从数据库获取真实商品数据作为 Mock 推荐
      */
     private Map<String, Object> mockAiResponse(String userMsg) {
         Map<String, Object> res = new HashMap<>();
-        
+
         // 从数据库获取热门商品作为 Mock 推荐
         List<Product> hotProducts = productMapper.selectList(
                 new LambdaQueryWrapper<Product>()
@@ -326,8 +340,8 @@ public class AiAssistantController {
                         .orderByDesc(Product::getSales)
                         .last("LIMIT 3")
         );
-        
-        if (userMsg.contains("推荐") || userMsg.contains("推荐") || userMsg.contains("什么好喝")) {
+
+        if (userMsg.contains("推荐") || userMsg.contains("好喝") || userMsg.contains("菜单")) {
             res.put("reply", "根据您的需求，我为您推荐以下热门商品！这些都是我们店里的爆款哦~ ☕️");
             List<Map<String, Object>> recs = new ArrayList<>();
             for (Product product : hotProducts) {
@@ -341,7 +355,7 @@ public class AiAssistantController {
             }
             res.put("recommendations", recs);
         } else {
-            res.put("reply", "您好！我是瑞幸 AI 助手，可以帮您推荐商品、解答问题。试试问我\"推荐\"或\"什么好喝\"吧！(当前为 Mock 模式，请配置 DeepSeek API Key 以使用完整功能)");
+            res.put("reply", "您好！我是瑞幸 AI 助手，可以帮您推荐商品、解答问题。试试问我\"推荐\"或\"什么好喝\"吧！");
             res.put("recommendations", new ArrayList<>());
         }
         return res;

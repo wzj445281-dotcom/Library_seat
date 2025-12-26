@@ -1,54 +1,49 @@
 <view class="container">
     <view class="tabs">
-        <view class="tab-item {{currentTab === 0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">
+        <view class="tab-item {{currentTab==0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">
             当前订单
-            <view class="line" wx:if="{{currentTab === 0}}"></view>
         </view>
-        <view class="tab-item {{currentTab === 1 ? 'active' : ''}}" bindtap="switchTab" data-index="1">
+        <view class="tab-item {{currentTab==1 ? 'active' : ''}}" bindtap="switchTab" data-index="1">
             历史订单
-            <view class="line" wx:if="{{currentTab === 1}}"></view>
         </view>
     </view>
 
-    <scroll-view scroll-y class="list-scroll" refresher-enabled bindrefresherrefresh="onPullDownRefresh" refresher-triggered="{{false}}">
-
-        <view class="empty-state" wx:if="{{!loading && list.length === 0}}">
-            <image class="empty-img" src="/assets/images/cart.png" mode="aspectFit" style="filter: grayscale(100%); opacity: 0.3;"></image>
-            <text class="empty-text">暂无相关订单</text>
-            <button class="go-btn" bindtap="reOrder">去喝一杯</button>
-        </view>
-
-        <view class="order-list" wx:else>
-            <block wx:for="{{list}}" wx:key="id">
-                <view class="order-card" bindtap="goToDetail" data-id="{{item.id}}">
-
-                    <view class="card-header">
-                        <text class="shop-name">{{item.shopName}}</text>
-                        <text class="status {{item.statusClass}}">{{item.statusText}}</text>
-                    </view>
-
-                    <view class="card-content">
-                        <view class="info-row">
-                            <text class="order-desc">{{item.desc}}</text>
-                            <text class="order-price">¥{{item.totalPrice}}</text>
-                        </view>
-                        <text class="order-time">{{item.time}}</text>
-                    </view>
-
-                    <view class="card-footer">
-                        <view class="btn-group">
-                            <view class="action-btn primary" wx:if="{{item.status === 'PENDING'}}" catchtap="goPay" data-id="{{item.id}}">去支付</view>
-
-                            <view class="action-btn outline" catchtap="reOrder">再来一单</view>
-
-                            <view class="action-btn primary" wx:if="{{item.status === 'MAKING' || item.status === 'PAID' || item.status === 'READY'}}">查看进度</view>
-                        </view>
-                    </view>
-
+    <view class="order-list">
+        <block wx:if="{{list.length > 0}}">
+            <view class="order-item" wx:for="{{list}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
+                <view class="header">
+                    <text class="shop-name">{{item.shopName}}</text>
+                    <text class="status {{item.statusClass}}">{{item.statusText}}</text>
                 </view>
-            </block>
-        </view>
 
-        <view style="height: 40rpx;"></view>
-    </scroll-view>
+                <view class="content">
+                    <image class="thumb"
+                           src="{{item.productList[0].productImage || '/assets/images/logo.png'}}"
+                           mode="aspectFill">
+                    </image>
+
+                    <view class="info">
+                        <view class="desc">{{item.desc}}</view>
+                        <view class="time">{{item.time}}</view>
+                    </view>
+
+                    <view class="price-info">
+                        <view class="price">¥{{item.totalPrice}}</view>
+                        <view class="count">共{{item.totalCount}}件</view>
+                    </view>
+                </view>
+
+                <view class="footer">
+                    <button wx:if="{{item.status === 'PENDING'}}" class="btn primary" catchtap="goPay" data-id="{{item.id}}">去支付</button>
+                    <button wx:else class="btn outline" catchtap="reOrder" data-id="{{item.id}}">再来一单</button>
+                </view>
+            </view>
+        </block>
+
+        <view wx:elif="{{!loading}}" class="empty">
+            <image class="empty-img" src="/assets/images/cart.png" mode="widthFix"></image>
+            <text>暂无相关订单</text>
+            <button class="go-menu-btn" bindtap="reOrder">去喝一杯</button>
+        </view>
+    </view>
 </view>

@@ -1,6 +1,7 @@
 package com.example.zhizuo.core.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -54,63 +54,91 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     public IPage<Order> pageWithItems(Page<Order> page, Wrapper<Order> queryWrapper) {
-        // 1. 执行主表查询
         IPage<Order> result = this.page(page, queryWrapper);
-
-        // 2. 如果结果为空，直接返回
         if (result.getRecords().isEmpty()) {
             return result;
         }
+        fillOrderItems(result.getRecords());
+        return result;
+    }
 
-        // 3. 批量查询关联的商品明细 (避免 N+1 问题)
-        // 提取查询到的所有订单 ID
-        List<Long> orderIds = result.getRecords().stream()
+    /**
+     * ✅ 核心修复：批量填充订单项，并关联商品图片
+     */
+    private void fillOrderItems(List<Order> orders) {
+        if (orders == null || orders.isEmpty()) return;
+
+        // 1. 获取所有订单ID
+        List<Long> orderIds = orders.stream()
                 .map(Order::getId)
                 .collect(Collectors.toList());
 
-        // 一次性查出所有相关商品
+        // 2. 查询这些订单的所有明细
         List<OrderItem> allItems = orderItemMapper.selectList(
                 Wrappers.<OrderItem>lambdaQuery().in(OrderItem::getOrderId, orderIds)
         );
 
-        // 4. 在内存中分组：Map<OrderId, List<OrderItem>>
+        // 3. ✅ 补充：查询商品图片
+        if (!allItems.isEmpty()) {
+            // 提取所有涉及的商品ID
+            List<Long> productIds = allItems.stream()
+                    .map(OrderItem::getProductId)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            if (!productIds.isEmpty()) {
+                // 批量查询商品信息
+                List<Product> products = productMapper.selectBatchIds(productIds);
+                // 转为 Map<ProductId, ImgUrl>
+                Map<Long, String> productImgMap = products.stream()
+                        .collect(Collectors.toMap(Product::getId, p -> p.getImgUrl() != null ? p.getImgUrl() : ""));
+
+                // 将图片填入 OrderItem
+                for (OrderItem item : allItems) {
+                    item.setProductImage(productImgMap.getOrDefault(item.getProductId(), ""));
+                }
+            }
+        }
+
+        // 4. 按订单分组并赋值
         Map<Long, List<OrderItem>> itemMap = allItems.stream()
                 .collect(Collectors.groupingBy(OrderItem::getOrderId));
 
-        // 5. 将商品明细填充回对应的订单对象中
-        result.getRecords().forEach(order -> {
+        orders.forEach(order -> {
             order.setProducts(itemMap.getOrDefault(order.getId(), Collections.emptyList()));
         });
-
-        return result;
     }
 
     @Override
     public Order getDetailWithItems(Long id) {
-        // 1. 查询主表
         Order order = this.getById(id);
-        if (order == null) {
-            return null;
-        }
+        if (order == null) return null;
 
-        // 2. 查询子表
-        List<OrderItem> items = orderItemMapper.selectList(
-                Wrappers.<OrderItem>lambdaQuery().eq(OrderItem::getOrderId, id)
-        );
-
-        // 3. 填充
-        order.setProducts(items);
+        // 复用 fillOrderItems 逻辑以获取图片
+        fillOrderItems(Collections.singletonList(order));
 
         return order;
     }
 
     @Override
-    public Map<String, Object> getAdminOrderList(String status) {
-        // 简单实现，实际项目中可能需要更复杂的逻辑
-        Map<String, Object> result = new HashMap<>();
-        result.put("status", status);
-        result.put("count", 0);
-        return result;
+    public List<Order> getAdminOrderList(String status) {
+        LambdaQueryWrapper<Order> wrapper = Wrappers.lambdaQuery();
+        if ("PAID".equals(status)) {
+            wrapper.eq(Order::getStatus, "PAID");
+        } else if ("MAKING".equals(status)) {
+            wrapper.eq(Order::getStatus, "MAKING");
+        } else if ("READY".equals(status)) {
+            wrapper.in(Order::getStatus, Arrays.asList("READY", "WAIT_PICKUP"));
+        } else if ("COMPLETED".equals(status)) {
+            wrapper.in(Order::getStatus, Arrays.asList("COMPLETED", "CANCELLED"));
+        } else if (status != null && !status.isEmpty() && !"ALL".equals(status)) {
+            wrapper.eq(Order::getStatus, status);
+        }
+        wrapper.orderByDesc(Order::getCreateTime);
+
+        List<Order> list = this.list(wrapper);
+        fillOrderItems(list);
+        return list;
     }
 
     @Override
@@ -119,8 +147,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (order != null) {
             order.setStatus(status);
             this.updateById(order);
-            
-            // 推送 WebSocket 消息（直接调用静态方法，避免循环依赖）
             OrderWebSocketEndpoint.pushOrderStatus(order.getOrderNo(), status);
         }
     }
@@ -128,65 +154,52 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createOrder(Long userId, List<Map<String, Object>> items, Integer deliveryType, Long userCouponId, String addressInfo, String remark) {
-        // 1. 生成订单号
         String orderNo = "ORDER" + IdUtil.getSnowflakeNextIdStr();
-        
-        // 2. 从数据库查询商品价格，计算订单原价（防止前端篡改）
+
         BigDecimal originalTotal = BigDecimal.ZERO;
         for (Map<String, Object> item : items) {
             Long productId = Long.valueOf(item.get("productId").toString());
             Integer count = Integer.valueOf(item.get("count").toString());
-            
+
             Product product = productMapper.selectById(productId);
-            if (product == null) {
-                throw new RuntimeException("商品不存在: " + productId);
-            }
-            if (product.getStatus() == null || product.getStatus() != 1) {
-                throw new RuntimeException("商品已下架: " + product.getName());
-            }
-            if (product.getStock() != null && product.getStock() < count) {
-                throw new RuntimeException("商品库存不足: " + product.getName());
-            }
-            
-            // 使用数据库中的价格，而不是前端传的价格
+            if (product == null) throw new RuntimeException("商品不存在: " + productId);
+            if (product.getStatus() != 1) throw new RuntimeException("商品已下架");
+
             BigDecimal itemPrice = product.getPrice().multiply(new BigDecimal(count));
             originalTotal = originalTotal.add(itemPrice);
         }
-        
-        // 3. 计算优惠后价格（如果使用了优惠券）
+
         BigDecimal finalAmount = originalTotal;
         BigDecimal discountAmount = BigDecimal.ZERO;
         Long couponId = null;
-        
+
         if (userCouponId != null) {
             try {
                 OrderSettlementService.SettlementResult settlement = settlementService.calculateFinalPrice(
-                    originalTotal, userCouponId, userId.toString()
+                        originalTotal, userCouponId, userId.toString()
                 );
                 finalAmount = settlement.getFinalPrice();
                 discountAmount = settlement.getDiscountAmount();
                 couponId = settlement.getUsedCouponId();
-                
-                // 4. 标记优惠券为已使用
+
                 UserCoupon userCoupon = userCouponMapper.selectById(userCouponId);
                 if (userCoupon != null) {
-                    userCoupon.setStatus(1); // 1:已使用
+                    userCoupon.setStatus(1);
                     userCoupon.setUseTime(LocalDateTime.now());
                     userCouponMapper.updateById(userCoupon);
                 }
             } catch (Exception e) {
                 log.error("优惠券结算失败", e);
-                throw new RuntimeException("优惠券使用失败: " + e.getMessage());
+                // 降级：不使用优惠券
             }
         }
-        
-        // 5. 创建订单主表
+
         Order order = new Order();
         order.setOrderNo(orderNo);
         order.setUserId(userId);
         order.setDeliveryType(deliveryType);
         order.setStatus("PENDING");
-        order.setPayStatus(0); // 0:未支付
+        order.setPayStatus(0);
         order.setTotalAmount(finalAmount);
         order.setOriginalAmount(originalTotal);
         order.setDiscountAmount(discountAmount);
@@ -194,31 +207,21 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setAddressInfo(addressInfo);
         order.setCreateTime(LocalDateTime.now());
         this.save(order);
-        
-        // 6. 创建订单明细
+
         for (Map<String, Object> item : items) {
             Long productId = Long.valueOf(item.get("productId").toString());
             Integer count = Integer.valueOf(item.get("count").toString());
-            
             Product product = productMapper.selectById(productId);
-            
+
             OrderItem orderItem = new OrderItem();
             orderItem.setOrderId(order.getId());
             orderItem.setProductId(productId);
             orderItem.setProductName(product.getName());
             orderItem.setPrice(product.getPrice());
             orderItem.setQuantity(count);
-            // 注意：OrderItem 实体没有 spec 字段，如果需要规格信息可以添加到实体中
             orderItemMapper.insert(orderItem);
-            
-            // 7. 扣减库存（可选，根据业务需求）
-            // product.setStock(product.getStock() - count);
-            // productMapper.updateById(product);
         }
-        
-        log.info("订单创建成功：订单号={}, 用户ID={}, 原价={}, 优惠={}, 实付={}", 
-                orderNo, userId, originalTotal, discountAmount, finalAmount);
-        
+
         return orderNo;
     }
 
@@ -231,17 +234,31 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
     }
 
+    /**
+     * ✅ 修复点：C端用户查询，支持状态转换，并调用 fillOrderItems 填充图片
+     */
     @Override
     public List<Order> getUserOrderList(Long userId, String status) {
-        return this.list(Wrappers.<Order>lambdaQuery()
+        LambdaQueryWrapper<Order> queryWrapper = Wrappers.<Order>lambdaQuery()
                 .eq(Order::getUserId, userId)
-                .eq(status != null, Order::getStatus, status)
-                .orderByDesc(Order::getCreateTime));
+                .orderByDesc(Order::getCreateTime);
+
+        if ("current".equals(status)) {
+            queryWrapper.in(Order::getStatus, Arrays.asList("PENDING", "PAID", "MAKING", "READY", "WAIT_PICKUP"));
+        } else if ("history".equals(status)) {
+            queryWrapper.in(Order::getStatus, Arrays.asList("COMPLETED", "CANCELLED", "REFUNDED"));
+        } else if (status != null && !status.isEmpty()) {
+            queryWrapper.eq(Order::getStatus, status);
+        }
+
+        List<Order> list = this.list(queryWrapper);
+        // 关键调用：填充图片
+        fillOrderItems(list);
+        return list;
     }
 
     @Override
     public Order getByOrderNo(String orderNo) {
-        return this.getOne(Wrappers.<Order>lambdaQuery()
-                .eq(Order::getOrderNo, orderNo));
+        return this.getOne(Wrappers.<Order>lambdaQuery().eq(Order::getOrderNo, orderNo));
     }
 }

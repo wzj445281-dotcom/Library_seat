@@ -1,345 +1,200 @@
 const app = getApp();
-// 顶部引用路径是正确的
-const orderApi = require('../../../api/order.js');
+const OrderAPI = require('../../../api/order.js');
+const UserAPI = require('../../../api/user.js');
 
 Page({
   data: {
-    cartItems: [],
+    cartList: [],
     totalPrice: 0,
-    originalPrice: 0, // 原价（优惠前）
-    discountAmount: 0, // 优惠金额
-    finalPrice: 0, // 实付金额（优惠后）
     totalCount: 0,
-    storeInfo: {},
-    diningType: 'self', // self: 自取, delivery: 外卖
+    address: null,
     remark: '',
-    isSubmitting: false, // 防止重复提交
-
-    // 优惠券相关
-    availableCoupons: [], // 可用优惠券列表
-    selectedCoupon: null, // 选中的优惠券 { userCouponId, title, amount, minPoint }
-    showCouponPicker: false, // 是否显示优惠券选择器
-
-    // 地址相关
-    selectedAddress: null // 选中的收货地址
+    deliveryType: 1, // 1: 配送到座, 2: 自取
+    submitting: false,
+    userCouponId: null, // 选中的优惠券ID
+    couponDiscount: 0,  // 优惠金额
+    finalPrice: 0       // 最终实付
   },
 
   onLoad(options) {
-    this.initData();
-    // 初始化完成后加载优惠券和地址
-    this.loadAvailableCoupons();
-    if (this.data.diningType === 'delivery') {
-      this.loadDefaultAddress();
+    // 1. 获取购物车数据
+    const cart = wx.getStorageSync('cart') || [];
+    if (cart.length === 0) {
+      wx.showToast({ title: '购物车是空的', icon: 'none' });
+      setTimeout(() => wx.switchTab({ url: '/pages/menu/index' }), 1500);
+      return;
     }
+    this.setData({ cartList: cart });
+    this.calcTotal();
+
+    // 2. 获取默认地址 (如果有)
+    this.loadDefaultAddress();
   },
 
   onShow() {
-    // 从地址选择页返回时，刷新选中的地址
-    const address = wx.getStorageSync('selectedAddress');
-    if (address) {
-      this.setData({ selectedAddress: address });
-      wx.removeStorageSync('selectedAddress');
-    }
-  },
-
-  initData() {
-    // 1. 获取当前门店信息
-    const store = wx.getStorageSync('currentStore');
-    // 2. 获取用餐方式 (首页选择的)
-    const diningType = wx.getStorageSync('diningType') || 'self';
-    // 3. 获取购物车数据 (这里简化处理，实际项目购物车结构会更复杂)
-    // 假设我们在 Menu 页将 cartItems 存入了 Storage
-    // 真实场景通常是在 App.globalData 或 Redux/Mobx 中管理购物车
-    const cartTemp = wx.getStorageSync('cart_data_detail') || [];
-
-    // 如果没有购物车详情数据的 Mock (因为之前Menu页只存了count/total)
-    // 这里为了演示，生成一些 Mock 商品数据，除非我们回去改 Menu 页
-    const mockCartItems = cartTemp.length > 0 ? cartTemp : [
-      { productId: 1, name: '生椰拿铁', spec: '标准糖/冰/大杯', price: 21, count: 1, image: '/assets/images/coconut_latte.jpg' },
-      { productId: 2, name: '美式咖啡', spec: '无糖/热/中杯', price: 18, count: 1, image: '/assets/images/american.jpg' }
-    ];
-
-    this.setData({
-      storeInfo: store || { name: '瑞幸咖啡 (科技园店)', address: '高新南九道10号' }, // 默认兜底
-      diningType,
-      cartItems: mockCartItems,
-      selectedAddress: null // 重置地址信息
-    });
-
+    // 如果从优惠券页面返回，可能需要重新计算
+    // 这里简单处理，每次显示都重算
     this.calcTotal();
   },
 
-  // 加载可用优惠券
-  loadAvailableCoupons() {
-    // 等待价格计算完成后再加载优惠券
-    if (this.data.originalPrice <= 0) {
-      // 如果价格还没计算，延迟加载
-      setTimeout(() => {
-        this.loadAvailableCoupons();
-      }, 100);
-      return;
+  /**
+   * 加载默认地址
+   */
+  loadDefaultAddress() {
+    // 模拟获取，实际应调用 UserAPI.getDefaultAddress()
+    const addr = wx.getStorageSync('defaultAddress');
+    if (addr) {
+      this.setData({ address: addr });
     }
-
-    // ✅ 修复：路径修改为 ../../../api/coupon
-    const couponApi = require('../../../api/coupon.js');
-    couponApi.getAvailableCoupons(this.data.originalPrice)
-        .then(res => {
-          if (res.code === 200) {
-            this.setData({ availableCoupons: res.data || [] });
-          }
-        })
-        .catch(err => {
-          console.error('加载优惠券失败', err);
-          // 静默失败，不影响下单流程
-        });
   },
 
+  /**
+   * ✅ 增加商品数量
+   */
+  addItem(e) {
+    const index = e.currentTarget.dataset.index;
+    const cart = this.data.cartList;
+
+    // 数量 +1
+    cart[index].quantity = (cart[index].quantity || 0) + 1;
+
+    this.updateCart(cart);
+  },
+
+  /**
+   * ✅ 减少商品数量 (减到0则删除)
+   */
+  reduceItem(e) {
+    const index = e.currentTarget.dataset.index;
+    const cart = this.data.cartList;
+
+    if (cart[index].quantity > 1) {
+      cart[index].quantity--;
+      this.updateCart(cart);
+    } else {
+      // 询问是否删除
+      wx.showModal({
+        title: '提示',
+        content: '确定要移除该商品吗？',
+        success: (res) => {
+          if (res.confirm) {
+            cart.splice(index, 1);
+            this.updateCart(cart);
+          }
+        }
+      });
+    }
+  },
+
+  /**
+   * 更新购物车数据 (保存到本地 + 刷新页面 + 重算总价)
+   */
+  updateCart(cart) {
+    this.setData({ cartList: cart });
+    wx.setStorageSync('cart', cart); // 同步更新缓存
+    this.calcTotal();
+
+    // 如果删光了，自动返回菜单
+    if (cart.length === 0) {
+      wx.showToast({ title: '购物车已清空', icon: 'none' });
+      setTimeout(() => wx.switchTab({ url: '/pages/menu/index' }), 1500);
+    }
+  },
+
+  /**
+   * 计算总价
+   */
   calcTotal() {
+    const cart = this.data.cartList;
     let total = 0;
     let count = 0;
-    this.data.cartItems.forEach(item => {
-      total += item.price * item.count;
-      count += item.count;
+
+    cart.forEach(item => {
+      total += item.price * item.quantity;
+      count += item.quantity;
     });
 
-    // 计算优惠后价格
-    let discountAmount = 0;
-    let finalPrice = total;
-    if (this.data.selectedCoupon) {
-      discountAmount = parseFloat(this.data.selectedCoupon.amount) || 0;
-      finalPrice = Math.max(0, total - discountAmount);
-    }
+    // 计算优惠 (这里简单模拟，如果接入了优惠券逻辑需复杂处理)
+    const discount = this.data.couponDiscount || 0;
+    let final = total - discount;
+    if (final < 0) final = 0;
 
     this.setData({
-      totalPrice: total,
-      originalPrice: total,
-      discountAmount: discountAmount,
-      finalPrice: finalPrice,
-      totalCount: count
+      totalPrice: total.toFixed(2),
+      totalCount: count,
+      finalPrice: final.toFixed(2)
     });
-
-    // 价格变化后，重新加载可用优惠券
-    // 注意：这里可能会导致循环调用，建议加个判断或者由用户手动触发刷新
-    // 简单起见，这里不再自动重新加载，以免死循环，仅在初始化或改变优惠券时计算价格
   },
 
-  // 切换用餐方式
-  switchDiningType(e) {
-    const type = e.currentTarget.dataset.type;
-    this.setData({ diningType: type });
-
-    // 如果切换到外卖模式，加载默认地址
-    if (type === 'delivery') {
-      this.loadDefaultAddress();
-    }
+  // 选择配送方式
+  selectDelivery(e) {
+    const type = Number(e.currentTarget.dataset.type);
+    this.setData({ deliveryType: type });
   },
 
+  // 选择地址
+  chooseAddress() {
+    wx.navigateTo({ url: '/pages/address/list?select=true' });
+  },
+
+  // 输入备注
   onRemarkInput(e) {
     this.setData({ remark: e.detail.value });
   },
 
-  // 显示/隐藏优惠券选择器
-  toggleCouponPicker() {
-    if (this.data.availableCoupons.length === 0) {
-      wx.showToast({ title: '暂无可用优惠券', icon: 'none' });
-      return;
-    }
-    this.setData({ showCouponPicker: !this.data.showCouponPicker });
-  },
-
-  // 选择优惠券
-  selectCoupon(e) {
-    const index = e.currentTarget.dataset.index;
-    const coupon = this.data.availableCoupons[index];
-
-    this.setData({
-      selectedCoupon: coupon,
-      showCouponPicker: false
-    });
-
-    // 重新计算价格
-    this.calcTotal();
-  },
-
-  // 取消选择优惠券
-  removeCoupon() {
-    this.setData({ selectedCoupon: null });
-    this.calcTotal();
-  },
-
-  // 加载默认地址
-  loadDefaultAddress() {
-    if (this.data.diningType === 'delivery') {
-      // ✅ 修复：路径修改为 ../../../api/address
-      const addressApi = require('../../../api/address.js');
-      addressApi.getDefaultAddress()
-          .then(res => {
-            if (res.code === 200 && res.data) {
-              this.setData({ selectedAddress: res.data });
-            }
-          })
-          .catch(err => {
-            console.error('加载默认地址失败', err);
-            // 静默失败，用户可以手动选择地址
-          });
-    }
-  },
-
-  // 选择地址
-  selectAddress() {
-    if (this.data.diningType !== 'delivery') {
-      return;
-    }
-
-    // 跳转到地址列表页（选择模式）
-    wx.navigateTo({
-      url: '/pages/address/list?select=true',
-      success: () => {
-        // 页面跳转成功
-      },
-      fail: (err) => {
-        console.error('跳转地址列表失败', err);
-        wx.showToast({ title: '跳转失败', icon: 'none' });
-      }
-    });
-  },
-
-  // --- 核心：提交订单 ---
+  // 提交订单
   submitOrder() {
-    if (this.data.isSubmitting) return;
+    if (this.data.submitting) return;
 
-    // 0. 检查登录状态
-    const token = wx.getStorageSync('token');
-    if (!token) {
-      wx.showModal({
-        title: '提示',
-        content: '请先登录后再下单',
-        confirmText: '去登录',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
-            wx.navigateTo({
-              url: '/pages/login/login'
-            });
-          }
-        }
-      });
+    // 校验
+    if (this.data.deliveryType === 1 && !this.data.address) {
+      wx.showToast({ title: '请选择收货地址', icon: 'none' });
+      return;
+    }
+    if (this.data.cartList.length === 0) {
+      wx.showToast({ title: '购物车为空', icon: 'none' });
       return;
     }
 
-    // 1. 基础校验
-    if (this.data.totalCount === 0) {
-      wx.showToast({ title: '请先选择商品', icon: 'none' });
-      return;
-    }
-
-    // 2. 外卖模式必须选择地址
-    if (this.data.diningType === 'delivery') {
-      if (!this.data.selectedAddress) {
-        wx.showModal({
-          title: '提示',
-          content: '外卖配送需要选择收货地址，是否去添加？',
-          confirmText: '去添加',
-          cancelText: '取消',
-          success: (res) => {
-            if (res.confirm) {
-              this.selectAddress();
-            }
-          }
-        });
-        return;
-      }
-    }
-
-    this.setData({ isSubmitting: true });
+    this.setData({ submitting: true });
     wx.showLoading({ title: '正在下单...' });
 
-    // 3. 构造后端需要的参数结构
-    // 注意：后端期望 deliveryType 为数字：0=自取，1=外卖
-    const deliveryType = this.data.diningType === 'delivery' ? 1 : 0;
-
-    // 构造地址信息字符串（外卖模式）
-    let addressInfo = null;
-    if (this.data.diningType === 'delivery' && this.data.selectedAddress) {
-      const addr = this.data.selectedAddress;
-      addressInfo = `${addr.province || ''}${addr.city || ''}${addr.district || ''}${addr.detail || ''} ${addr.name || ''} ${addr.phone || ''}`.trim();
-    }
-
-    // 获取优惠券ID（如果有选中的优惠券）
-    const userCouponId = this.data.selectedCoupon ?
-        (this.data.selectedCoupon.userCouponId || this.data.selectedCoupon.id) : null;
-
+    // 构造后端需要的参数
     const orderData = {
-      items: this.data.cartItems.map(item => ({
-        productId: item.productId || item.id,
-        count: item.count || 1,
-        spec: item.spec || ''
+      items: this.data.cartList.map(item => ({
+        productId: item.id, // 确保 menu 页面存进去的是 id
+        count: item.quantity,
+        spec: item.spec || '' // 规格
       })),
-      deliveryType: deliveryType, // 0=自取, 1=外卖
-      remark: this.data.remark || '',
-      userCouponId: userCouponId,
-      addressInfo: addressInfo
+      deliveryType: this.data.deliveryType,
+      addressInfo: this.data.deliveryType === 1 ? `${this.data.address.contact} ${this.data.address.phone} ${this.data.address.detail}` : '自取',
+      remark: this.data.remark,
+      userCouponId: this.data.userCouponId
     };
 
-    console.log('提交订单数据:', orderData);
-
-    orderApi.createOrder(orderData)
+    OrderAPI.createOrder(orderData)
         .then(res => {
-          wx.hideLoading();
           if (res.code === 200) {
-            // 下单成功，后端返回订单号
-            const orderNo = res.data || res.data?.orderNo;
-            this.handleOrderSuccess(orderNo);
+            // 下单成功，清空购物车
+            wx.removeStorageSync('cart');
+            wx.showToast({ title: '下单成功' });
+
+            // 跳转详情或支付
+            const orderNo = res.data; // 假设返回订单号
+            setTimeout(() => {
+              wx.redirectTo({ url: `/pages/orders/detail/detail?orderNo=${orderNo}` });
+            }, 1000);
           } else {
-            // 业务失败
-            this.handleOrderFail(res.message || '下单失败');
+            wx.showToast({ title: res.message || '下单失败', icon: 'none' });
           }
         })
         .catch(err => {
-          wx.hideLoading();
-          console.error('下单异常', err);
-          wx.showToast({
-            title: err.message || '网络异常，请重试',
-            icon: 'none',
-            duration: 2000
-          });
+          console.error(err);
+          wx.showToast({ title: '网络异常', icon: 'none' });
         })
         .finally(() => {
-          this.setData({ isSubmitting: false });
+          this.setData({ submitting: false });
+          wx.hideLoading();
         });
-  },
-
-  handleOrderSuccess(orderNo) {
-    // 1. 清空购物车缓存
-    wx.removeStorageSync('cart_data_detail');
-    wx.removeStorageSync('cart_temp');
-
-    // 2. 清空选中的地址和优惠券
-    wx.removeStorageSync('selectedAddress');
-    this.setData({
-      selectedAddress: null,
-      selectedCoupon: null
-    });
-
-    // 3. 提示并跳转
-    wx.showToast({
-      title: '下单成功',
-      icon: 'success',
-      duration: 1500
-    });
-
-    setTimeout(() => {
-      // 跳转到订单详情页 (使用 redirectTo 关闭当前页，防止返回重新提交)
-      wx.redirectTo({
-        url: `/pages/orders/detail/detail?orderNo=${orderNo}`
-      });
-    }, 1500);
-  },
-
-  handleOrderFail(msg) {
-    wx.showToast({
-      title: msg || '下单失败，请重试',
-      icon: 'none'
-    });
   }
 });

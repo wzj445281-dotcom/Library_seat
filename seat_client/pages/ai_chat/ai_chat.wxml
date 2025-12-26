@@ -2,24 +2,23 @@
     <scroll-view scroll-y="true" class="chat-list" scroll-top="{{scrollTop}}" scroll-with-animation>
         <block wx:for="{{messageList}}" wx:key="index">
 
-            <!-- 机器人消息 -->
             <view class="message-item robot" wx:if="{{item.type === 'robot'}}">
                 <image class="avatar" src="/assets/images/logo.png" mode="aspectFill"></image>
                 <view class="content-wrapper">
-                    <view class="content">{{item.content}}</view>
-                    
-                    <!-- 推荐商品卡片 -->
+                    <view class="content">
+                        <text user-select="true">{{item.content}}</text>
+                    </view>
+
                     <view class="recommendations" wx:if="{{item.recommendations && item.recommendations.length > 0}}">
                         <view class="recommend-title">为您推荐</view>
                         <scroll-view class="recommend-scroll" scroll-x="true">
                             <view class="recommend-list">
-                                <view 
-                                    class="recommend-item" 
-                                    wx:for="{{item.recommendations}}" 
-                                    wx:key="pid"
-                                    wx:for-item="rec"
-                                    data-pid="{{rec.pid}}"
-                                    bindtap="onRecommendTap">
+                                <view class="recommend-item"
+                                      wx:for="{{item.recommendations}}"
+                                      wx:key="pid"
+                                      wx:for-item="rec"
+                                      data-pid="{{rec.pid}}"
+                                      bindtap="onRecommendTap">
                                     <image class="rec-image" src="{{rec.image}}" mode="aspectFill" lazy-load></image>
                                     <view class="rec-info">
                                         <view class="rec-name">{{rec.name}}</view>
@@ -33,17 +32,17 @@
                 </view>
             </view>
 
-            <!-- 用户消息 -->
             <view class="message-item user" wx:if="{{item.type === 'user'}}">
                 <view class="content-wrapper">
-                    <view class="content">{{item.content}}</view>
+                    <view class="content">
+                        <text user-select="true">{{item.content}}</text>
+                    </view>
                 </view>
-                <image class="avatar" src="{{userInfo && userInfo.avatarUrl ? userInfo.avatarUrl : '/assets/images/user.png'}}" mode="aspectFill"></image>
+                <image class="avatar" src="{{userInfo.avatarUrl || '/assets/images/user.png'}}" mode="aspectFill"></image>
             </view>
 
         </block>
 
-        <!-- 加载状态 -->
         <view class="loading-wrapper" wx:if="{{loading}}">
             <view class="loading-dot"></view>
             <view class="loading-dot"></view>
@@ -51,8 +50,7 @@
             <view class="loading-text">AI 正在思考...</view>
         </view>
 
-        <!-- 底部垫高 -->
-        <view style="height: 120rpx;"></view>
+        <view style="height: 140rpx;"></view>
     </scroll-view>
 
     <view class="input-area">

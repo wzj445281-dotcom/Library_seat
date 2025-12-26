@@ -1,11 +1,41 @@
 /**
  * WebSocket 工具类
  * 用于订单状态实时推送
- * 完全本地运行，无需外部网络
+ * 支持动态获取服务器地址
  */
 
-// 本地WebSocket地址
-const WS_BASE_URL = 'ws://localhost:8080';
+// 从 request.js 获取 BASE_URL，并转换为 WebSocket 地址
+const { BASE_URL } = require('./request.js');
+
+/**
+ * 将 HTTP URL 转换为 WebSocket URL
+ * @param {string} httpUrl - HTTP URL (例如: http://localhost:8080/api)
+ * @returns {string} WebSocket URL (例如: ws://localhost:8080)
+ */
+function getWebSocketUrl(httpUrl) {
+    if (!httpUrl) {
+        // 默认值
+        return 'ws://localhost:8080';
+    }
+    
+    // 移除 /api 后缀（如果有）
+    let baseUrl = httpUrl.replace(/\/api\/?$/, '');
+    
+    // 转换为 WebSocket 协议
+    if (baseUrl.startsWith('http://')) {
+        return baseUrl.replace('http://', 'ws://');
+    } else if (baseUrl.startsWith('https://')) {
+        return baseUrl.replace('https://', 'wss://');
+    } else if (baseUrl.startsWith('ws://') || baseUrl.startsWith('wss://')) {
+        return baseUrl;
+    } else {
+        // 如果没有协议，默认使用 ws://
+        return 'ws://' + baseUrl;
+    }
+}
+
+// 动态获取 WebSocket 基础地址
+const WS_BASE_URL = getWebSocketUrl(BASE_URL);
 
 class WebSocketManager {
     constructor() {
@@ -32,7 +62,7 @@ class WebSocketManager {
 
         this.isConnecting = true;
         
-        // 使用本地WebSocket地址
+        // 动态构建 WebSocket 地址
         const wsUrl = `${WS_BASE_URL}/ws/order/${orderNo}`;
         console.log('正在连接 WebSocket:', wsUrl);
 

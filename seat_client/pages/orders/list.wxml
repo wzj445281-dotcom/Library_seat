@@ -1,2 +1,44 @@
-<!--pages/orders/list.wxml-->
-<text>pages/orders/list.wxml</text>
+<view class="container">
+    <view class="tabs">
+        <view class="tab-item {{currentTab==0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">
+            当前订单
+        </view>
+        <view class="tab-item {{currentTab==1 ? 'active' : ''}}" bindtap="switchTab" data-index="1">
+            历史订单
+        </view>
+    </view>
+
+    <view class="order-list">
+        <block wx:if="{{list.length > 0}}">
+            <view class="order-item" wx:for="{{list}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
+                <view class="header">
+                    <text class="shop-name">{{item.shopName}}</text>
+                    <text class="status {{item.statusClass}}">{{item.statusText}}</text>
+                </view>
+
+                <view class="content">
+                    <image class="thumb" src="/assets/images/logo.png" mode="aspectFill"></image>
+                    <view class="info">
+                        <view class="desc">{{item.desc}}</view>
+                        <view class="time">{{item.time}}</view>
+                    </view>
+                    <view class="price-info">
+                        <view class="price">¥{{item.totalPrice}}</view>
+                        <view class="count">共{{item.totalCount}}件</view>
+                    </view>
+                </view>
+
+                <view class="footer">
+                    <button wx:if="{{item.status === 'PENDING'}}" class="btn primary" catchtap="goPay" data-id="{{item.id}}">去支付</button>
+                    <button wx:else class="btn outline" catchtap="reOrder" data-id="{{item.id}}">再来一单</button>
+                </view>
+            </view>
+        </block>
+
+        <view wx:elif="{{!loading}}" class="empty">
+            <image class="empty-img" src="/assets/images/cart.png" mode="widthFix"></image>
+            <text>暂无相关订单</text>
+            <button class="go-menu-btn" bindtap="reOrder">去喝一杯</button>
+        </view>
+    </view>
+</view>
