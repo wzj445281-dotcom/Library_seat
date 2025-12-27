@@ -1,21 +1,38 @@
-/* 全局样式优化 - 现代字体栈和CSS变量 */
+/* seat_client/app.wxss */
 page {
-    /* 现代字体栈：优先系统默认黑体，兼容各平台 */
+    /* 现代字体栈 */
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
-    
-    /* 优化字体渲染 */
-    -webkit-font-smoothing: antialiased; 
+    -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    
-    /* 定义主色变量，方便统一修改 */
-    --primary-color: #0022AB; /* 瑞幸蓝 */
-    --primary-light: #e6f3ff;
-    --text-main: #333333;
-    --text-sub: #666666;
-    --bg-color: #f7f7f7;
+
+    /* 品牌色系优化 */
+    --primary-color: #0022AB;       /* 瑞幸深蓝 */
+    --primary-gradient: linear-gradient(135deg, #0022AB 0%, #2b4cbf 100%);
+    --secondary-color: #d93025;     /* 瑞幸红（价格/警告） */
+    --bg-color: #f7f8fa;            /* 浅灰背景，比纯白更护眼 */
+
+    /* 质感变量 */
+    --card-radius: 24rpx;
+    --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 8rpx 24rpx rgba(0, 34, 171, 0.08); /* 带一点品牌色的阴影 */
+    --shadow-float: 0 16rpx 48rpx rgba(0, 34, 171, 0.12);
 }
 
-/* 全局空状态样式 */
+/* 全局卡片基础样式 */
+.card-base {
+    background: #ffffff;
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+/* 点击反馈：缩小效果 */
+.hover-scale:active {
+    transform: scale(0.96);
+    opacity: 0.9;
+    transition: all 0.1s ease;
+}
+
+/* 全局空状态 */
 .empty-state-container {
     display: flex;
     flex-direction: column;
@@ -23,23 +40,23 @@ page {
     justify-content: center;
     padding-top: 15vh;
     opacity: 0;
-    animation: fadeIn 0.5s ease forwards;
+    animation: fadeIn 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
 .empty-img {
-    width: 240rpx;
-    height: 240rpx;
-    margin-bottom: 30rpx;
-    opacity: 0.8;
+    width: 280rpx;
+    height: 280rpx;
+    margin-bottom: 40rpx;
+    filter: grayscale(20%) opacity(0.8); /* 图片微调 */
 }
 
 .empty-text {
-    font-size: 28rpx;
+    font-size: 30rpx;
     color: #999;
-    letter-spacing: 1rpx;
+    font-weight: 500;
 }
 
 @keyframes fadeIn {
-    to { opacity: 1; }
+    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(20rpx); }
 }
-

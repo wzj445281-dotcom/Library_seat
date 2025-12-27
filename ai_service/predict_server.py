@@ -2,40 +2,39 @@ from flask import Flask, request, jsonify
 import joblib
 import pandas as pd
 import random
-import requests
 import os
 from datetime import datetime
 
 app = Flask(__name__)
 
-# 配置 DeepSeek API Key
-# 建议在 docker-compose.yml 中配置环境变量 DEEPSEEK_API_KEY，如果没有配置则使用默认值（请填入您的 Key）
-DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', 'sk-xxxxxxxxxxxxxxxxxxxxxxxx')
-DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-
-# 尝试加载模型，如果不存在则使用模拟逻辑
+# --- 加载本地模型 ---
+# 加载用于客流预测的模型
 try:
-    model = joblib.load('model.pkl')
-    model_loaded = True
+    crowd_model = joblib.load('model.pkl')
+    crowd_model_loaded = True
 except:
-    print("Warning: model.pkl not found. Running in mock mode.")
-    model_loaded = False
+    print("Warning: model.pkl (客流预测) not found. Running in mock mode.")
+    crowd_model_loaded = False
+
+# 加载用于对话的 NLP 模型
+try:
+    chat_model = joblib.load('chat_model.pkl')
+    chat_model_loaded = True
+    print("Success: Local AI chat model loaded.")
+except:
+    print("Warning: chat_model.pkl not found. Please run train_nlp.py first.")
+    chat_model_loaded = False
 
 @app.route('/predict', methods=['POST'])
 def predict():
     """
-    【功能 1】: 传统的机器学习预测 (保留原有功能)
-    用于预测门店客流拥挤度数值。
+    【功能 1】: 客流预测 (保持不变)
     """
-    if not model_loaded:
-        # 模拟返回：随机生成一个拥挤度预测
+    if not crowd_model_loaded:
         return jsonify({'prediction': random.uniform(0, 1), 'status': 'mock'})
-
     try:
-        data = request.json
-        # 这里放置实际的特征提取和预测逻辑
-        # df = pd.DataFrame(data, index=[0])
-        # prediction = model.predict(df)
+        # data = request.json
+        # 实际预测逻辑...
         return jsonify({'prediction': 0.5, 'status': 'success'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -43,59 +42,47 @@ def predict():
 @app.route('/chat', methods=['POST'])
 def chat():
     """
-    【功能 2】: AI 智能对话 (由 DeepSeek 驱动)
-    接收用户消息 -> 注入系统人设 -> 调用 DeepSeek -> 返回结果
+    【功能 2】: 本地 AI 对话 (不再调用 DeepSeek)
     """
     data = request.json
     user_msg = data.get('message', '')
 
     if not user_msg:
-        return jsonify({'reply': '请告诉我您想了解什么？'})
+        return jsonify({'reply': '请告诉我您想了解什么？', 'recommendations': []})
 
-    # 构造请求 DeepSeek 的 payload
-    # System Prompt 定义了 AI 的身份和业务规则
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {
-                "role": "system",
-                "content": "你是一个名为'瑞幸咖啡'的智能点餐助手。你的职责是帮助用户选择合适的产品、解答门店营业时间问题、推荐饮品搭配。营业时间是每天08:00-22:00。请用亲切、简练的中文回答。如果用户询问无法回答的问题，请引导他们去查看菜单。"
-            },
-            {
-                "role": "user",
-                "content": user_msg
-            }
-        ],
-        "stream": False,
-        "temperature": 0.7
-    }
+    ai_reply = ""
+    recommendations = []
 
-    headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
-    }
+    # 1. 使用本地模型预测意图
+    intent = "chat" # 默认意图
+    if chat_model_loaded:
+        try:
+            intent = chat_model.predict([user_msg])[0]
+        except Exception as e:
+            print(f"Prediction error: {e}")
 
-    try:
-        # 调用 DeepSeek 接口
-        response = requests.post(DEEPSEEK_URL, json=payload, headers=headers, timeout=30)
+    # 2. 根据意图生成回复 (规则库)
+    if intent == "recommend":
+        ai_reply = "根据您的口味，我为您推荐以下几款瑞幸爆款饮品，点击即可查看详情哦！☕️"
+        # 模拟推荐商品数据 (ID需要对应数据库里的真实ID)
+        recommendations = [
+            {"pid": 1, "name": "生椰拿铁", "price": 18.0, "image": "/images/product/coconut_latte.jpg", "reason": "人气Top1，YYDS"},
+            {"pid": 2, "name": "加浓美式", "price": 13.0, "image": "/images/product/american.jpg", "reason": "提神醒脑必备"},
+            {"pid": 7, "name": "拿铁", "price": 16.0, "image": "/images/product/latte.jpg", "reason": "经典奶咖"}
+        ]
 
-        if response.status_code == 200:
-            result = response.json()
-            # 提取 AI 的回复内容
-            ai_reply = result['choices'][0]['message']['content']
-        else:
-            print(f"DeepSeek API Error: {response.text}")
-            ai_reply = "抱歉，我的大脑暂时连接不畅，请稍后再试。"
+    elif intent == "info":
+        ai_reply = "我们的营业时间是每天 08:00 - 22:00。门店提供免费 Wi-Fi 和充电插座，欢迎光临！"
 
-    except Exception as e:
-        print(f"Request Exception: {e}")
-        ai_reply = "抱歉，由于网络原因我无法回答您的问题。"
+    else: # chat 或其他
+        ai_reply = "您好！我是瑞幸智能助手。您可以问我“有什么推荐”或者“营业时间”哦。"
 
+    # 返回符合 Java 后端要求的 JSON 格式
     return jsonify({
         'reply': ai_reply,
+        'recommendations': recommendations,
         'timestamp': datetime.now().isoformat()
     })
 
 if __name__ == '__main__':
-    # 监听 5000 端口
     app.run(host='0.0.0.0', port=5000)
