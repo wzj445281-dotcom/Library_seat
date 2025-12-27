@@ -4,7 +4,8 @@
 // 【Docker部署】后端端口映射为8081，用 http://你的IP:8081/api
 // 获取本机IP：Windows用 ipconfig，Mac/Linux用 ifconfig
 const BASE_URL = 'http://localhost:8080/api';
+// const BASE_URL = 'http://172.20.10.2:8080/api'; // 真机调试使用IP地址
 
-export default {
+module.exports = {
     BASE_URL
 }

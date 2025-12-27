@@ -19,13 +19,6 @@
       "pages": [
         "index"
       ]
-    },
-    {
-      "root": "subpackages/ai",
-      "name": "ai",
-      "pages": [
-        "ai_chat"
-      ]
     }
   ],
   "window": {

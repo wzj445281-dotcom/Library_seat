@@ -7,7 +7,10 @@ import com.example.zhizuo.core.mapper.ProductMapper;
 import com.example.zhizuo.core.service.AiPredictionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -41,7 +44,7 @@ public class AiAssistantController {
      * AI 智能导购对话接口
      * 逻辑：Java 接收前端请求 -> 转发给 Python -> 返回结果
      */
-    @PostMapping("/chat")
+    @PostMapping(value = "/chat", produces = "application/json;charset=UTF-8")
     public ApiResponse<Map<String, Object>> chat(@RequestBody Map<String, String> body) {
         String userMessage = body.get("message");
         if (userMessage == null || userMessage.trim().isEmpty()) {
@@ -51,17 +54,25 @@ public class AiAssistantController {
         try {
             // 1. 准备 Python 服务的 URL (拼接 /chat)
             String pythonChatUrl = aiServiceUrl + "/chat";
+            System.out.println("调用Python服务URL: " + pythonChatUrl);
 
             // 2. 构造发送给 Python 的请求体
             Map<String, String> requestMap = new HashMap<>();
             requestMap.put("message", userMessage);
+            System.out.println("发送给Python的消息: " + userMessage);
 
-            // 3. 发送 HTTP POST 请求 (Java -> Python)
+            // 3. 设置请求头，确保UTF-8编码
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            // 4. 发送 HTTP POST 请求 (Java -> Python)
             RestTemplate restTemplate = new RestTemplate();
-            // 这里使用了 ResponseEntity 来接收响应，能更好地处理状态码
-            ResponseEntity<Map> response = restTemplate.postForEntity(pythonChatUrl, requestMap, Map.class);
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(requestMap, headers);
+            System.out.println("发送请求到Python服务...");
+            ResponseEntity<Map> response = restTemplate.postForEntity(pythonChatUrl, request, Map.class);
+            System.out.println("收到Python服务响应: " + response.getStatusCode());
 
-            // 4. 处理响应
+            // 5. 处理响应
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 // Python 已经返回了符合前端要求的 JSON 格式（包含 reply 和 recommendations）
                 // 我们直接原样返回给前端即可

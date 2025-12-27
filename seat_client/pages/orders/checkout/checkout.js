@@ -13,7 +13,11 @@ Page({
     submitting: false,
     userCouponId: null, // 选中的优惠券ID
     couponDiscount: 0,  // 优惠金额
-    finalPrice: 0       // 最终实付
+    finalPrice: 0,      // 最终实付
+    
+    // 优惠券相关
+    availableCoupons: [],  // 可用优惠券列表
+    selectedCoupon: null   // 选中的优惠券
   },
 
   onLoad(options) {
@@ -29,11 +33,34 @@ Page({
 
     // 2. 获取默认地址 (如果有)
     this.loadDefaultAddress();
+    
+    // 3. 加载可用优惠券
+    this.loadAvailableCoupons();
   },
 
   onShow() {
-    // 如果从优惠券页面返回，可能需要重新计算
-    // 这里简单处理，每次显示都重算
+    // 检查是否有从地址页面返回的选中地址
+    const selectedAddress = wx.getStorageSync('selectedAddress');
+    if (selectedAddress) {
+      this.setData({ address: selectedAddress });
+      // 清除缓存，避免下次进入时仍然存在
+      wx.removeStorageSync('selectedAddress');
+    }
+    
+    // 检查是否有从优惠券页面返回的选中优惠券
+    const pages = getCurrentPages();
+    const currentPage = pages[pages.length - 1];
+    
+    // 检查是否有从优惠券页面返回的数据
+    if (currentPage.data && currentPage.data.selectedCoupon) {
+      const selectedCoupon = currentPage.data.selectedCoupon;
+      this.setData({
+        selectedCoupon: selectedCoupon,
+        userCouponId: selectedCoupon.id,
+        couponDiscount: selectedCoupon.amount || 0
+      });
+    }
+    
     this.calcTotal();
   },
 
@@ -46,6 +73,45 @@ Page({
     if (addr) {
       this.setData({ address: addr });
     }
+  },
+
+  /**
+   * 加载可用优惠券
+   */
+  loadAvailableCoupons() {
+    // 这里应该调用后端API获取可用优惠券
+    // 暂时使用模拟数据
+    const mockCoupons = [
+      { id: 1, title: '满30减5', amount: 5, minPoint: 30 },
+      { id: 2, title: '满50减10', amount: 10, minPoint: 50 },
+      { id: 3, title: '新用户专享券', amount: 8, minPoint: 20 }
+    ];
+    
+    // 过滤满足当前订单金额的优惠券
+    const currentTotal = parseFloat(this.data.totalPrice) || 0;
+    const availableCoupons = mockCoupons.filter(coupon => 
+      currentTotal >= coupon.minPoint
+    );
+    
+    this.setData({ availableCoupons });
+  },
+
+  /**
+   * 选择优惠券
+   */
+  selectCoupon() {
+    if (this.data.availableCoupons.length === 0) {
+      wx.showToast({
+        title: '暂无可用优惠券',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 跳转到优惠券选择页面
+    wx.navigateTo({
+      url: '/subpackages/coupon/index?select=true&totalPrice=' + this.data.totalPrice
+    });
   },
 
   /**
