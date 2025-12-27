@@ -1,41 +1,45 @@
 const app = getApp();
-const request = require('../../utils/request.js');
+// 引入封装好的请求工具 (根据您的文件结构，如果有 request.js 建议使用，这里演示原生 wx.request 以保证独立性)
+// const request = require('../../utils/request.js');
 
 Page({
-    data: {
-        messageList: [],      // 聊天记录
-        inputValue: '',       // 输入框内容
-        loading: false,       // AI思考中状态
-        scrollTop: 0,         // 滚动条位置
-        userInfo: null        // 用户头像信息
-    },
-
-    onLoad() {
-        // 1. 获取用户信息用于显示头像 (如果有)
-        const userInfo = wx.getStorageSync('userInfo');
-        this.setData({ userInfo });
-
-        // 2. AI 欢迎语
-        this.addRobotMessage('您好！我是瑞幸 AI 助手 ☕️\n我可以为您推荐饮品、查询优惠，或者聊聊咖啡知识。\n试试问我："有什么好喝的推荐？"');
-    },
-
     /**
-     * 监听输入框输入
+     * 页面的初始数据
      */
-    handleInput(e) {
-        this.setData({ inputValue: e.detail.value });
+    data: {
+        inputValue: '',       // 输入框内容
+        messageList: [],      // 消息列表 { role: 'user'/'ai', content: string, recommendations: [] }
+        scrollTop: 0,         // 滚动条位置
+        loading: false,       // 是否正在思考中
+        isFocus: false        // 输入框聚焦状态
     },
 
     /**
-     * 发送消息
+     * 生命周期函数--监听页面加载
+     */
+    onLoad(options) {
+        // 初始化欢迎语
+        this.addMessage('ai', '您好！我是瑞幸智能助手 ☕️\n我可以为您推荐饮品、查询门店信息，快来问我吧！');
+    },
+
+    /**
+     * 监听输入框内容变化
+     */
+    onInput(e) {
+        this.setData({
+            inputValue: e.detail.value
+        });
+    },
+
+    /**
+     * 发送消息主逻辑
      */
     sendMessage() {
         const content = this.data.inputValue.trim();
-        // 如果内容为空或正在加载中，不发送
-        if (!content || this.data.loading) return;
+        if (!content) return;
 
-        // 1. 立即上屏用户消息
-        this.addUserMessage(content);
+        // 1. 添加用户消息到列表
+        this.addMessage('user', content);
 
         // 清空输入框并显示加载状态
         this.setData({
@@ -44,77 +48,87 @@ Page({
         });
 
         // 2. 调用后端 API
-        request.post('/app/ai/chat', { message: content })
-            .then(res => {
-                if (res) {
-                    // 兼容处理：后端可能直接返回 Map，也可能封装在 data 中
-                    // 根据你的 Controller，它是直接返回 ApiResponse<Map>，所以数据在 res 中 (request.js已解包)
-                    const reply = res.reply || 'AI 暂时没话说了...';
-                    const recommendations = res.recommendations || [];
+        // 注意：这里 URL 需要根据您的真机调试/本地环境配置
+        // 如果是本地调试，通常是 http://localhost:8080/api/app/ai/chat
+        // 如果使用了内网穿透或局域网 IP，请替换为对应的 IP
+        const baseUrl = app.globalData.baseUrl || 'http://localhost:8080';
 
-                    this.addRobotMessage(reply, recommendations);
+        wx.request({
+            url: `${baseUrl}/api/app/ai/chat`,
+            method: 'POST',
+            data: {
+                message: content
+            },
+            header: {
+                'content-type': 'application/json',
+                // 如果有 Token 鉴权，记得带上
+                // 'Authorization': wx.getStorageSync('token')
+            },
+            success: (res) => {
+                // 3. 处理成功响应
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const aiData = res.data.data; // 后端返回的结构: { reply: "...", recommendations: [...] }
+
+                    this.addMessage('ai', aiData.reply, aiData.recommendations);
                 } else {
-                    this.addRobotMessage('抱歉，我好像走神了，请再问一次 🤯');
+                    console.error('API Error:', res);
+                    this.addMessage('ai', '抱歉，我现在有点累，请稍后再试 😵‍💫');
                 }
-            })
-            .catch(err => {
-                console.error('AI Chat Error:', err);
-                this.addRobotMessage('网络连接似乎出了点问题，请检查网络 📶');
-            })
-            .finally(() => {
+            },
+            fail: (err) => {
+                console.error('Network Error:', err);
+                this.addMessage('ai', '网络连接失败，请检查网络设置 📶');
+            },
+            complete: () => {
                 this.setData({ loading: false });
-            });
-    },
-
-    /**
-     * 添加用户消息到列表
-     */
-    addUserMessage(content) {
-        const msg = { type: 'user', content: content };
-        this.setData({
-            messageList: [...this.data.messageList, msg]
-        }, () => {
-            this.scrollToBottom();
+            }
         });
     },
 
     /**
-     * 添加机器人消息到列表
+     * 通用：添加消息到列表并滚动
+     * @param {String} role 角色 'user' | 'ai'
+     * @param {String} content 文本内容
+     * @param {Array} recommendations 推荐商品数组 (可选)
      */
-    addRobotMessage(content, recommendations = []) {
-        const msg = {
-            type: 'robot',
+    addMessage(role, content, recommendations = []) {
+        const list = this.data.messageList;
+        list.push({
+            role: role,
             content: content,
             recommendations: recommendations
-        };
+        });
+
         this.setData({
-            messageList: [...this.data.messageList, msg]
-        }, () => {
-            this.scrollToBottom();
+            messageList: list,
+            // 计算滚动高度，确保滚动到底部 (乘以一个足够大的系数)
+            scrollTop: list.length * 1000
         });
     },
 
     /**
-     * 滚动到底部
+     * 点击推荐商品卡片
      */
-    scrollToBottom() {
-        this.setData({
-            scrollTop: this.data.messageList.length * 1000 // 简单粗暴的滚动到底部
+    onProductClick(e) {
+        const product = e.currentTarget.dataset.item;
+        // 跳转到商品详情页，或者是直接去点单页
+        // 这里假设跳转到点餐页并带上商品ID，或者弹出规格选择
+        wx.showToast({
+            title: `已选择: ${product.name}`,
+            icon: 'none'
         });
+
+        // 示例：跳转到菜单页
+        // wx.switchTab({ url: '/pages/menu/index' });
     },
 
     /**
-     * 点击推荐商品，跳转到菜单页
+     * 点击快捷问题 (如果有)
      */
-    onRecommendTap(e) {
-        const pid = e.currentTarget.dataset.pid;
-        // 跳转到菜单页面 (TabBar页面需使用 switchTab)
-        wx.switchTab({
-            url: '/pages/menu/index',
-            success: () => {
-                // 可选：这里可以存一下 pid，在菜单页 onLoad 里自动定位到该商品
-                wx.setStorageSync('targetProductId', pid);
-            }
+    onTagClick(e) {
+        const text = e.currentTarget.dataset.text;
+        this.setData({ inputValue: text }, () => {
+            this.sendMessage();
         });
     }
 });

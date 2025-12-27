@@ -1,63 +1,40 @@
+# train_nlp.py
 import joblib
+import jieba
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 
-# 1. 准备训练数据 (语料库)
-# 这里定义了用户常说的话 (text) 和 对应的意图 (intent)
+# 1. 定义中文分词函数
+def jieba_tokenizer(text):
+    return jieba.lcut(text)
+
+# 2. 准备语料 (建议扩充更多样本)
 data = [
-    # --- 推荐意图 ---
-    ("推荐一下", "recommend"),
-    ("有什么好喝的", "recommend"),
-    ("介绍一下菜单", "recommend"),
-    ("想喝咖啡", "recommend"),
-    ("拿铁怎么样", "recommend"),
-    ("来杯最火的", "recommend"),
-    ("生椰拿铁", "recommend"),
-    ("美式", "recommend"),
-    ("我不喜欢甜的", "recommend"),
+    # recommend 意图
+    ("推荐一下", "recommend"), ("有什么好喝的", "recommend"), ("我想喝咖啡", "recommend"),
+    ("最近有什么新品", "recommend"), ("拿铁怎么样", "recommend"), ("来杯招牌", "recommend"),
 
-    # --- 营业信息意图 ---
-    ("几点开门", "info"),
-    ("几点关门", "info"),
-    ("营业时间", "info"),
-    ("什么时候打烊", "info"),
-    ("在哪里", "info"),
-    ("地址", "info"),
+    # info 意图
+    ("几点开门", "info"), ("营业时间", "info"), ("你们在哪里", "info"),
+    ("什么时候打烊", "info"), ("店铺位置", "info"), ("有wifi吗", "info"),
 
-    # --- 闲聊/问候 ---
-    ("你好", "chat"),
-    ("在吗", "chat"),
-    ("嗨", "chat"),
-    ("你是谁", "chat"),
-    ("早上好", "chat"),
-    ("谢谢", "chat"),
+    # chat 意图 (尽量覆盖非业务的闲聊)
+    ("你好", "chat"), ("你是谁", "chat"), ("今天天气不错", "chat"),
+    ("讲个笑话", "chat"), ("很高兴认识你", "chat"), ("笨蛋", "chat")
 ]
-
-# 转换为 DataFrame
 df = pd.DataFrame(data, columns=['text', 'intent'])
 
-# 2. 构建训练管道 (Pipeline)
-# 分词(CountVectorizer) -> 计算权重(Tfidf) -> 分类器(贝叶斯)
+# 3. 构建管道，关键是传入 tokenizer=jieba_tokenizer
+# 注意：token_pattern=None 是为了避免 sklearn 默认正则过滤掉单字
 text_clf = Pipeline([
-    ('vect', CountVectorizer()),
+    ('vect', CountVectorizer(tokenizer=jieba_tokenizer, token_pattern=None)),
     ('tfidf', TfidfTransformer()),
     ('clf', MultinomialNB()),
 ])
 
-# 3. 开始训练
-print("正在训练本地 AI 模型...")
+# 4. 训练并保存
 text_clf.fit(df['text'], df['intent'])
-
-# 4. 保存模型
-model_path = 'chat_model.pkl'
-joblib.dump(text_clf, model_path)
-print(f"模型已保存至: {model_path}")
-
-# 5. 简单测试
-test_phrases = ["推荐个好喝的", "你们几点关门", "你好呀"]
-for phrase in test_phrases:
-    predicted = text_clf.predict([phrase])[0]
-    print(f"测试: '{phrase}' -> 识别意图: {predicted}")
+joblib.dump(text_clf, 'chat_model.pkl')
+print("模型已使用 Jieba 分词优化并保存！")

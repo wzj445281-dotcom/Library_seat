@@ -81,11 +81,30 @@ Page({
   onLoad() {
     this.initBalls();
     this.loadSearchHistory();
+    this.loadCartData(); // 加载购物车数据
 
     // 模拟网络请求延迟，展示骨架屏
     setTimeout(() => {
       this.setData({ loading: false });
     }, 1000);
+  },
+
+  // 加载购物车数据
+  loadCartData() {
+    const cart = wx.getStorageSync('cart') || [];
+    let totalCount = 0;
+    let totalPrice = 0;
+    
+    // 计算购物车商品总数和总价
+    cart.forEach(item => {
+      totalCount += item.quantity || 0;
+      totalPrice += (item.price || 0) * (item.quantity || 0);
+    });
+    
+    this.setData({
+      cartCount: totalCount,
+      totalPrice: totalPrice
+    });
   },
 
   // --- 搜索相关 ---
@@ -197,13 +216,52 @@ Page({
   confirmAddToCart() {
     // 1. 获取当前商品信息
     const product = this.data.specProduct;
-    // 2. 这里可以添加加入购物车的具体逻辑（更新cartCount和totalPrice）
+    const specs = this.data.specSelections;
+    
+    // 2. 将商品添加到购物车数据结构
+    this.addToCartStorage(product, specs);
+    
+    // 3. 更新页面显示的购物车数量和总价
     this.addToCartLogic(product.price);
 
-    // 3. 关闭弹窗
+    // 4. 关闭弹窗
     this.closeSpecModal();
 
     wx.showToast({ title: '已加入购物车', icon: 'success' });
+  },
+
+  // 将商品添加到本地存储的购物车中
+  addToCartStorage(product, specs) {
+    // 获取现有购物车数据
+    let cart = wx.getStorageSync('cart') || [];
+    
+    // 生成规格字符串
+    const specStr = `${specs.temp}/${specs.sugar}`;
+    
+    // 生成唯一key，用于区分同商品不同规格
+    const uniqueKey = `${product.id}_${specs.temp}_${specs.sugar}`;
+    
+    // 查找购物车中是否已有该商品+规格
+    const existingItemIndex = cart.findIndex(item => item.uniqueKey === uniqueKey);
+    
+    if (existingItemIndex !== -1) {
+      // 已存在，数量+1
+      cart[existingItemIndex].quantity += 1;
+    } else {
+      // 不存在，新增条目
+      cart.push({
+        id: product.id,
+        uniqueKey: uniqueKey,
+        name: product.name,
+        price: parseFloat(product.price),
+        image: product.image,
+        specs: specStr,
+        quantity: 1
+      });
+    }
+    
+    // 保存到本地存储
+    wx.setStorageSync('cart', cart);
   },
 
   // --- 购物车逻辑 ---
@@ -224,7 +282,14 @@ Page({
   },
 
   goToCheckout() {
-    if (this.data.cartCount === 0) return;
+    if (this.data.cartCount === 0) {
+      wx.showToast({
+        title: '购物车是空的，请先添加商品',
+        icon: 'none',
+        duration: 2000
+      });
+      return;
+    }
     wx.navigateTo({ url: '/pages/orders/checkout/checkout' });
   },
 

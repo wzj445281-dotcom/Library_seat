@@ -2,362 +2,131 @@ package com.example.zhizuo.api.app;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.zhizuo.common.ApiResponse;
-import com.example.zhizuo.core.entity.Order;
-import com.example.zhizuo.core.entity.OrderItem;
 import com.example.zhizuo.core.entity.Product;
-import com.example.zhizuo.core.entity.UserFavorite;
-import com.example.zhizuo.core.mapper.OrderItemMapper;
 import com.example.zhizuo.core.mapper.ProductMapper;
 import com.example.zhizuo.core.service.AiPredictionService;
-import com.example.zhizuo.core.service.OrderService;
-import com.example.zhizuo.core.service.ProductService;
-import com.example.zhizuo.mapper.UserFavoriteMapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
- * AI 助手控制器 (增强版)
- * 集成商品库、用户收藏、历史订单数据，打造个性化导购
- * 同时提供客流拥挤度预测接口
+ * AI 助手控制器 (本地离线版)
+ * 逻辑简化说明：
+ * 1. 不再连接 DeepSeek，也不需要构建复杂的用户画像 Prompt。
+ * 2. 直接将用户消息转发给本地 Python 服务 (/chat 接口)。
+ * 3. 如果 Python 服务未启动，使用 Java 内部的 Mock 数据兜底。
  */
 @RestController
 @RequestMapping("/api/app/ai")
 public class AiAssistantController {
 
     @Autowired
-    private ProductService productService;
-
-    @Autowired
     private ProductMapper productMapper;
 
     @Autowired
-    private OrderService orderService;
-
-    @Autowired
-    private OrderItemMapper orderItemMapper;
-
-    @Autowired
-    private UserFavoriteMapper userFavoriteMapper;
-
-    // ✅ 新增：注入 AI 预测服务
-    @Autowired
     private AiPredictionService aiPredictionService;
 
-    // 从 application.yml 读取配置
-    @Value("${ai.deepseek.key:}")
-    private String deepSeekApiKey;
-
-    @Value("${ai.deepseek.url:https://api.deepseek.com/chat/completions}")
-    private String deepSeekApiUrl;
-
-    @Value("${ai.deepseek.model:deepseek-chat}")
-    private String deepSeekModel;
+    // 读取配置文件中的 AI 服务地址，默认指向本地 Python 服务
+    @Value("${ai.service.url:http://localhost:5000}")
+    private String aiServiceUrl;
 
     /**
      * AI 智能导购对话接口
+     * 逻辑：Java 接收前端请求 -> 转发给 Python -> 返回结果
      */
     @PostMapping("/chat")
-    public ApiResponse<Map<String, Object>> chat(@RequestBody Map<String, String> body, @RequestAttribute(required = false) Long userId) {
+    public ApiResponse<Map<String, Object>> chat(@RequestBody Map<String, String> body) {
         String userMessage = body.get("message");
         if (userMessage == null || userMessage.trim().isEmpty()) {
             return ApiResponse.error("输入不能为空");
         }
 
         try {
-            // 1. 【构建知识库 (Context) - 从数据库获取真实数据】
+            // 1. 准备 Python 服务的 URL (拼接 /chat)
+            String pythonChatUrl = aiServiceUrl + "/chat";
 
-            // A. 商品列表 - 从数据库获取所有上架商品
-            List<Product> products = productMapper.selectList(
-                    new LambdaQueryWrapper<Product>()
-                            .eq(Product::getStatus, 1) // 只获取上架商品
-                            .orderByDesc(Product::getSales) // 按销量排序
-            );
+            // 2. 构造发送给 Python 的请求体
+            Map<String, String> requestMap = new HashMap<>();
+            requestMap.put("message", userMessage);
 
-            // 构建商品知识库 JSON 格式
-            String productContext = products.stream()
-                    .map(p -> String.format(
-                            "{\"pid\":%d, \"name\":\"%s\", \"price\":%.2f, \"image\":\"%s\", \"description\":\"%s\", \"sales\":%d}",
-                            p.getId(),
-                            p.getName() != null ? p.getName().replace("\"", "'") : "",
-                            p.getPrice() != null ? p.getPrice() : BigDecimal.ZERO,
-                            p.getImgUrl() != null ? p.getImgUrl() : "",
-                            p.getDescription() != null ? p.getDescription().replace("\"", "'").replace("\n", " ") : "",
-                            p.getSales() != null ? p.getSales() : 0
-                    ))
-                    .collect(Collectors.joining(", "));
-
-            // B. 用户画像 - 从数据库获取收藏和历史订单
-            String userProfile = buildUserProfile(userId);
-
-            // 2. 【Prompt 工程 + 结构化输出】
-            String systemPrompt = String.format(
-                    "你是一个瑞幸咖啡的资深AI导购助手。请根据用户的【历史偏好】和【当前问题】，从【商品库】中推荐最合适的饮品。\n\n" +
-                            "=== 数据输入 ===\n" +
-                            "【商品库】：[%s]\n" +
-                            "【用户画像】：%s\n\n" +
-                            "=== 输出规则 ===\n" +
-                            "1. 语气亲切、活泼，像朋友一样交流。\n" +
-                            "2. 如果用户有收藏或常喝的口味，优先推荐相关商品。\n" +
-                            "3. 推荐商品时，必须从商品库中选择，使用准确的 pid、name、price、image。\n" +
-                            "4. 回复要自然、有温度，不要生硬地列举商品。",
-                    productContext, userProfile
-            );
-
-            // 3. 调用 DeepSeek API
-            // 检查 API Key - 如果未配置，提示用户配置
-            if (deepSeekApiKey == null || deepSeekApiKey.isEmpty() || deepSeekApiKey.startsWith("sk-your") || deepSeekApiKey.equals("${AI_DEEPSEEK_KEY}")) {
-                // 如果没配置 Key，返回提示信息，同时返回 Mock 数据作为降级方案
-                return ApiResponse.success(mockAiResponse(userMessage));
-            }
-
+            // 3. 发送 HTTP POST 请求 (Java -> Python)
             RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + deepSeekApiKey);
+            // 这里使用了 ResponseEntity 来接收响应，能更好地处理状态码
+            ResponseEntity<Map> response = restTemplate.postForEntity(pythonChatUrl, requestMap, Map.class);
 
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode requestBody = mapper.createObjectNode();
-            requestBody.put("model", deepSeekModel);
-            requestBody.put("temperature", 0.7);
-
-            // 使用结构化输出（JSON Schema）
-            ObjectNode responseFormat = mapper.createObjectNode();
-            responseFormat.put("type", "json_object");
-            requestBody.set("response_format", responseFormat);
-
-            ArrayNode messages = requestBody.putArray("messages");
-            messages.addObject().put("role", "system").put("content", systemPrompt +
-                    "\n\n请严格按照以下 JSON 格式返回，不要包含任何 Markdown 标记或额外文本：\n" +
-                    "{\n" +
-                    "  \"reply\": \"回复文本，结合用户偏好进行个性化推荐\",\n" +
-                    "  \"recommendations\": [\n" +
-                    "    {\"pid\": 商品ID(数字), \"name\": \"商品名称\", \"price\": 价格(数字), \"image\": \"图片URL\", \"reason\": \"推荐理由\"}\n" +
-                    "  ]\n" +
-                    "}");
-            messages.addObject().put("role", "user").put("content", userMessage);
-
-            HttpEntity<String> entity = new HttpEntity<>(mapper.writeValueAsString(requestBody), headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity(deepSeekApiUrl, entity, Map.class);
-
-            // 4. 解析结果
-            @SuppressWarnings("unchecked")
-            Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
-            if (responseBody != null && responseBody.containsKey("choices")) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
-                if (choices != null && !choices.isEmpty()) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-                    if (message != null) {
-                        String content = (String) message.get("content");
-                        return ApiResponse.success(parseAiJson(content));
-                    }
-                }
+            // 4. 处理响应
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                // Python 已经返回了符合前端要求的 JSON 格式（包含 reply 和 recommendations）
+                // 我们直接原样返回给前端即可
+                return ApiResponse.success(response.getBody());
+            } else {
+                return ApiResponse.error("AI 服务响应异常");
             }
-
-            return ApiResponse.error("AI 响应异常");
 
         } catch (Exception e) {
-            e.printStackTrace();
-            return ApiResponse.success(mockAiResponse(userMessage)); // 降级处理
+            // 打印错误日志，方便调试（比如 Connection refused 说明 Python 没启动）
+            System.err.println("调用本地 Python AI 服务失败: " + e.getMessage());
+
+            // 5. 降级处理 (关键！)
+            // 如果 Python 服务挂了或没启动，不要报错，而是返回 Java 写死的 Mock 数据
+            // 这样能保证前端演示时不会出现“系统错误”
+            return ApiResponse.success(mockAiResponse(userMessage));
         }
     }
 
     /**
-     * ✅ 新增接口：获取人流量/拥挤度预测
+     * 获取人流量/拥挤度预测
      * 供 monitor.html 大屏使用
-     * @return 预测的拥挤度系数 (0.0 - 1.0)
      */
     @GetMapping("/prediction/crowding")
     public ApiResponse<Double> getCrowdingPrediction() {
-        // 调用 Python 预测服务 (通过 AiPredictionService)
+        // 这个接口依然保留，调用 Python 的预测功能
         Double prediction = aiPredictionService.predictCrowding();
         return ApiResponse.success(prediction);
     }
 
     /**
-     * 构建用户画像 - 从数据库获取真实数据
-     */
-    private String buildUserProfile(Long userId) {
-        if (userId == null) {
-            return "新用户，无历史数据";
-        }
-
-        StringBuilder profile = new StringBuilder();
-        profile.append("用户ID: ").append(userId);
-
-        // 1. 获取收藏列表
-        List<UserFavorite> favorites = userFavoriteMapper.selectList(
-                new LambdaQueryWrapper<UserFavorite>()
-                        .eq(UserFavorite::getUserId, userId.toString())
-                        .orderByDesc(UserFavorite::getCreateTime)
-                        .last("LIMIT 10")
-        );
-
-        if (!favorites.isEmpty()) {
-            List<Long> favoriteProductIds = favorites.stream()
-                    .map(UserFavorite::getProductId)
-                    .collect(Collectors.toList());
-
-            List<Product> favoriteProducts = productMapper.selectBatchIds(favoriteProductIds);
-            String favoriteNames = favoriteProducts.stream()
-                    .map(Product::getName)
-                    .collect(Collectors.joining("、"));
-
-            profile.append("，【收藏商品】：[").append(favoriteNames).append("]");
-        }
-
-        // 2. 获取历史订单（最近10单）
-        List<Order> recentOrders = orderService.getUserOrderList(userId, null);
-        if (recentOrders.size() > 10) {
-            recentOrders = recentOrders.subList(0, 10);
-        }
-
-        if (!recentOrders.isEmpty()) {
-            // 统计订单中最常购买的商品
-            Map<Long, Integer> productCountMap = new HashMap<>();
-            for (Order order : recentOrders) {
-                List<OrderItem> items = orderItemMapper.selectList(
-                        new LambdaQueryWrapper<OrderItem>()
-                                .eq(OrderItem::getOrderId, order.getId())
-                );
-                for (OrderItem item : items) {
-                    productCountMap.put(item.getProductId(),
-                            productCountMap.getOrDefault(item.getProductId(), 0) + item.getQuantity());
-                }
-            }
-
-            // 获取最常购买的商品名称
-            if (!productCountMap.isEmpty()) {
-                Long topProductId = productCountMap.entrySet().stream()
-                        .max(Map.Entry.comparingByValue())
-                        .map(Map.Entry::getKey)
-                        .orElse(null);
-
-                if (topProductId != null) {
-                    Product topProduct = productMapper.selectById(topProductId);
-                    if (topProduct != null) {
-                        profile.append("，【历史订单】：最近购买了").append(recentOrders.size()).append("单");
-                        profile.append("，最常购买：").append(topProduct.getName());
-                    }
-                }
-            }
-        } else {
-            profile.append("，【历史订单】：暂无订单记录");
-        }
-
-        return profile.toString();
-    }
-
-    /**
-     * 解析 AI 返回的 JSON 字符串 (包含容错处理)
-     */
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseAiJson(String jsonContent) {
-        try {
-            // 清理 Markdown 标记
-            String cleanJson = jsonContent.trim();
-            if (cleanJson.startsWith("```json")) cleanJson = cleanJson.substring(7);
-            if (cleanJson.startsWith("```")) cleanJson = cleanJson.substring(3);
-            if (cleanJson.endsWith("```")) cleanJson = cleanJson.substring(0, cleanJson.length() - 3);
-            cleanJson = cleanJson.trim();
-
-            Map<String, Object> result = new ObjectMapper().readValue(cleanJson, Map.class);
-
-            // 验证并补充推荐商品信息（从数据库获取完整信息）
-            if (result.containsKey("recommendations")) {
-                List<Map<String, Object>> recommendations = (List<Map<String, Object>>) result.get("recommendations");
-                List<Map<String, Object>> enrichedRecommendations = new ArrayList<>();
-
-                for (Map<String, Object> rec : recommendations) {
-                    Object pidObj = rec.get("pid");
-                    if (pidObj != null) {
-                        Long pid = null;
-                        if (pidObj instanceof Number) {
-                            pid = ((Number) pidObj).longValue();
-                        } else if (pidObj instanceof String) {
-                            try {
-                                pid = Long.parseLong((String) pidObj);
-                            } catch (NumberFormatException e) {
-                                continue;
-                            }
-                        }
-
-                        if (pid != null) {
-                            Product product = productMapper.selectById(pid);
-                            if (product != null) {
-                                Map<String, Object> enrichedRec = new HashMap<>();
-                                enrichedRec.put("pid", product.getId());
-                                enrichedRec.put("name", product.getName());
-                                enrichedRec.put("price", product.getPrice());
-                                enrichedRec.put("image", product.getImgUrl() != null ? product.getImgUrl() : "");
-                                enrichedRec.put("reason", rec.getOrDefault("reason", "为您推荐"));
-                                enrichedRecommendations.add(enrichedRec);
-                            }
-                        }
-                    }
-                }
-
-                result.put("recommendations", enrichedRecommendations);
-            }
-
-            return result;
-        } catch (Exception e) {
-            e.printStackTrace();
-            Map<String, Object> fallback = new HashMap<>();
-            fallback.put("reply", jsonContent); // 解析失败则直接把文本作为回复
-            fallback.put("recommendations", new ArrayList<>());
-            return fallback;
-        }
-    }
-
-    /**
-     * Mock 数据 (用于演示或 API Key 无效时)
+     * Mock 数据 (兜底方案)
+     * 当 Python 服务不可用时，使用此简单的规则回复，保证演示不翻车
      */
     private Map<String, Object> mockAiResponse(String userMsg) {
         Map<String, Object> res = new HashMap<>();
+        List<Map<String, Object>> recs = new ArrayList<>();
 
-        // 从数据库获取热门商品作为 Mock 推荐
-        List<Product> hotProducts = productMapper.selectList(
-                new LambdaQueryWrapper<Product>()
-                        .eq(Product::getStatus, 1)
-                        .orderByDesc(Product::getSales)
-                        .last("LIMIT 3")
-        );
-
+        // 简单的关键词匹配
         if (userMsg.contains("推荐") || userMsg.contains("好喝") || userMsg.contains("菜单")) {
-            res.put("reply", "根据您的需求，我为您推荐以下热门商品！这些都是我们店里的爆款哦~ ☕️");
-            List<Map<String, Object>> recs = new ArrayList<>();
-            for (Product product : hotProducts) {
+            res.put("reply", "（网络开小差了，这是备用回复）给您推荐我们的招牌生椰拿铁！🥥");
+
+            // 从数据库里随便查 2 个销量高的商品作为推荐
+            List<Product> hotProducts = productMapper.selectList(
+                    new LambdaQueryWrapper<Product>()
+                            .eq(Product::getStatus, 1) // 上架状态
+                            .orderByDesc(Product::getSales) // 按销量
+                            .last("LIMIT 2")
+            );
+
+            for (Product p : hotProducts) {
                 Map<String, Object> item = new HashMap<>();
-                item.put("pid", product.getId());
-                item.put("name", product.getName());
-                item.put("price", product.getPrice());
-                item.put("image", product.getImgUrl() != null ? product.getImgUrl() : "");
-                item.put("reason", "热门推荐");
+                item.put("pid", p.getId());
+                item.put("name", p.getName());
+                item.put("price", p.getPrice());
+                // 确保图片路径不为空
+                item.put("image", p.getImgUrl() != null ? p.getImgUrl() : "");
+                item.put("reason", "热门榜单");
                 recs.add(item);
             }
-            res.put("recommendations", recs);
         } else {
-            res.put("reply", "您好！我是瑞幸 AI 助手，可以帮您推荐商品、解答问题。试试问我\"推荐\"或\"什么好喝\"吧！");
-            res.put("recommendations", new ArrayList<>());
+            res.put("reply", "（网络开小差了）您好，我是瑞幸小助手。由于连接不到 AI 大脑，我现在只能回答简单问题。");
         }
+
+        res.put("recommendations", recs);
         return res;
     }
 }

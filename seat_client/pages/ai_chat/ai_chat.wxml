@@ -1,44 +1,44 @@
 <view class="chat-container">
-    <scroll-view scroll-y="true" class="chat-list" scroll-top="{{scrollTop}}" scroll-with-animation>
+    <scroll-view
+            class="chat-list"
+            scroll-y="true"
+            scroll-top="{{scrollTop}}"
+            scroll-with-animation="true">
+
         <block wx:for="{{messageList}}" wx:key="index">
 
-            <view class="message-item robot" wx:if="{{item.type === 'robot'}}">
+            <view class="message-item user" wx:if="{{item.role === 'user'}}">
+                <view class="content-wrapper">
+                    <view class="content">
+                        <text user-select="true">{{item.content}}</text>
+                    </view>
+                </view>
+                <image class="avatar" src="/assets/images/user.png" mode="aspectFill"></image>
+            </view>
+
+            <view class="message-item ai" wx:else>
                 <image class="avatar" src="/assets/images/logo.png" mode="aspectFill"></image>
                 <view class="content-wrapper">
                     <view class="content">
                         <text user-select="true">{{item.content}}</text>
                     </view>
 
-                    <view class="recommendations" wx:if="{{item.recommendations && item.recommendations.length > 0}}">
-                        <view class="recommend-title">为您推荐</view>
-                        <scroll-view class="recommend-scroll" scroll-x="true">
-                            <view class="recommend-list">
-                                <view class="recommend-item"
-                                      wx:for="{{item.recommendations}}"
-                                      wx:key="pid"
-                                      wx:for-item="rec"
-                                      data-pid="{{rec.pid}}"
-                                      bindtap="onRecommendTap">
-                                    <image class="rec-image" src="{{rec.image}}" mode="aspectFill" lazy-load></image>
-                                    <view class="rec-info">
-                                        <view class="rec-name">{{rec.name}}</view>
-                                        <view class="rec-price">¥{{rec.price}}</view>
-                                        <view class="rec-reason" wx:if="{{rec.reason}}">{{rec.reason}}</view>
-                                    </view>
-                                </view>
+                    <view class="recommend-list" wx:if="{{item.recommendations && item.recommendations.length > 0}}">
+                        <view class="recommend-item"
+                              wx:for="{{item.recommendations}}"
+                              wx:for-item="prod"
+                              wx:key="pid"
+                              bindtap="onProductClick"
+                              data-item="{{prod}}">
+                            <image class="prod-img" src="{{prod.image}}" mode="aspectFill"></image>
+                            <view class="prod-info">
+                                <view class="prod-name">{{prod.name}}</view>
+                                <view class="prod-price">¥{{prod.price}}</view>
+                                <view class="prod-reason" wx:if="{{prod.reason}}">{{prod.reason}}</view>
                             </view>
-                        </scroll-view>
+                        </view>
                     </view>
                 </view>
-            </view>
-
-            <view class="message-item user" wx:if="{{item.type === 'user'}}">
-                <view class="content-wrapper">
-                    <view class="content">
-                        <text user-select="true">{{item.content}}</text>
-                    </view>
-                </view>
-                <image class="avatar" src="{{userInfo.avatarUrl || '/assets/images/user.png'}}" mode="aspectFill"></image>
             </view>
 
         </block>
@@ -56,11 +56,13 @@
     <view class="input-area">
         <input class="input-box"
                value="{{inputValue}}"
-               bindinput="handleInput"
+               bindinput="onInput"
                bindconfirm="sendMessage"
                placeholder="请输入您的问题..."
                confirm-type="send"
                disabled="{{loading}}"/>
-        <button class="send-btn" bindtap="sendMessage" disabled="{{loading || !inputValue}}">发送</button>
+        <button class="send-btn"
+                bindtap="sendMessage"
+                disabled="{{loading || !inputValue}}">发送</button>
     </view>
 </view>
