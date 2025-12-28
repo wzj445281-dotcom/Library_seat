@@ -65,5 +65,45 @@ public class WebController {
     public String checkout() {
         return "checkout";
     }
+    
+    /**
+     * 后台管理页面 - 直接返回静态HTML文件
+     */
+    @GetMapping("/admin.html")
+    public String admin() {
+        return "forward:/static/admin.html";
+    }
+    
+    /**
+     * 商品管理页面 - 直接返回静态HTML文件
+     */
+    @GetMapping("/product_manage.html")
+    public String productManage() {
+        return "forward:/static/product_manage.html";
+    }
+    
+    /**
+     * AI监控大屏页面 - 直接返回静态HTML文件
+     */
+    @GetMapping("/monitor.html")
+    public String monitor() {
+        return "forward:/static/monitor.html";
+    }
+    
+    /**
+     * 反馈管理页面 - 直接返回静态HTML文件
+     */
+    @GetMapping("/feedback_manage.html")
+    public String feedbackManage() {
+        return "forward:/static/feedback_manage.html";
+    }
+    
+    /**
+     * 门店订单管理页面 - 直接返回静态HTML文件
+     */
+    @GetMapping("/store_order_manage.html")
+    public String storeOrderManage() {
+        return "forward:/static/store_order_manage.html";
+    }
 }
 

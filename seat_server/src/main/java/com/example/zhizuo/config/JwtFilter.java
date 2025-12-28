@@ -48,15 +48,20 @@ public class JwtFilter extends OncePerRequestFilter {
 
         // 2. 验证 Token 并设置上下文
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            try {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-            if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // 将用户信息放入 SecurityContext，表示已登录
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    // 将用户信息放入 SecurityContext，表示已登录
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (Exception e) {
+                logger.error("JWT验证失败: " + e.getMessage());
+                // 不设置SecurityContext，保持未认证状态
             }
         }
         chain.doFilter(request, response);

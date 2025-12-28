@@ -31,7 +31,7 @@ public class SecurityConfig {
                 .and()
                 .authorizeRequests()
                 // 放行静态资源：HTML页面、API文档、静态文件
-                .antMatchers("/**/*.html", "/doc.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**", "/static/**").permitAll()
+                .antMatchers("/**/*.html", "/doc.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**", "/static/**", "/css/**", "/js/**", "/images/**").permitAll()
                 // 放行 WebSocket 连接
                 .antMatchers("/ws/**", "/app/**", "/topic/**", "/queue/**").permitAll()
                 // 放行所有API接口（开发阶段，生产环境需要更严格的配置）

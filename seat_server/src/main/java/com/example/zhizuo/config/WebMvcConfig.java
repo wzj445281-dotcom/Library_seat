@@ -29,8 +29,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 注意：Spring Boot 默认支持 classpath:/static/，但需要显式配置以确保正确工作
         // 添加多个可能的路径，以确保资源能被找到
         registry.addResourceHandler("/static/**")
-                .addResourceLocations("classpath:/static/", "classpath:/static/images/")
+                .addResourceLocations("classpath:/static/", "classpath:/static/images/", "classpath:/static/css/", "classpath:/static/js/")
                 .setCachePeriod(3600); // 缓存1小时
+        
+        // 配置根路径直接访问静态资源
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/")
+                .setCachePeriod(3600);
+                
+        // 配置静态资源处理器：直接映射HTML文件到根路径
+        registry.addResourceHandler("/admin.html", "/product_manage.html", "/monitor.html", "/feedback_manage.html", "/store_order_manage.html")
+                .addResourceLocations("classpath:/static/")
+                .setCachePeriod(3600);
     }
 
     /**

@@ -18,7 +18,7 @@ public class AdminUserServiceImpl extends ServiceImpl<UserMapper, User> implemen
         QueryWrapper<User> query = new QueryWrapper<>();
 
         if (studentId != null && !studentId.isEmpty()) {
-            query.like("student_id", studentId);
+            query.like("username", studentId);
         }
         // 按信用分排序，方便管理员先处理违纪学生
         query.orderByAsc("credit_score");

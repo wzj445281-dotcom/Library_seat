@@ -32,10 +32,13 @@ public class AppWorkOrderController {
     private UserMapper userMapper;
 
     private Long getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String studentId = (String) auth.getPrincipal();
-        User user = userMapper.selectOne(new QueryWrapper<User>().eq("student_id", studentId));
-        return user.getId();
+        try {
+            // 使用SecurityUtils获取用户ID，确保与系统其他部分一致
+            return com.example.zhizuo.common.util.SecurityUtils.getUserId();
+        } catch (Exception e) {
+            log.error("获取用户ID失败", e);
+            throw new RuntimeException("获取用户ID失败: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "提交智能工单")
